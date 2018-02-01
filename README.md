@@ -11,6 +11,9 @@ This is a service that runs inside of a Kubernetes cluster namespace and impleme
 1. Document how to programmatically create a Service using the Kubernetes API.
 	Here's a starting point: https://godoc.org/k8s.io/client-go/kubernetes/typed/core/v1#CoreV1Client.Services
 
+1. Document how to programmatically configure an Ingress using the Kubernetes API
+	Here's a starting point: https://godoc.org/k8s.io/client-go/kubernetes/typed/extensions/v1beta1#ExtensionsV1beta1Client.Ingresses
+
 1. Design the HTTP/JSON endpoints.
     Read entry          - GET /{name} -> 200 + {"ip":"", "port":""}
     Create/Update entry - PUT /{name} {"ip:"", "port":""} -> 200 or error code
