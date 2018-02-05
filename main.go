@@ -10,9 +10,9 @@ import (
 // EndpointCrudder defines the interface for objects that allow CRUD operations
 // on Kubernetes Endpoints. Mostly needed to facilitate testing.
 type EndpointCrudder interface {
-	Create(name, namespace string, ip string, ports string) (*v1.Endpoints, error)
+	Create(name, namespace, ip string, port int32) (*v1.Endpoints, error)
 	Get(name string) (*v1.Endpoints, error)
-	Update(name, namespace, IPs []string, ports []string) (*v1.Endpoints, error)
+	Update(name, namespace, ip string, port int32) (*v1.Endpoints, error)
 	Delete(name string) error
 }
 
@@ -82,7 +82,7 @@ type Endpointer struct {
 
 // Create uses the Kubernetes API to add a new Endpoint to the indicated
 // namespace.
-func (e *Endpointer) Create(name, namespace string, IP string, port int32) (*v1.Endpoints, error) {
+func (e *Endpointer) Create(name, namespace, ip string, port int32) (*v1.Endpoints, error) {
 	return e.ept.Create(&v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -90,11 +90,37 @@ func (e *Endpointer) Create(name, namespace string, IP string, port int32) (*v1.
 		},
 		Subsets: []v1.EndpointSubset{
 			{
-				Addresses: []v1.EndpointAddress{{IP: IP}},
+				Addresses: []v1.EndpointAddress{{IP: ip}},
 				Ports:     []v1.EndpointPort{{Port: port}},
 			},
 		},
 	})
+}
+
+// Get returns a *v1.Endpoints for an existing Endpoints configuration in K8s.
+func (e *Endpointer) Get(name string) (*v1.Endpoints, error) {
+	return e.ept.Get(name, metav1.GetOptions{})
+}
+
+// Update applies updates to an existing set of Endpoints in K8s.
+func (e *Endpointer) Update(name, namespace, ip string, port int32) (*v1.Endpoints, error) {
+	return e.ept.Update(&v1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Subsets: []v1.EndpointSubset{
+			{
+				Addresses: []v1.EndpointAddress{{IP: ip}},
+				Ports:     []v1.EndpointPort{{Port: port}},
+			},
+		},
+	})
+}
+
+// Delete removes an Endpoints object from K8s.
+func (e *Endpointer) Delete(name string) error {
+	return e.ept.Delete(name, &metav1.DeleteOptions{})
 }
 
 // NewEndpointer returns a newly instantiated *Endpointer.
