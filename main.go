@@ -2,9 +2,11 @@ package main
 
 import (
 	"k8s.io/api/core/v1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	typed_corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	typed_extv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 )
 
 // EndpointCrudder defines the interface for objects that allow CRUD operations
@@ -25,13 +27,22 @@ type ServiceCrudder interface {
 	Delete(name string) error
 }
 
+// IngressCrudder defines the interface for objects that allow CRUD operations
+// on Kubernetes Ingresses. Mostly needed to facilitate testing.
+type IngressCrudder interface {
+	Create(name, namespace, serviceName string, servicePort int32) (*extv1beta1.Ingress, error)
+	Get(name string) (*extv1beta1.Ingress, error)
+	Update(name, namespace, serviceName string, servicePort int32) (*extv1beta1.Ingress, error)
+	Delete(name string) error
+}
+
 // Servicer is a concrete implementation of a ServiceCrudder.
 type Servicer struct {
-	svc typedcorev1.ServiceInterface
+	svc typed_corev1.ServiceInterface
 }
 
 // NewServicer returns a newly instantiated *Servicer.
-func NewServicer(s typedcorev1.ServiceInterface) *Servicer {
+func NewServicer(s typed_corev1.ServiceInterface) *Servicer {
 	return &Servicer{s}
 }
 
@@ -77,7 +88,7 @@ func (s *Servicer) Delete(name string) error {
 
 // Endpointer is a concreate implementation of a EndpointCrudder.
 type Endpointer struct {
-	ept typedcorev1.EndpointsInterface
+	ept typed_corev1.EndpointsInterface
 }
 
 // Create uses the Kubernetes API to add a new Endpoint to the indicated
@@ -124,8 +135,61 @@ func (e *Endpointer) Delete(name string) error {
 }
 
 // NewEndpointer returns a newly instantiated *Endpointer.
-func NewEndpointer(e typedcorev1.EndpointsInterface) *Endpointer {
+func NewEndpointer(e typed_corev1.EndpointsInterface) *Endpointer {
 	return &Endpointer{e}
+}
+
+// Ingresser is a concrete implementation of IngressCrudder
+type Ingresser struct {
+	ing typed_extv1beta1.IngressInterface
+}
+
+// Create uses the Kubernetes API add a new Ingress to the indicated namespace.
+func (i *Ingresser) Create(name, namespace, serviceName string, servicePort int) (*extv1beta1.Ingress, error) {
+	return i.ing.Create(&extv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: extv1beta1.IngressSpec{
+			Backend: &extv1beta1.IngressBackend{
+				ServiceName: serviceName,
+				ServicePort: intstr.FromInt(servicePort),
+			},
+		},
+	})
+}
+
+// Get returns a *extv1beta.Ingress instance for the named Ingress in the K8s
+// cluster.
+func (i *Ingresser) Get(name string) (*extv1beta1.Ingress, error) {
+	return i.ing.Get(name, metav1.GetOptions{})
+}
+
+// Update modifies an existing Ingress stored in K8s to match the provided info.
+func (i *Ingresser) Update(name, namespace, serviceName string, servicePort int) (*extv1beta1.Ingress, error) {
+	return i.ing.Update(&extv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: extv1beta1.IngressSpec{
+			Backend: &extv1beta1.IngressBackend{
+				ServiceName: serviceName,
+				ServicePort: intstr.FromInt(servicePort),
+			},
+		},
+	})
+}
+
+// Delete removes the specified Ingress from Kubernetes.
+func (i *Ingresser) Delete(name string) error {
+	return i.ing.Delete(name, &metav1.DeleteOptions{})
+}
+
+// NewIngresser returns a newly instantiated *Ingresser.
+func NewIngresser(i typed_extv1beta1.IngressInterface) *Ingresser {
+	return &Ingresser{i}
 }
 
 func main() {
