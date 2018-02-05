@@ -52,6 +52,29 @@ func (s *Servicer) Create(name, namespace string, targetPort int, listenPort int
 	})
 }
 
+// Get returns a *v1.Service for an existing Service.
+func (s *Servicer) Get(name string) (*v1.Service, error) {
+	return s.svc.Get(name, metav1.GetOptions{})
+}
+
+// Update applies updates to an existing Service.
+func (s *Servicer) Update(name, namespace string, targetPort int, listenPort int32) (*v1.Service, error) {
+	return s.svc.Update(&v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(targetPort), Port: listenPort}},
+		},
+	})
+}
+
+// Delete removes a Service from Kubernetes.
+func (s *Servicer) Delete(name string) error {
+	return s.svc.Delete(name, &metav1.DeleteOptions{})
+}
+
 // Endpointer is a concreate implementation of a EndpointCrudder.
 type Endpointer struct {
 	ept typedcorev1.EndpointsInterface
