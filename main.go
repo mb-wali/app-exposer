@@ -1,6 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"os"
+
+	"github.com/gorilla/mux"
+
 	"k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -190,6 +195,63 @@ func (i *Ingresser) Delete(name string) error {
 // NewIngresser returns a newly instantiated *Ingresser.
 func NewIngresser(i typed_extv1beta1.IngressInterface) *Ingresser {
 	return &Ingresser{i}
+}
+
+// HTTPObjectInterface defines the functions for the HTTP request handlers that
+// deal with CRUD operations on k8s objects.
+type HTTPObjectInterface interface {
+	GetRequest(http.ResponseWriter, *http.Request)
+	PutRequest(http.ResponseWriter, *http.Request)
+	PostRequest(http.ResponseWriter, *http.Request)
+	DeleteRequest(http.ResponseWriter, *http.Request)
+}
+
+type ExposerApp struct {
+	ServiceController  ServiceCrudder
+	EndpointController EndpointCrudder
+	IngressController  IngressCrudder
+	router             *mux.Router
+}
+
+func NewExposerApp(svc ServiceCrudder, ept EndpointCrudder, ig IngressCrudder) *ExposerApp {
+	app := &ExposerApp{
+		svc,
+		ept,
+		ig,
+		mux.NewRouter(),
+	}
+	app.router.HandleFunc("/", app.Greeting).Methods("GET")
+	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
+	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")
+	app.router.HandleFunc("/service/{name}", app.GetService).Methods("GET")
+	app.router.HandleFunc("/service/{name}", app.DeleteService).Methods("DELETE")
+	app.router.HandleFunc("/endpoint/{name}", app.CreateEndpoint).Methods("POST")
+	app.router.HandleFunc("/endpoint/{name}", app.UpdateEndpoint).Methods("PUT")
+	app.router.HandleFunc("/endpoint/{name}", app.GetEndpoint).Methods("GET")
+	app.router.HandleFunc("/endpoint/{name}", app.DeleteEndpoint).Methods("DELETE")
+	app.router.HandleFunc("/ingress/{name}", app.CreateIngress).Methods("POST")
+	app.router.HandleFunc("/ingress/{name}", app.UpdateIngress).Methods("PUT")
+	app.router.HandleFunc("/ingress/{name}", app.GetIngress).Methods("GET")
+	app.router.HandleFunc("/ingress/{name}", app.DeleteIngress).Methods("DELETE")
+	return app
+}
+
+func (e *ExposerApp) Greeting(http.ResponseWriter, *http.Request)       {}
+func (e *ExposerApp) CreateService(http.ResponseWriter, *http.Request)  {}
+func (e *ExposerApp) UpdateService(http.ResponseWriter, *http.Request)  {}
+func (e *ExposerApp) GetService(http.ResponseWriter, *http.Request)     {}
+func (e *ExposerApp) DeleteService(http.ResponseWriter, *http.Request)  {}
+func (e *ExposerApp) CreateEndpoint(http.ResponseWriter, *http.Request) {}
+func (e *ExposerApp) UpdateEndpoint(http.ResponseWriter, *http.Request) {}
+func (e *ExposerApp) GetEndpoint(http.ResponseWriter, *http.Request)    {}
+func (e *ExposerApp) DeleteEndpoint(http.ResponseWriter, *http.Request) {}
+func (e *ExposerApp) CreateIngress(http.ResponseWriter, *http.Request)  {}
+func (e *ExposerApp) UpdateIngress(http.ResponseWriter, *http.Request)  {}
+func (e *ExposerApp) GetIngress(http.ResponseWriter, *http.Request)     {}
+func (e *ExposerApp) DeleteIngress(http.ResponseWriter, *http.Request)  {}
+
+func homeDir() string {
+	return os.Getenv("HOME")
 }
 
 func main() {
