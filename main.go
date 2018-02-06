@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -236,19 +237,48 @@ func NewExposerApp(svc ServiceCrudder, ept EndpointCrudder, ig IngressCrudder) *
 	return app
 }
 
-func (e *ExposerApp) Greeting(http.ResponseWriter, *http.Request)       {}
-func (e *ExposerApp) CreateService(http.ResponseWriter, *http.Request)  {}
-func (e *ExposerApp) UpdateService(http.ResponseWriter, *http.Request)  {}
-func (e *ExposerApp) GetService(http.ResponseWriter, *http.Request)     {}
-func (e *ExposerApp) DeleteService(http.ResponseWriter, *http.Request)  {}
-func (e *ExposerApp) CreateEndpoint(http.ResponseWriter, *http.Request) {}
-func (e *ExposerApp) UpdateEndpoint(http.ResponseWriter, *http.Request) {}
-func (e *ExposerApp) GetEndpoint(http.ResponseWriter, *http.Request)    {}
-func (e *ExposerApp) DeleteEndpoint(http.ResponseWriter, *http.Request) {}
-func (e *ExposerApp) CreateIngress(http.ResponseWriter, *http.Request)  {}
-func (e *ExposerApp) UpdateIngress(http.ResponseWriter, *http.Request)  {}
-func (e *ExposerApp) GetIngress(http.ResponseWriter, *http.Request)     {}
-func (e *ExposerApp) DeleteIngress(http.ResponseWriter, *http.Request)  {}
+// Greeting lets the caller know that the service is up and should be receiving
+// requests.
+func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintf(writer, "Hello from app-exposer.")
+}
+
+// CreateService is an http handler for creating a Service object in a k8s cluster.
+func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Request) {}
+
+// UpdateService is an http handler for updating a Service object in a k8s cluster.
+func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Request) {}
+
+// GetService is an http handler for getting information about a Service object from
+// a k8s cluster.
+func (e *ExposerApp) GetService(writer http.ResponseWriter, request *http.Request) {}
+
+// DeleteService is an http handler for deleting a Service object in a k8s cluster.
+func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Request) {}
+
+// CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
+func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Request) {}
+
+// UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
+func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Request) {}
+
+// GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
+func (e *ExposerApp) GetEndpoint(writer http.ResponseWriter, request *http.Request) {}
+
+// DeleteEndpoint is an http handler for deleting an Endpoints object from a k8s cluster.
+func (e *ExposerApp) DeleteEndpoint(writer http.ResponseWriter, request *http.Request) {}
+
+// CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
+func (e *ExposerApp) CreateIngress(writer http.ResponseWriter, request *http.Request) {}
+
+// UpdateIngress is an http handler for updating an Ingress object in a k8s cluster.
+func (e *ExposerApp) UpdateIngress(writer http.ResponseWriter, request *http.Request) {}
+
+// GetIngress is an http handler for getting an Ingress object from a k8s cluster.
+func (e *ExposerApp) GetIngress(writer http.ResponseWriter, request *http.Request) {}
+
+// DeleteIngress is an http handler for deleting an Ingress object from a k8s cluster.
+func (e *ExposerApp) DeleteIngress(writer http.ResponseWriter, request *http.Request) {}
 
 func homeDir() string {
 	return os.Getenv("HOME")
