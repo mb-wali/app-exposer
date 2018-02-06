@@ -5,19 +5,17 @@ This is a service that runs inside of a Kubernetes cluster namespace and impleme
 
 # Development
 
-You'll need to install godep for this service, since it's the supported option
-for the client-go dependency, which we absolutely need.
+You'll need to install ```go dep```.
 
-``` go get github.com/tools/godep ```
+``` go get -u github.com/golang/dep/cmd/dep ```
 
-Next you'll need to follow the instructions [here](https://github.com/kubernetes/client-go/blob/master/INSTALL.md#godep) for
-using Godep to get the client-go dependency. We need version 5.0.0, which is on
-the ```v5.0.0``` branch.
+Then, in the top-level of the cloned repository:
 
-After you've done the godep save ./... inside your working directory, do the
-following to speed up compilation times:
+```dep ensure```
 
-``` godep get ./... ```
+Finally, run the following in the same directory:
+
+``` go install ./... ```
 
 After that, the difficult stuff should be done.
 
