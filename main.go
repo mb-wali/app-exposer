@@ -207,6 +207,9 @@ type HTTPObjectInterface interface {
 	DeleteRequest(http.ResponseWriter, *http.Request)
 }
 
+// ExposerApp encapsulates the overall application-logic, tying together the
+// REST-like API with the underlying Kubernetes API. All of the HTTP handlers
+// are methods for an ExposerApp instance.
 type ExposerApp struct {
 	ServiceController  ServiceCrudder
 	EndpointController EndpointCrudder
@@ -214,6 +217,7 @@ type ExposerApp struct {
 	router             *mux.Router
 }
 
+// NewExposerApp creates and returns a newly instantiated *ExposerApp.
 func NewExposerApp(svc ServiceCrudder, ept EndpointCrudder, ig IngressCrudder) *ExposerApp {
 	app := &ExposerApp{
 		svc,
@@ -244,40 +248,135 @@ func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request)
 }
 
 // CreateService is an http handler for creating a Service object in a k8s cluster.
+//
+// Expects JSON in the request body in the following format:
+// 	{
+// 		"targetPort" : integer,
+// 		"listenPort" : integer
+// 	}
+//
+// The name of the Service comes from the URL the request is sent to and the
+// namespace is a daemon-wide configuration setting.
 func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Request) {}
 
 // UpdateService is an http handler for updating a Service object in a k8s cluster.
+//
+// Expects JSON in the request body in the following format:
+// 	{
+// 		"targetPort" : integer,
+// 		"listenPort" : integer
+// 	}
+//
+// The name of the Service comes from the URL the request is sent to and the
+// namespace is a daemon-wide configuration setting.
 func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Request) {}
 
 // GetService is an http handler for getting information about a Service object from
 // a k8s cluster.
+//
+// Expects no body in the requests and will return a JSON encoded body in the
+// response in the following format:
+// 	{
+// 		"name" : "The name of the service as a string.",
+// 		"namespace" : "The namespace that the service is in, as a string",
+// 		"targetPort" : integer,
+// 		"listenPort" : integer
+// 	}
+//
+// The namespace of the Service comes from the daemon configuration setting.
 func (e *ExposerApp) GetService(writer http.ResponseWriter, request *http.Request) {}
 
 // DeleteService is an http handler for deleting a Service object in a k8s cluster.
+//
+// Expects no body in the request and returns no body in the response. Returns
+// a 200 status if you try to delete a Service that doesn't exist.
 func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Request) {}
 
 // CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
+//
+// Expects JSON in the request body in the following format:
+// 	{
+// 		"ip" : "IP address of the external process as a string.",
+// 		"port" : The target port of the external process as an integer
+// 	}
+//
+// The name of the Endpoint is derived from the URL the request was sent to and
+// the namespace comes from the daemon-wide configuration value.
 func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Request) {}
 
 // UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
+//
+// Expects JSON in the request body in the following format:
+// 	{
+// 		"ip" : "IP address of the external process as a string.",
+// 		"port" : The target port of the external process as an integer
+// 	}
+//
+// The name of the Endpoint is derived from the URL the request was sent to and
+// the namespace comes from the daemon-wide configuration value.
 func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Request) {}
 
 // GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
+//
+// Expects no body in the request and returns JSON in the response body in the
+// following format:
+// 	{
+// 		"name" : "The name of the Endpoints object in Kubernetes, as a string.",
+// 		"namespace" : "The namespace of the Endpoints object in Kubernetes, as a string.",
+// 		"ip" : "IP address of the external process as a string.",
+// 		"port" : The target port of the external process as an integer
+// 	}
+//
+// The name of the Endpoint is derived from the URL the request was sent to and
+// the namespace comes from the daemon-wide configuration value.
 func (e *ExposerApp) GetEndpoint(writer http.ResponseWriter, request *http.Request) {}
 
 // DeleteEndpoint is an http handler for deleting an Endpoints object from a k8s cluster.
+//
+// Expects no request body and returns no body in the response. Returns a 200
+// if you attempt to delete an Endpoints object that doesn't exist.
 func (e *ExposerApp) DeleteEndpoint(writer http.ResponseWriter, request *http.Request) {}
 
 // CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
+//
+// Expects a JSON encoded request body in the following format:
+// 	{
+// 		"serviceName" : "The name of the Service that the Ingress is configured for, as a string.",
+// 		"servicePort" : The port of the Service that the Ingress is configured for, as an integer
+// 	}
+//
+// The name of the Ingress is extracted from the URL that the request is sent to.
+// The namespace for the Ingress object comes from the daemon configuration setting.
 func (e *ExposerApp) CreateIngress(writer http.ResponseWriter, request *http.Request) {}
 
 // UpdateIngress is an http handler for updating an Ingress object in a k8s cluster.
+//
+// Expects a JSON encoded request body in the following format:
+// 	{
+// 		"serviceName" : "The name of the Service that the Ingress is configured for, as a string.",
+// 		"servicePort" : The port of the Service that the Ingress is configured for, as an integer
+// 	}
+//
+// The name of the Ingress is extracted from the URL that the request is sent to.
+// The namespace for the Ingress object comes from the daemon configuration setting.
 func (e *ExposerApp) UpdateIngress(writer http.ResponseWriter, request *http.Request) {}
 
 // GetIngress is an http handler for getting an Ingress object from a k8s cluster.
+//
+// Expects no request body and returns a JSON-encoded body in the response in the
+// following format:
+// 	{
+// 		"name" : "The name of the Ingress, as a string.",
+// 		"namespace" : "The Kubernetes namespace that the Ingress exists in, as a string.",
+// 		"serviceName" : "The name of the Service that the Ingress is configured for, as a string.",
+// 		"servicePort" : The port of the Service that the Ingress is configured for, as an integer
+// 	}
 func (e *ExposerApp) GetIngress(writer http.ResponseWriter, request *http.Request) {}
 
 // DeleteIngress is an http handler for deleting an Ingress object from a k8s cluster.
+//
+// Expects no request body and returns no body in the response. Returns a 200
+// if you attempt to delete an Endpoints object that doesn't exist.
 func (e *ExposerApp) DeleteIngress(writer http.ResponseWriter, request *http.Request) {}
 
 func homeDir() string {
