@@ -1,9 +1,14 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 
@@ -11,34 +16,64 @@ import (
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 	typed_corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	typed_extv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
+
+// ServiceOptions contains the settings needed to create or update a Service for
+// an interactive app.
+type ServiceOptions struct {
+	Name       string
+	Namespace  string
+	TargetPort int   `json:"target_port"`
+	ListenPort int32 `json:"listen_port"`
+}
+
+// EndpointOptions contains the settings needed to create or update an
+// Endpoint for an interactive app.
+type EndpointOptions struct {
+	Name      string
+	Namespace string
+	IP        string
+	Port      int32
+}
+
+// IngressOptions contains the settings needed to create or update an Ingress
+// for an interactive app.
+type IngressOptions struct {
+	Name      string
+	Namespace string
+	Service   string
+	Port      int
+}
 
 // EndpointCrudder defines the interface for objects that allow CRUD operations
 // on Kubernetes Endpoints. Mostly needed to facilitate testing.
 type EndpointCrudder interface {
-	Create(name, namespace, ip string, port int32) (*v1.Endpoints, error)
+	Create(opts *EndpointOptions) (*v1.Endpoints, error)
 	Get(name string) (*v1.Endpoints, error)
-	Update(name, namespace, ip string, port int32) (*v1.Endpoints, error)
+	Update(opts *EndpointOptions) (*v1.Endpoints, error)
 	Delete(name string) error
 }
 
 // ServiceCrudder defines the interface for objects that allow CRUD operation
 // on Kubernetes Services. Mostly needed to facilitate testing.
 type ServiceCrudder interface {
-	Create(name, namespace string, targetPort, listenPort int) (*v1.Service, error)
+	Create(opts *ServiceOptions) (*v1.Service, error)
 	Get(name string) (*v1.Service, error)
-	Update(name, namespace string, targetPort, listenPort int) (*v1.Service, error)
+	Update(opts *ServiceOptions) (*v1.Service, error)
 	Delete(name string) error
 }
 
 // IngressCrudder defines the interface for objects that allow CRUD operations
 // on Kubernetes Ingresses. Mostly needed to facilitate testing.
 type IngressCrudder interface {
-	Create(name, namespace, serviceName string, servicePort int32) (*extv1beta1.Ingress, error)
+	Create(opts *IngressOptions) (*extv1beta1.Ingress, error)
 	Get(name string) (*extv1beta1.Ingress, error)
-	Update(name, namespace, serviceName string, servicePort int32) (*extv1beta1.Ingress, error)
+	Update(opts *IngressOptions) (*extv1beta1.Ingress, error)
 	Delete(name string) error
 }
 
@@ -52,21 +87,12 @@ func NewServicer(s typed_corev1.ServiceInterface) *Servicer {
 	return &Servicer{s}
 }
 
-// ServicerOptions contains the settings needed to create or update a Service for
-// an interactive app.
-type ServicerOptions struct {
-	Name       string
-	Namespace  string
-	TargetPort int   `json:"target_port"`
-	ListenPort int32 `json:"listen_port"`
-}
-
 // Create uses the Kubernetes API to add a new Service to the indicated
 // namespace. Yes, I know that using an int for targetPort and an int32 for
 // listenPort is weird, but that weirdness comes from the underlying K8s API.
 // I'm letting the weirdness percolate up the stack until I get annoyed enough
 // to deal with it.
-func (s *Servicer) Create(opts *ServicerOptions) (*v1.Service, error) {
+func (s *Servicer) Create(opts *ServiceOptions) (*v1.Service, error) {
 	return s.svc.Create(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -84,7 +110,7 @@ func (s *Servicer) Get(name string) (*v1.Service, error) {
 }
 
 // Update applies updates to an existing Service.
-func (s *Servicer) Update(opts *ServicerOptions) (*v1.Service, error) {
+func (s *Servicer) Update(opts *ServiceOptions) (*v1.Service, error) {
 	return s.svc.Update(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -106,18 +132,9 @@ type Endpointer struct {
 	ept typed_corev1.EndpointsInterface
 }
 
-// EndpointerOptions contains the settings needed to create or update an
-// Endpoint for an interactive app.
-type EndpointerOptions struct {
-	Name      string
-	Namespace string
-	IP        string
-	Port      int32
-}
-
 // Create uses the Kubernetes API to add a new Endpoint to the indicated
 // namespace.
-func (e *Endpointer) Create(opts *EndpointerOptions) (*v1.Endpoints, error) {
+func (e *Endpointer) Create(opts *EndpointOptions) (*v1.Endpoints, error) {
 	return e.ept.Create(&v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -138,7 +155,7 @@ func (e *Endpointer) Get(name string) (*v1.Endpoints, error) {
 }
 
 // Update applies updates to an existing set of Endpoints in K8s.
-func (e *Endpointer) Update(opts *EndpointerOptions) (*v1.Endpoints, error) {
+func (e *Endpointer) Update(opts *EndpointOptions) (*v1.Endpoints, error) {
 	return e.ept.Update(&v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -168,17 +185,8 @@ type Ingresser struct {
 	ing typed_extv1beta1.IngressInterface
 }
 
-// IngresserOptions contains the settings needed to create or update an Ingress
-// for an interactive app.
-type IngresserOptions struct {
-	Name      string
-	Namespace string
-	Service   string
-	Port      int
-}
-
 // Create uses the Kubernetes API add a new Ingress to the indicated namespace.
-func (i *Ingresser) Create(opts *IngresserOptions) (*extv1beta1.Ingress, error) {
+func (i *Ingresser) Create(opts *IngressOptions) (*extv1beta1.Ingress, error) {
 	return i.ing.Create(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -200,7 +208,7 @@ func (i *Ingresser) Get(name string) (*extv1beta1.Ingress, error) {
 }
 
 // Update modifies an existing Ingress stored in K8s to match the provided info.
-func (i *Ingresser) Update(opts *IngresserOptions) (*extv1beta1.Ingress, error) {
+func (i *Ingresser) Update(opts *IngressOptions) (*extv1beta1.Ingress, error) {
 	return i.ing.Update(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
@@ -238,6 +246,7 @@ type HTTPObjectInterface interface {
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
+	namespace          string
 	ServiceController  ServiceCrudder
 	EndpointController EndpointCrudder
 	IngressController  IngressCrudder
@@ -245,11 +254,12 @@ type ExposerApp struct {
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
-func NewExposerApp(svc ServiceCrudder, ept EndpointCrudder, ig IngressCrudder) *ExposerApp {
+func NewExposerApp(ns string, cs *kubernetes.Clientset) *ExposerApp {
 	app := &ExposerApp{
-		svc,
-		ept,
-		ig,
+		ns,
+		NewServicer(cs.CoreV1().Services(ns)),
+		NewEndpointer(cs.CoreV1().Endpoints(ns)),
+		NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns)),
 		mux.NewRouter(),
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
@@ -278,13 +288,51 @@ func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request)
 //
 // Expects JSON in the request body in the following format:
 // 	{
+//		"name"				: string,
 // 		"target_port" : integer,
 // 		"listen_port" : integer
 // 	}
 //
 // The name of the Service comes from the URL the request is sent to and the
 // namespace is a daemon-wide configuration setting.
-func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &ServiceOptions{}
+
+	err = json.Unmarshal(buf, opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if opts.Name == "" {
+		http.Error(writer, "name field was not set", http.StatusBadRequest)
+		return
+	}
+
+	if opts.TargetPort == 0 {
+		http.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	if opts.ListenPort == 0 {
+		http.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	opts.Namespace = e.namespace
+
+	// Call e.ServiceController.Create(*ServicerOptions)
+	// TODO: Create the service
+
+}
 
 // UpdateService is an http handler for updating a Service object in a k8s cluster.
 //
@@ -411,5 +459,38 @@ func homeDir() string {
 }
 
 func main() {
+	var (
+		err        error
+		kubeconfig *string
+		namespace  *string
+	)
+	if home := homeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
+	flag.Parse()
 
+	var config *rest.Config
+	if *kubeconfig != "" {
+		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+		if err != nil {
+			panic(err.Error())
+		}
+	} else {
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	app := NewExposerApp(*namespace, clientset)
+	//TODO: Make the port configurable.
+	log.Fatal(http.ListenAndServe("60000", app.router))
 }
