@@ -52,19 +52,28 @@ func NewServicer(s typed_corev1.ServiceInterface) *Servicer {
 	return &Servicer{s}
 }
 
+// ServicerOptions contains the settings needed to create or update a Service for
+// an interactive app.
+type ServicerOptions struct {
+	Name       string
+	Namespace  string
+	TargetPort int
+	ListenPort int32
+}
+
 // Create uses the Kubernetes API to add a new Service to the indicated
 // namespace. Yes, I know that using an int for targetPort and an int32 for
 // listenPort is weird, but that weirdness comes from the underlying K8s API.
 // I'm letting the weirdness percolate up the stack until I get annoyed enough
 // to deal with it.
-func (s *Servicer) Create(name, namespace string, targetPort int, listenPort int32) (*v1.Service, error) {
+func (s *Servicer) Create(opts *ServicerOptions) (*v1.Service, error) {
 	return s.svc.Create(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(targetPort), Port: listenPort}},
+			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(opts.TargetPort), Port: opts.ListenPort}},
 		},
 	})
 }
@@ -75,14 +84,14 @@ func (s *Servicer) Get(name string) (*v1.Service, error) {
 }
 
 // Update applies updates to an existing Service.
-func (s *Servicer) Update(name, namespace string, targetPort int, listenPort int32) (*v1.Service, error) {
+func (s *Servicer) Update(opts *ServicerOptions) (*v1.Service, error) {
 	return s.svc.Update(&v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(targetPort), Port: listenPort}},
+			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(opts.TargetPort), Port: opts.ListenPort}},
 		},
 	})
 }
@@ -97,18 +106,27 @@ type Endpointer struct {
 	ept typed_corev1.EndpointsInterface
 }
 
+// EndpointerOptions contains the settings needed to create or update an
+// Endpoint for an interactive app.
+type EndpointerOptions struct {
+	Name      string
+	Namespace string
+	IP        string
+	Port      int32
+}
+
 // Create uses the Kubernetes API to add a new Endpoint to the indicated
 // namespace.
-func (e *Endpointer) Create(name, namespace, ip string, port int32) (*v1.Endpoints, error) {
+func (e *Endpointer) Create(opts *EndpointerOptions) (*v1.Endpoints, error) {
 	return e.ept.Create(&v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Subsets: []v1.EndpointSubset{
 			{
-				Addresses: []v1.EndpointAddress{{IP: ip}},
-				Ports:     []v1.EndpointPort{{Port: port}},
+				Addresses: []v1.EndpointAddress{{IP: opts.IP}},
+				Ports:     []v1.EndpointPort{{Port: opts.Port}},
 			},
 		},
 	})
@@ -120,16 +138,16 @@ func (e *Endpointer) Get(name string) (*v1.Endpoints, error) {
 }
 
 // Update applies updates to an existing set of Endpoints in K8s.
-func (e *Endpointer) Update(name, namespace, ip string, port int32) (*v1.Endpoints, error) {
+func (e *Endpointer) Update(opts *EndpointerOptions) (*v1.Endpoints, error) {
 	return e.ept.Update(&v1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Subsets: []v1.EndpointSubset{
 			{
-				Addresses: []v1.EndpointAddress{{IP: ip}},
-				Ports:     []v1.EndpointPort{{Port: port}},
+				Addresses: []v1.EndpointAddress{{IP: opts.IP}},
+				Ports:     []v1.EndpointPort{{Port: opts.Port}},
 			},
 		},
 	})
@@ -150,17 +168,26 @@ type Ingresser struct {
 	ing typed_extv1beta1.IngressInterface
 }
 
+// IngresserOptions contains the settings needed to create or update an Ingress
+// for an interactive app.
+type IngresserOptions struct {
+	Name      string
+	Namespace string
+	Service   string
+	Port      int
+}
+
 // Create uses the Kubernetes API add a new Ingress to the indicated namespace.
-func (i *Ingresser) Create(name, namespace, serviceName string, servicePort int) (*extv1beta1.Ingress, error) {
+func (i *Ingresser) Create(opts *IngresserOptions) (*extv1beta1.Ingress, error) {
 	return i.ing.Create(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Spec: extv1beta1.IngressSpec{
 			Backend: &extv1beta1.IngressBackend{
-				ServiceName: serviceName,
-				ServicePort: intstr.FromInt(servicePort),
+				ServiceName: opts.Service,
+				ServicePort: intstr.FromInt(opts.Port),
 			},
 		},
 	})
@@ -173,16 +200,16 @@ func (i *Ingresser) Get(name string) (*extv1beta1.Ingress, error) {
 }
 
 // Update modifies an existing Ingress stored in K8s to match the provided info.
-func (i *Ingresser) Update(name, namespace, serviceName string, servicePort int) (*extv1beta1.Ingress, error) {
+func (i *Ingresser) Update(opts *IngresserOptions) (*extv1beta1.Ingress, error) {
 	return i.ing.Update(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name:      opts.Name,
+			Namespace: opts.Namespace,
 		},
 		Spec: extv1beta1.IngressSpec{
 			Backend: &extv1beta1.IngressBackend{
-				ServiceName: serviceName,
-				ServicePort: intstr.FromInt(servicePort),
+				ServiceName: opts.Service,
+				ServicePort: intstr.FromInt(opts.Port),
 			},
 		},
 	})
@@ -207,6 +234,8 @@ type HTTPObjectInterface interface {
 	DeleteRequest(http.ResponseWriter, *http.Request)
 }
 
+// ExposerApp is the top-level object that orchestrates calls betwen the various
+// Controllers and the HTTP router.
 type ExposerApp struct {
 	ServiceController  ServiceCrudder
 	EndpointController EndpointCrudder
@@ -214,6 +243,7 @@ type ExposerApp struct {
 	router             *mux.Router
 }
 
+// NewExposerApp creates a new *ExposerApp and returns it.
 func NewExposerApp(svc ServiceCrudder, ept EndpointCrudder, ig IngressCrudder) *ExposerApp {
 	app := &ExposerApp{
 		svc,
