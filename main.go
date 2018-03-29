@@ -57,8 +57,8 @@ func NewServicer(s typed_corev1.ServiceInterface) *Servicer {
 type ServicerOptions struct {
 	Name       string
 	Namespace  string
-	TargetPort int
-	ListenPort int32
+	TargetPort int   `json:"target_port"`
+	ListenPort int32 `json:"listen_port"`
 }
 
 // Create uses the Kubernetes API to add a new Service to the indicated
