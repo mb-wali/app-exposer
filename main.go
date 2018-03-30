@@ -74,15 +74,6 @@ type IngressCrudder interface {
 	Delete(name string) error
 }
 
-// HTTPObjectInterface defines the functions for the HTTP request handlers that
-// deal with CRUD operations on k8s objects.
-type HTTPObjectInterface interface {
-	GetRequest(http.ResponseWriter, *http.Request)
-	PutRequest(http.ResponseWriter, *http.Request)
-	PostRequest(http.ResponseWriter, *http.Request)
-	DeleteRequest(http.ResponseWriter, *http.Request)
-}
-
 // ExposerApp encapsulates the overall application-logic, tying together the
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
