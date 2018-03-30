@@ -6,6 +6,24 @@ import (
 	typed_corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// EndpointOptions contains the settings needed to create or update an
+// Endpoint for an interactive app.
+type EndpointOptions struct {
+	Name      string
+	Namespace string
+	IP        string
+	Port      int32
+}
+
+// EndpointCrudder defines the interface for objects that allow CRUD operations
+// on Kubernetes Endpoints. Mostly needed to facilitate testing.
+type EndpointCrudder interface {
+	Create(opts *EndpointOptions) (*v1.Endpoints, error)
+	Get(name string) (*v1.Endpoints, error)
+	Update(opts *EndpointOptions) (*v1.Endpoints, error)
+	Delete(name string) error
+}
+
 // Endpointer is a concreate implementation of a EndpointCrudder.
 type Endpointer struct {
 	ept typed_corev1.EndpointsInterface

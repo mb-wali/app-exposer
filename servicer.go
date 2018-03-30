@@ -7,6 +7,24 @@ import (
 	typed_corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// ServiceOptions contains the settings needed to create or update a Service for
+// an interactive app.
+type ServiceOptions struct {
+	Name       string
+	Namespace  string
+	TargetPort int   `json:"target_port"`
+	ListenPort int32 `json:"listen_port"`
+}
+
+// ServiceCrudder defines the interface for objects that allow CRUD operation
+// on Kubernetes Services. Mostly needed to facilitate testing.
+type ServiceCrudder interface {
+	Create(opts *ServiceOptions) (*v1.Service, error)
+	Get(name string) (*v1.Service, error)
+	Update(opts *ServiceOptions) (*v1.Service, error)
+	Delete(name string) error
+}
+
 // Servicer is a concrete implementation of a ServiceCrudder.
 type Servicer struct {
 	svc typed_corev1.ServiceInterface

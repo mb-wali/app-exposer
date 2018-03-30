@@ -8,6 +8,24 @@ import (
 	typed_extv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 )
 
+// IngressOptions contains the settings needed to create or update an Ingress
+// for an interactive app.
+type IngressOptions struct {
+	Name      string
+	Namespace string
+	Service   string
+	Port      int
+}
+
+// IngressCrudder defines the interface for objects that allow CRUD operations
+// on Kubernetes Ingresses. Mostly needed to facilitate testing.
+type IngressCrudder interface {
+	Create(opts *IngressOptions) (*extv1beta1.Ingress, error)
+	Get(name string) (*extv1beta1.Ingress, error)
+	Update(opts *IngressOptions) (*extv1beta1.Ingress, error)
+	Delete(name string) error
+}
+
 // Ingresser is a concrete implementation of an IngressCrudder.
 type Ingresser struct {
 	ing typed_extv1beta1.IngressInterface
