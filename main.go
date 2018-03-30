@@ -20,13 +20,19 @@ func main() {
 		namespace  *string
 		listenPort *int
 	)
+
+	// If the home directory exists, then assume that the kube config will be read
+	// from ~/.kube/config.
 	if home := os.Getenv("HOME"); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
+		// If the home directory doesn't exist, then allow the user to specify a path.
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
+
 	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
 	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
+
 	flag.Parse()
 
 	var config *rest.Config
@@ -36,9 +42,11 @@ func main() {
 			panic(err.Error())
 		}
 	} else {
+		// If the home directory doesn't exist and the user doesn't specify a path,
+		// then assume that we're running inside a cluster.
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			panic(err.Error())
+			panic(err.Error()) // If all else fails, panic.
 		}
 	}
 
