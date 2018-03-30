@@ -513,6 +513,25 @@ func (e *ExposerApp) DeleteEndpoint(writer http.ResponseWriter, request *http.Re
 	}
 }
 
+// WriteIngress uses the provided writer to write a version of the provided
+// *typed_extv1beta1.Ingress object out as JSON in the response body.
+func WriteIngress(ing *extv1beta1.Ingress, writer http.ResponseWriter) {
+	returnOpts := &IngressOptions{
+		Name:      ing.Name,
+		Namespace: ing.Namespace,
+		Service:   ing.Spec.Backend.ServiceName,
+		Port:      ing.Spec.Backend.ServicePort.IntValue(),
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
+
 // CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
 //
 // Expects a JSON encoded request body in the following format:
