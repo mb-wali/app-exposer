@@ -542,7 +542,54 @@ func WriteIngress(ing *extv1beta1.Ingress, writer http.ResponseWriter) {
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *ExposerApp) CreateIngress(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) CreateIngress(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	var (
+		ingress string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if ingress, ok = v["name"]; !ok {
+		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &IngressOptions{}
+
+	if err = json.Unmarshal(buf, opts); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if opts.Service == "" {
+		http.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
+		return
+	}
+
+	if opts.Port == 0 {
+		http.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	opts.Name = ingress
+	opts.Namespace = e.namespace
+
+	ing, err := e.IngressController.Create(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	WriteIngress(ing, writer)
+}
 
 // UpdateIngress is an http handler for updating an Ingress object in a k8s cluster.
 //
@@ -554,7 +601,54 @@ func (e *ExposerApp) CreateIngress(writer http.ResponseWriter, request *http.Req
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *ExposerApp) UpdateIngress(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) UpdateIngress(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	var (
+		ingress string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if ingress, ok = v["name"]; !ok {
+		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &IngressOptions{}
+
+	if err = json.Unmarshal(buf, opts); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if opts.Service == "" {
+		http.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
+		return
+	}
+
+	if opts.Port == 0 {
+		http.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	opts.Name = ingress
+	opts.Namespace = e.namespace
+
+	ing, err := e.IngressController.Update(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	WriteIngress(ing, writer)
+}
 
 // GetIngress is an http handler for getting an Ingress object from a k8s cluster.
 //
@@ -566,13 +660,49 @@ func (e *ExposerApp) UpdateIngress(writer http.ResponseWriter, request *http.Req
 // 		"service" : "The name of the Service that the Ingress is configured for, as a string.",
 // 		"port" : The port of the Service that the Ingress is configured for, as an integer
 // 	}
-func (e *ExposerApp) GetIngress(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) GetIngress(writer http.ResponseWriter, request *http.Request) {
+	var (
+		ingress string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if ingress, ok = v["name"]; !ok {
+		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	ing, err := e.IngressController.Get(ingress)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	WriteIngress(ing, writer)
+}
 
 // DeleteIngress is an http handler for deleting an Ingress object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *ExposerApp) DeleteIngress(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) DeleteIngress(writer http.ResponseWriter, request *http.Request) {
+	var (
+		ingress string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if ingress, ok = v["name"]; !ok {
+		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	err := e.IngressController.Delete(ingress)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
 
 func homeDir() string {
 	return os.Getenv("HOME")
