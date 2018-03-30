@@ -125,6 +125,25 @@ func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request)
 	fmt.Fprintf(writer, "Hello from app-exposer.")
 }
 
+// WriteService uses the provided writer to write a version of the provided
+// *v1.Services object out as JSON in the response body.
+func WriteService(svc *v1.Service, writer http.ResponseWriter) {
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
+
 // CreateService is an http handler for creating a Service object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
@@ -183,20 +202,7 @@ func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	returnOpts := &ServiceOptions{
-		Name:       svc.Name,
-		Namespace:  svc.Namespace,
-		ListenPort: svc.Spec.Ports[0].Port,
-		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	WriteService(svc, writer)
 }
 
 // UpdateService is an http handler for updating a Service object in a k8s cluster.
@@ -256,20 +262,7 @@ func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	returnOpts := &ServiceOptions{
-		Name:       svc.Name,
-		Namespace:  svc.Namespace,
-		ListenPort: svc.Spec.Ports[0].Port,
-		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	WriteService(svc, writer)
 }
 
 // GetService is an http handler for getting information about a Service object from
@@ -303,20 +296,7 @@ func (e *ExposerApp) GetService(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	returnOpts := &ServiceOptions{
-		Name:       svc.Name,
-		Namespace:  svc.Namespace,
-		ListenPort: svc.Spec.Ports[0].Port,
-		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	WriteService(svc, writer)
 }
 
 // DeleteService is an http handler for deleting a Service object in a k8s cluster.
@@ -339,6 +319,23 @@ func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Req
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// WriteEndpoint uses the provided writer to write a version of the provided
+// *v1.Endpoints object out as JSON in the response body.
+func WriteEndpoint(ept *v1.Endpoints, writer http.ResponseWriter) {
+	returnOpts := &EndpointOptions{
+		IP:   ept.Subsets[0].Addresses[0].IP,
+		Port: ept.Subsets[0].Ports[0].Port,
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
 }
 
 // CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
@@ -397,18 +394,7 @@ func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	returnOpts := &EndpointOptions{
-		IP:   ept.Subsets[0].Addresses[0].IP,
-		Port: ept.Subsets[0].Ports[0].Port,
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	WriteEndpoint(ept, writer)
 }
 
 // UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
@@ -467,18 +453,7 @@ func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	returnOpts := &EndpointOptions{
-		IP:   ept.Subsets[0].Addresses[0].IP,
-		Port: ept.Subsets[0].Ports[0].Port,
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	WriteEndpoint(ept, writer)
 }
 
 // GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
@@ -494,13 +469,49 @@ func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Re
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *ExposerApp) GetEndpoint(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) GetEndpoint(writer http.ResponseWriter, request *http.Request) {
+	var (
+		endpoint string
+		ok       bool
+		v        = mux.Vars(request)
+	)
+
+	if endpoint, ok = v["name"]; !ok {
+		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	ept, err := e.EndpointController.Get(endpoint)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	WriteEndpoint(ept, writer)
+}
 
 // DeleteEndpoint is an http handler for deleting an Endpoints object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *ExposerApp) DeleteEndpoint(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) DeleteEndpoint(writer http.ResponseWriter, request *http.Request) {
+	var (
+		endpoint string
+		ok       bool
+		v        = mux.Vars(request)
+	)
+
+	if endpoint, ok = v["name"]; !ok {
+		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	err := e.EndpointController.Delete(endpoint)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
 
 // CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
 //
