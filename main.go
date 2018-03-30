@@ -15,11 +15,7 @@ import (
 
 	"k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
-	typed_corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	typed_extv1beta1 "k8s.io/client-go/kubernetes/typed/extensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -76,162 +72,6 @@ type IngressCrudder interface {
 	Get(name string) (*extv1beta1.Ingress, error)
 	Update(opts *IngressOptions) (*extv1beta1.Ingress, error)
 	Delete(name string) error
-}
-
-// Servicer is a concrete implementation of a ServiceCrudder.
-type Servicer struct {
-	svc typed_corev1.ServiceInterface
-}
-
-// NewServicer returns a newly instantiated *Servicer.
-func NewServicer(s typed_corev1.ServiceInterface) *Servicer {
-	return &Servicer{s}
-}
-
-// Create uses the Kubernetes API to add a new Service to the indicated
-// namespace. Yes, I know that using an int for targetPort and an int32 for
-// listenPort is weird, but that weirdness comes from the underlying K8s API.
-// I'm letting the weirdness percolate up the stack until I get annoyed enough
-// to deal with it.
-func (s *Servicer) Create(opts *ServiceOptions) (*v1.Service, error) {
-	return s.svc.Create(&v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(opts.TargetPort), Port: opts.ListenPort}},
-		},
-	})
-}
-
-// Get returns a *v1.Service for an existing Service.
-func (s *Servicer) Get(name string) (*v1.Service, error) {
-	return s.svc.Get(name, metav1.GetOptions{})
-}
-
-// Update applies updates to an existing Service.
-func (s *Servicer) Update(opts *ServiceOptions) (*v1.Service, error) {
-	return s.svc.Update(&v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{TargetPort: intstr.FromInt(opts.TargetPort), Port: opts.ListenPort}},
-		},
-	})
-}
-
-// Delete removes a Service from Kubernetes.
-func (s *Servicer) Delete(name string) error {
-	return s.svc.Delete(name, &metav1.DeleteOptions{})
-}
-
-// Endpointer is a concreate implementation of a EndpointCrudder.
-type Endpointer struct {
-	ept typed_corev1.EndpointsInterface
-}
-
-// Create uses the Kubernetes API to add a new Endpoint to the indicated
-// namespace.
-func (e *Endpointer) Create(opts *EndpointOptions) (*v1.Endpoints, error) {
-	return e.ept.Create(&v1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Subsets: []v1.EndpointSubset{
-			{
-				Addresses: []v1.EndpointAddress{{IP: opts.IP}},
-				Ports:     []v1.EndpointPort{{Port: opts.Port}},
-			},
-		},
-	})
-}
-
-// Get returns a *v1.Endpoints for an existing Endpoints configuration in K8s.
-func (e *Endpointer) Get(name string) (*v1.Endpoints, error) {
-	return e.ept.Get(name, metav1.GetOptions{})
-}
-
-// Update applies updates to an existing set of Endpoints in K8s.
-func (e *Endpointer) Update(opts *EndpointOptions) (*v1.Endpoints, error) {
-	return e.ept.Update(&v1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Subsets: []v1.EndpointSubset{
-			{
-				Addresses: []v1.EndpointAddress{{IP: opts.IP}},
-				Ports:     []v1.EndpointPort{{Port: opts.Port}},
-			},
-		},
-	})
-}
-
-// Delete removes an Endpoints object from K8s.
-func (e *Endpointer) Delete(name string) error {
-	return e.ept.Delete(name, &metav1.DeleteOptions{})
-}
-
-// NewEndpointer returns a newly instantiated *Endpointer.
-func NewEndpointer(e typed_corev1.EndpointsInterface) *Endpointer {
-	return &Endpointer{e}
-}
-
-// Ingresser is a concrete implementation of IngressCrudder
-type Ingresser struct {
-	ing typed_extv1beta1.IngressInterface
-}
-
-// Create uses the Kubernetes API add a new Ingress to the indicated namespace.
-func (i *Ingresser) Create(opts *IngressOptions) (*extv1beta1.Ingress, error) {
-	return i.ing.Create(&extv1beta1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Spec: extv1beta1.IngressSpec{
-			Backend: &extv1beta1.IngressBackend{
-				ServiceName: opts.Service,
-				ServicePort: intstr.FromInt(opts.Port),
-			},
-		},
-	})
-}
-
-// Get returns a *extv1beta.Ingress instance for the named Ingress in the K8s
-// cluster.
-func (i *Ingresser) Get(name string) (*extv1beta1.Ingress, error) {
-	return i.ing.Get(name, metav1.GetOptions{})
-}
-
-// Update modifies an existing Ingress stored in K8s to match the provided info.
-func (i *Ingresser) Update(opts *IngressOptions) (*extv1beta1.Ingress, error) {
-	return i.ing.Update(&extv1beta1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      opts.Name,
-			Namespace: opts.Namespace,
-		},
-		Spec: extv1beta1.IngressSpec{
-			Backend: &extv1beta1.IngressBackend{
-				ServiceName: opts.Service,
-				ServicePort: intstr.FromInt(opts.Port),
-			},
-		},
-	})
-}
-
-// Delete removes the specified Ingress from Kubernetes.
-func (i *Ingresser) Delete(name string) error {
-	return i.ing.Delete(name, &metav1.DeleteOptions{})
-}
-
-// NewIngresser returns a newly instantiated *Ingresser.
-func NewIngresser(i typed_extv1beta1.IngressInterface) *Ingresser {
-	return &Ingresser{i}
 }
 
 // HTTPObjectInterface defines the functions for the HTTP request handlers that
@@ -511,7 +351,65 @@ func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Req
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	var (
+		endpoint string
+		ok       bool
+		v        = mux.Vars(request)
+	)
+
+	if endpoint, ok = v["name"]; !ok {
+		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &EndpointOptions{}
+
+	if err = json.Unmarshal(buf, opts); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if opts.IP == "" {
+		http.Error(writer, "IP field is blank", http.StatusBadRequest)
+		return
+	}
+
+	if opts.Port == 0 {
+		http.Error(writer, "Port field is blank", http.StatusBadRequest)
+		return
+	}
+
+	opts.Name = endpoint
+	opts.Namespace = e.namespace
+
+	ept, err := e.EndpointController.Create(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	returnOpts := &EndpointOptions{
+		IP:   ept.Subsets[0].Addresses[0].IP,
+		Port: ept.Subsets[0].Ports[0].Port,
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
 
 // UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
 //
@@ -523,7 +421,65 @@ func (e *ExposerApp) CreateEndpoint(writer http.ResponseWriter, request *http.Re
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) UpdateEndpoint(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	var (
+		endpoint string
+		ok       bool
+		v        = mux.Vars(request)
+	)
+
+	if endpoint, ok = v["name"]; !ok {
+		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &EndpointOptions{}
+
+	if err = json.Unmarshal(buf, opts); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if opts.IP == "" {
+		http.Error(writer, "IP field is blank", http.StatusBadRequest)
+		return
+	}
+
+	if opts.Port == 0 {
+		http.Error(writer, "Port field is blank", http.StatusBadRequest)
+		return
+	}
+
+	opts.Name = endpoint
+	opts.Namespace = e.namespace
+
+	ept, err := e.EndpointController.Update(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	returnOpts := &EndpointOptions{
+		IP:   ept.Subsets[0].Addresses[0].IP,
+		Port: ept.Subsets[0].Ports[0].Port,
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
 
 // GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
 //
