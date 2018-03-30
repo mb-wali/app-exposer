@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -56,5 +57,5 @@ func main() {
 	}
 
 	app := NewExposerApp(*namespace, clientset)
-	log.Fatal(http.ListenAndServe(strconv.Itoa(*listenPort), app.router))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }
