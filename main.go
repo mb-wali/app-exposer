@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -288,7 +289,6 @@ func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request)
 //
 // Expects JSON in the request body in the following format:
 // 	{
-//		"name"				: string,
 // 		"target_port" : integer,
 // 		"listen_port" : integer
 // 	}
@@ -297,6 +297,17 @@ func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request)
 // namespace is a daemon-wide configuration setting.
 func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
+
+	var (
+		service string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if service, ok = v["name"]; !ok {
+		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		return
+	}
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
@@ -312,8 +323,77 @@ func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	if opts.Name == "" {
-		http.Error(writer, "name field was not set", http.StatusBadRequest)
+	if opts.TargetPort == 0 {
+		http.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	if opts.ListenPort == 0 {
+		http.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
+		return
+	}
+
+	opts.Name = service
+	opts.Namespace = e.namespace
+
+	// Call e.ServiceController.Create(*ServicerOptions)
+	svc, err := e.ServiceController.Create(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
+
+// UpdateService is an http handler for updating a Service object in a k8s cluster.
+//
+// Expects JSON in the request body in the following format:
+// 	{
+// 		"target_port" : integer,
+// 		"listen_port" : integer
+// 	}
+//
+// The name of the Service comes from the URL the request is sent to and the
+// namespace is a daemon-wide configuration setting.
+func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	var (
+		service string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if service, ok = v["name"]; !ok {
+		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	opts := &ServiceOptions{}
+
+	err = json.Unmarshal(buf, opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -327,24 +407,30 @@ func (e *ExposerApp) CreateService(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
+	opts.Name = service
 	opts.Namespace = e.namespace
 
-	// Call e.ServiceController.Create(*ServicerOptions)
-	// TODO: Create the service
+	svc, err := e.ServiceController.Update(opts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
 }
-
-// UpdateService is an http handler for updating a Service object in a k8s cluster.
-//
-// Expects JSON in the request body in the following format:
-// 	{
-// 		"target_port" : integer,
-// 		"listen_port" : integer
-// 	}
-//
-// The name of the Service comes from the URL the request is sent to and the
-// namespace is a daemon-wide configuration setting.
-func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Request) {}
 
 // GetService is an http handler for getting information about a Service object from
 // a k8s cluster.
@@ -359,13 +445,61 @@ func (e *ExposerApp) UpdateService(writer http.ResponseWriter, request *http.Req
 // 	}
 //
 // The namespace of the Service comes from the daemon configuration setting.
-func (e *ExposerApp) GetService(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) GetService(writer http.ResponseWriter, request *http.Request) {
+	var (
+		service string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if service, ok = v["name"]; !ok {
+		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	svc, err := e.ServiceController.Get(service)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
+
+	outbuf, err := json.Marshal(returnOpts)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Write(outbuf)
+}
 
 // DeleteService is an http handler for deleting a Service object in a k8s cluster.
 //
 // Expects no body in the request and returns no body in the response. Returns
 // a 200 status if you try to delete a Service that doesn't exist.
-func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Request) {}
+func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Request) {
+	var (
+		service string
+		ok      bool
+		v       = mux.Vars(request)
+	)
+
+	if service, ok = v["name"]; !ok {
+		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		return
+	}
+
+	if err := e.ServiceController.Delete(service); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
 
 // CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
 //
@@ -463,6 +597,7 @@ func main() {
 		err        error
 		kubeconfig *string
 		namespace  *string
+		listenPort *int
 	)
 	if home := homeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -470,6 +605,7 @@ func main() {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
 	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
+	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
 	flag.Parse()
 
 	var config *rest.Config
@@ -491,6 +627,5 @@ func main() {
 	}
 
 	app := NewExposerApp(*namespace, clientset)
-	//TODO: Make the port configurable.
-	log.Fatal(http.ListenAndServe("60000", app.router))
+	log.Fatal(http.ListenAndServe(strconv.Itoa(*listenPort), app.router))
 }
