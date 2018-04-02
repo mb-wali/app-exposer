@@ -181,6 +181,12 @@
   version = "v2.0.1"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
@@ -380,6 +386,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f69360f8fd464eb94904003b366ae043fc6454f93c5125f75973dcd68f070a8d"
+  inputs-digest = "c34c600fce402c754e84f36a7bd8a47bfddf26b938e700e500132333b368ee20"
   solver-name = "gps-cdcl"
   solver-version = 1

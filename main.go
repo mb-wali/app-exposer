@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -45,7 +46,7 @@ func main() {
 			if os.IsNotExist(err) {
 				log.Fatalf("config %s does not exist", *kubeconfig)
 			}
-			log.Fatal(err.Error())
+			log.Fatal(errors.Wrapf(err, "error stat'ing the kubeconfig %s", *kubeconfig))
 		}
 	}
 
@@ -57,20 +58,20 @@ func main() {
 	if *kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 		if err != nil {
-			log.Fatal(err.Error())
+			log.Fatal(errors.Wrapf(err, "error building config from flags using kubeconfig %s", *kubeconfig))
 		}
 	} else {
 		// If the home directory doesn't exist and the user doesn't specify a path,
 		// then assume that we're running inside a cluster.
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			log.Fatalf("error loading the config inside the cluster: %s", err.Error())
+			log.Fatal(errors.Wrapf(err, "error loading the config inside the cluster"))
 		}
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Wrap(err, "error creating clientset from config"))
 	}
 
 	app := NewExposerApp(*namespace, clientset)
