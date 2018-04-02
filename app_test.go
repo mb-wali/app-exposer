@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"k8s.io/api/core/v1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
@@ -173,5 +174,52 @@ func TestWriteEndpoints(t *testing.T) {
 
 	if actual.Port != expected.Subsets[0].Ports[0].Port {
 		t.Errorf("endpoint port was %d, not %d", actual.Port, expected.Subsets[0].Ports[0].Port)
+	}
+}
+
+func TestWriteIngress(t *testing.T) {
+	expected := &extv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-namespace",
+		},
+		Spec: extv1beta1.IngressSpec{
+			Backend: &extv1beta1.IngressBackend{
+				ServiceName: "test-service",
+				ServicePort: intstr.FromInt(60000),
+			},
+		},
+	}
+
+	writer := httptest.NewRecorder()
+
+	WriteIngress(expected, writer)
+
+	resp := writer.Result()
+	rbody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	actual := &IngressOptions{}
+	err = json.Unmarshal(rbody, actual)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actual.Name != expected.Name {
+		t.Errorf("ingress name was %s, not %s", actual.Name, expected.Name)
+	}
+
+	if actual.Namespace != expected.Namespace {
+		t.Errorf("ingress namespace was %s, not %s", actual.Namespace, expected.Namespace)
+	}
+
+	if actual.Service != expected.Spec.Backend.ServiceName {
+		t.Errorf("ingress service name was %s, not %s", actual.Service, expected.Spec.Backend.ServiceName)
+	}
+
+	if actual.Port != expected.Spec.Backend.ServicePort.IntValue() {
+		t.Errorf("ingress service port was %d, not %d", actual.Port, expected.Spec.Backend.ServicePort.IntValue())
 	}
 }
