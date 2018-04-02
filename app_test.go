@@ -1,10 +1,16 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gorilla/mux"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -72,5 +78,53 @@ func TestNewExposerApp(t *testing.T) {
 				t.Errorf("name was %s, not %s", actual, name)
 			}
 		}
+	}
+}
+
+func TestWriteService(t *testing.T) {
+	expected := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-namespace",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				v1.ServicePort{
+					Port:       60000,
+					TargetPort: intstr.FromInt(60001),
+				},
+			},
+		},
+	}
+	writer := httptest.NewRecorder()
+
+	WriteService(expected, writer)
+
+	resp := writer.Result()
+	rbody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	actual := &ServiceOptions{}
+	err = json.Unmarshal(rbody, actual)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actual.Name != expected.Name {
+		t.Errorf("service name was %s, not %s", actual.Name, expected.Name)
+	}
+
+	if actual.Namespace != expected.Namespace {
+		t.Errorf("service namespace was %s, not %s", actual.Namespace, expected.Namespace)
+	}
+
+	if actual.ListenPort != expected.Spec.Ports[0].Port {
+		t.Errorf("service listen port was %d, not %d", actual.ListenPort, expected.Spec.Ports[0].Port)
+	}
+
+	if actual.TargetPort != expected.Spec.Ports[0].TargetPort.IntValue() {
+		t.Errorf("service target port was %d, not %d", actual.TargetPort, expected.Spec.Ports[0].TargetPort.IntValue())
 	}
 }
