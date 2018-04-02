@@ -36,26 +36,44 @@ func main() {
 
 	flag.Parse()
 
+	// Print error and exit if *kubeconfig is not empty and doesn't actually
+	// exist. If *kubeconfig is blank, then the app may be running inside the
+	// cluster, so let things proceed.
+	if *kubeconfig != "" {
+		_, err = os.Stat(*kubeconfig)
+		if err != nil {
+			if os.IsNotExist(err) {
+				log.Fatalf("config %s does not exist", *kubeconfig)
+			}
+			log.Fatal(err.Error())
+		}
+	}
+
+	log.Printf("namespace is set to %s\n", *namespace)
+	log.Printf("listen port is set to %d\n", *listenPort)
+	log.Printf("kubeconfig is set to '%s', and may be blank", *kubeconfig)
+
 	var config *rest.Config
 	if *kubeconfig != "" {
 		config, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
 		if err != nil {
-			panic(err.Error())
+			log.Fatal(err.Error())
 		}
 	} else {
 		// If the home directory doesn't exist and the user doesn't specify a path,
 		// then assume that we're running inside a cluster.
 		config, err = rest.InClusterConfig()
 		if err != nil {
-			panic(err.Error()) // If all else fails, panic.
+			log.Fatalf("error loading the config inside the cluster: %s", err.Error())
 		}
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 
 	app := NewExposerApp(*namespace, clientset)
+	log.Printf("listening on port %d", *listenPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }
