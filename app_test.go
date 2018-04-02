@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -221,5 +223,129 @@ func TestWriteIngress(t *testing.T) {
 
 	if actual.Port != expected.Spec.Backend.ServicePort.IntValue() {
 		t.Errorf("ingress service port was %d, not %d", actual.Port, expected.Spec.Backend.ServicePort.IntValue())
+	}
+}
+
+func TestCreateService(t *testing.T) {
+	expectedNS := "testing"
+	testcs := fake.NewSimpleClientset()
+	testapp := NewExposerApp(expectedNS, testcs)
+
+	expectedOpts := &ServiceOptions{
+		TargetPort: 60000,
+		ListenPort: 60001,
+	}
+
+	expectedJSON, err := json.Marshal(expectedOpts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedName := "test-name"
+	req := httptest.NewRequest("POST", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	w := httptest.NewRecorder()
+
+	testapp.router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	rbody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		t.Error(err)
+	}
+
+	actualOpts := &ServiceOptions{}
+	err = json.Unmarshal(rbody, actualOpts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actualOpts.Name != expectedName {
+		t.Errorf("service name was %s, not %s", actualOpts.Name, expectedName)
+	}
+
+	if actualOpts.Namespace != expectedNS {
+		t.Errorf("service namespace was %s, not %s", actualOpts.Namespace, expectedNS)
+	}
+
+	if actualOpts.TargetPort != expectedOpts.TargetPort {
+		t.Errorf("service target port was %d, not %d", actualOpts.TargetPort, expectedOpts.TargetPort)
+	}
+
+	if actualOpts.ListenPort != expectedOpts.ListenPort {
+		t.Errorf("service listen port was %d, not %d", actualOpts.ListenPort, expectedOpts.ListenPort)
+	}
+}
+
+func TestUpdateService(t *testing.T) {
+	expectedNS := "testing"
+	testcs := fake.NewSimpleClientset()
+	testapp := NewExposerApp(expectedNS, testcs)
+
+	createOpts := &ServiceOptions{
+		TargetPort: 40000,
+		ListenPort: 40001,
+	}
+
+	expectedOpts := &ServiceOptions{
+		TargetPort: 60000,
+		ListenPort: 60001,
+	}
+
+	createJSON, err := json.Marshal(createOpts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedJSON, err := json.Marshal(expectedOpts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expectedName := "test-name"
+
+	addreq, err := http.NewRequest("POST", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(createJSON))
+	if err != nil {
+		t.Error(err)
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	if err != nil {
+		t.Error(err)
+	}
+
+	cw := httptest.NewRecorder()
+	w := httptest.NewRecorder()
+
+	testapp.router.ServeHTTP(cw, addreq) // Need to create the object before updating it.
+	testapp.router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	rbody, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		t.Error(err)
+	}
+
+	actualOpts := &ServiceOptions{}
+	err = json.Unmarshal(rbody, actualOpts)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actualOpts.Name != expectedName {
+		t.Errorf("service name was %s, not %s", actualOpts.Name, expectedName)
+	}
+
+	if actualOpts.Namespace != expectedNS {
+		t.Errorf("service namespace was %s, not %s", actualOpts.Namespace, expectedNS)
+	}
+
+	if actualOpts.TargetPort != expectedOpts.TargetPort {
+		t.Errorf("service target port was %d, not %d", actualOpts.TargetPort, expectedOpts.TargetPort)
+	}
+
+	if actualOpts.ListenPort != expectedOpts.ListenPort {
+		t.Errorf("service listen port was %d, not %d", actualOpts.ListenPort, expectedOpts.ListenPort)
 	}
 }
