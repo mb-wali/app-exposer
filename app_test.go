@@ -128,3 +128,50 @@ func TestWriteService(t *testing.T) {
 		t.Errorf("service target port was %d, not %d", actual.TargetPort, expected.Spec.Ports[0].TargetPort.IntValue())
 	}
 }
+
+func TestWriteEndpoints(t *testing.T) {
+	expected := &v1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-name",
+			Namespace: "test-namespace",
+		},
+		Subsets: []v1.EndpointSubset{
+			{
+				Addresses: []v1.EndpointAddress{{IP: "1.1.1.1"}},
+				Ports:     []v1.EndpointPort{{Port: 60000}},
+			},
+		},
+	}
+
+	writer := httptest.NewRecorder()
+
+	WriteEndpoint(expected, writer)
+
+	resp := writer.Result()
+	rbody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	}
+
+	actual := &EndpointOptions{}
+	err = json.Unmarshal(rbody, actual)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if actual.Name != expected.Name {
+		t.Errorf("endpoint name was %s, not %s", actual.Name, expected.Name)
+	}
+
+	if actual.Namespace != expected.Namespace {
+		t.Errorf("endpoint namespace was %s, not %s", actual.Namespace, expected.Namespace)
+	}
+
+	if actual.IP != expected.Subsets[0].Addresses[0].IP {
+		t.Errorf("endpoint IP was %s, not %s", actual.IP, expected.Subsets[0].Addresses[0].IP)
+	}
+
+	if actual.Port != expected.Subsets[0].Ports[0].Port {
+		t.Errorf("endpoint port was %d, not %d", actual.Port, expected.Subsets[0].Ports[0].Port)
+	}
+}

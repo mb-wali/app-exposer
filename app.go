@@ -284,8 +284,10 @@ func (e *ExposerApp) DeleteService(writer http.ResponseWriter, request *http.Req
 // *v1.Endpoints object out as JSON in the response body.
 func WriteEndpoint(ept *v1.Endpoints, writer http.ResponseWriter) {
 	returnOpts := &EndpointOptions{
-		IP:   ept.Subsets[0].Addresses[0].IP,
-		Port: ept.Subsets[0].Ports[0].Port,
+		Name:      ept.Name,
+		Namespace: ept.Namespace,
+		IP:        ept.Subsets[0].Addresses[0].IP,
+		Port:      ept.Subsets[0].Ports[0].Port,
 	}
 
 	outbuf, err := json.Marshal(returnOpts)
