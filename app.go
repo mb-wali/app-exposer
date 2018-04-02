@@ -25,7 +25,7 @@ type ExposerApp struct {
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
-func NewExposerApp(ns string, cs *kubernetes.Clientset) *ExposerApp {
+func NewExposerApp(ns string, cs kubernetes.Interface) *ExposerApp {
 	app := &ExposerApp{
 		ns,
 		NewServicer(cs.CoreV1().Services(ns)),
