@@ -43,6 +43,11 @@ func (i *Ingresser) Create(opts *IngressOptions) (*extv1beta1.Ingress, error) {
 				ServiceName: opts.Service,
 				ServicePort: intstr.FromInt(opts.Port),
 			},
+			Rules: []extv1beta1.IngressRule{
+				{
+					Host: opts.Name, // For interactive apps, this is the job ID.
+				},
+			},
 		},
 	})
 }
