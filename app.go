@@ -25,12 +25,12 @@ type ExposerApp struct {
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
-func NewExposerApp(ns string, cs kubernetes.Interface) *ExposerApp {
+func NewExposerApp(ns, ingressClass string, cs kubernetes.Interface) *ExposerApp {
 	app := &ExposerApp{
 		ns,
 		NewServicer(cs.CoreV1().Services(ns)),
 		NewEndpointer(cs.CoreV1().Endpoints(ns)),
-		NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns)),
+		NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns), ingressClass),
 		mux.NewRouter(),
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")

@@ -17,10 +17,11 @@ import (
 
 func main() {
 	var (
-		err        error
-		kubeconfig *string
-		namespace  *string
-		listenPort *int
+		err          error
+		kubeconfig   *string
+		namespace    *string
+		listenPort   *int
+		ingressClass *string
 	)
 
 	// If the home directory exists, then assume that the kube config will be read
@@ -34,6 +35,7 @@ func main() {
 
 	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
 	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
+	ingressClass = flag.String("ingress-class", "linkerd", "(optional) the ingress class to use")
 
 	flag.Parse()
 
@@ -74,7 +76,7 @@ func main() {
 		log.Fatal(errors.Wrap(err, "error creating clientset from config"))
 	}
 
-	app := NewExposerApp(*namespace, clientset)
+	app := NewExposerApp(*namespace, *ingressClass, clientset)
 	log.Printf("listening on port %d", *listenPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }

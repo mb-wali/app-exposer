@@ -28,24 +28,38 @@ type IngressCrudder interface {
 
 // Ingresser is a concrete implementation of an IngressCrudder.
 type Ingresser struct {
-	ing typed_extv1beta1.IngressInterface
+	ing   typed_extv1beta1.IngressInterface
+	class string
 }
 
 // Create uses the Kubernetes API add a new Ingress to the indicated namespace.
 func (i *Ingresser) Create(opts *IngressOptions) (*extv1beta1.Ingress, error) {
+	backend := &extv1beta1.IngressBackend{
+		ServiceName: opts.Service,
+		ServicePort: intstr.FromInt(opts.Port),
+	}
 	return i.ing.Create(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class": i.class,
+			},
 		},
 		Spec: extv1beta1.IngressSpec{
-			Backend: &extv1beta1.IngressBackend{
-				ServiceName: opts.Service,
-				ServicePort: intstr.FromInt(opts.Port),
-			},
+			Backend: backend,
 			Rules: []extv1beta1.IngressRule{
 				{
 					Host: opts.Name, // For interactive apps, this is the job ID.
+					IngressRuleValue: extv1beta1.IngressRuleValue{
+						HTTP: &extv1beta1.HTTPIngressRuleValue{
+							Paths: []extv1beta1.HTTPIngressPath{
+								{
+									Backend: *backend,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -60,15 +74,33 @@ func (i *Ingresser) Get(name string) (*extv1beta1.Ingress, error) {
 
 // Update modifies an existing Ingress stored in K8s to match the provided info.
 func (i *Ingresser) Update(opts *IngressOptions) (*extv1beta1.Ingress, error) {
+	backend := &extv1beta1.IngressBackend{
+		ServiceName: opts.Service,
+		ServicePort: intstr.FromInt(opts.Port),
+	}
 	return i.ing.Update(&extv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      opts.Name,
 			Namespace: opts.Namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class": i.class,
+			},
 		},
 		Spec: extv1beta1.IngressSpec{
-			Backend: &extv1beta1.IngressBackend{
-				ServiceName: opts.Service,
-				ServicePort: intstr.FromInt(opts.Port),
+			Backend: backend,
+			Rules: []extv1beta1.IngressRule{
+				{
+					Host: opts.Name,
+					IngressRuleValue: extv1beta1.IngressRuleValue{
+						HTTP: &extv1beta1.HTTPIngressRuleValue{
+							Paths: []extv1beta1.HTTPIngressPath{
+								{
+									Backend: *backend,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	})
@@ -80,6 +112,6 @@ func (i *Ingresser) Delete(name string) error {
 }
 
 // NewIngresser returns a newly instantiated *Ingresser.
-func NewIngresser(i typed_extv1beta1.IngressInterface) *Ingresser {
-	return &Ingresser{i}
+func NewIngresser(i typed_extv1beta1.IngressInterface, class string) *Ingresser {
+	return &Ingresser{i, class}
 }
