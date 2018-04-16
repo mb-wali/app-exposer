@@ -24,13 +24,18 @@ func main() {
 		ingressClass *string
 	)
 
-	// If the home directory exists, then assume that the kube config will be read
-	// from ~/.kube/config.
-	if home := os.Getenv("HOME"); home != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		// If the home directory doesn't exist, then allow the user to specify a path.
+	// if cluster is set, then
+	if cluster := os.Getenv("CLUSTER"); cluster != "" {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	} else {
+		// If the home directory exists, then assume that the kube config will be read
+		// from ~/.kube/config.
+		if home := os.Getenv("HOME"); home != "" {
+			kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+		} else {
+			// If the home directory doesn't exist, then allow the user to specify a path.
+			kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+		}
 	}
 
 	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
