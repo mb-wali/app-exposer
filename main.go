@@ -40,7 +40,7 @@ func main() {
 
 	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
 	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
-	ingressClass = flag.String("ingress-class", "linkerd", "(optional) the ingress class to use")
+	ingressClass = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
 
 	flag.Parse()
 
