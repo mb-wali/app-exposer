@@ -1,13 +1,32 @@
-FROM golang:1.11-alpine
+### First stage
+FROM golang:1.12 as build-root
 
-RUN apk add --no-cache git
 RUN go get -u github.com/jstemmer/go-junit-report
 
-COPY . /go/src/github.com/cyverse-de/app-exposer
-ENV CGO_ENABLED=0
-RUN go install -v -ldflags "-X main.appver=$version -X main.gitref=$git_commit" github.com/cyverse-de/app-exposer
+WORKDIR /build
 
-ENTRYPOINT ["app-exposer"]
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+COPY . .
+
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+
+RUN go build -ldflags "-X main.appver=$version -X main.gitref=$git_commit" ./...
+RUN sh -c "go test -v | tee /dev/stderr | go-junit-report > test-results.xml"
+
+## Second stage
+FROM scratch
+
+COPY --from=build-root /build/app-exposer /
+COPY --from=build-root /build/test-results.xml /
+
+ENTRYPOINT ["/app-exposer"]
+
 EXPOSE 60000
 
 ARG git_commit=unknown
