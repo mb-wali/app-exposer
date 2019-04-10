@@ -33,7 +33,7 @@ node('docker') {
         try {
             stage "Test"
             try {
-              sh "docker create --name ${dockerTestRunner} ${dockerPushRepo}"
+              sh "docker create --name ${dockerTestRunner} ${dockerRepo}"
               sh "docker cp ${dockerTestRunner}:/test-results.xml ."
               sh "docker rm ${dockerTestRunner}"
             } finally {
