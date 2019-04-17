@@ -17,11 +17,12 @@ import (
 
 func main() {
 	var (
-		err          error
-		kubeconfig   *string
-		namespace    *string
-		listenPort   *int
-		ingressClass *string
+		err           error
+		kubeconfig    *string
+		namespace     *string
+		viceNamespace *string
+		listenPort    *int
+		ingressClass  *string
 	)
 
 	// if cluster is set, then
@@ -38,7 +39,8 @@ func main() {
 		}
 	}
 
-	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
+	namespace = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
+	viceNamespace = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
 	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
 	ingressClass = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
 
@@ -81,7 +83,7 @@ func main() {
 		log.Fatal(errors.Wrap(err, "error creating clientset from config"))
 	}
 
-	app := NewExposerApp(*namespace, *ingressClass, clientset)
+	app := NewExposerApp(*namespace, *ingressClass, *viceNamespace, clientset)
 	log.Printf("listening on port %d", *listenPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }

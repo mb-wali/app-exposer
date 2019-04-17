@@ -408,7 +408,6 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 }
 
 func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request) {
-	// Parse DE Job JSON
 	job := &model.Job{}
 
 	buf, err := ioutil.ReadAll(request.Body)
@@ -422,7 +421,7 @@ func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	if strings.ToLower(job.Type) != "interactive" {
+	if strings.ToLower(job.ExecutionTarget) != "interapps" {
 		http.Error(
 			writer,
 			fmt.Errorf("job type %s is not supported by this service", job.Type).Error(),
