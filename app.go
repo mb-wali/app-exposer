@@ -18,20 +18,25 @@ import (
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
 	namespace          string
+	clientset          kubernetes.Interface
+	viceNamespace      string
 	ServiceController  ServiceCrudder
 	EndpointController EndpointCrudder
 	IngressController  IngressCrudder
+	PorklockImage      string
+	PorklockTag        string
 	router             *mux.Router
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
 func NewExposerApp(ns, ingressClass string, cs kubernetes.Interface) *ExposerApp {
 	app := &ExposerApp{
-		ns,
-		NewServicer(cs.CoreV1().Services(ns)),
-		NewEndpointer(cs.CoreV1().Endpoints(ns)),
-		NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns), ingressClass),
-		mux.NewRouter(),
+		namespace:          ns,
+		clientset:          cs,
+		ServiceController:  NewServicer(cs.CoreV1().Services(ns)),
+		EndpointController: NewEndpointer(cs.CoreV1().Endpoints(ns)),
+		IngressController:  NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns), ingressClass),
+		router:             mux.NewRouter(),
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
