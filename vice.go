@@ -62,7 +62,7 @@ func inputCommand(job *model.Job) []string {
 		"porklock", "-jar", "/usr/src/app/porklock-standalone.jar",
 	}
 	appendArgs := []string{
-		"-z", "/etc/porklock/irods-config.json",
+		"-z", "/etc/porklock/irods-config.properties",
 	}
 	args := job.InputSourceListArguments(path.Join(inputPathListMountPath, inputPathListFileName))
 	return append(append(prependArgs, args...), appendArgs...)
@@ -116,7 +116,7 @@ func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
 }
 
 func inputPathListConfigMapName(job *model.Job) string {
-	return fmt.Sprintf("includes-%s", job.InvocationID)
+	return fmt.Sprintf("input-path-list-%s", job.InvocationID)
 }
 
 func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
@@ -143,7 +143,7 @@ func outputCommand(job *model.Job) []string {
 		"nc", "-lk", "-p", "60000", "-e", "porklock", "-jar", "/usr/src/app/porklock-standalone.jar",
 	}
 	appendArgs := []string{
-		"-z", "/etc/porklock/irods-config.json",
+		"-z", "/etc/porklock/irods-config.properties",
 	}
 	args := job.FinalOutputArguments(path.Join(excludesMountPath, excludesFileName))
 	return append(append(prependArgs, args...), appendArgs...)
@@ -335,7 +335,7 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(2),
+			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": job.InvocationID,
@@ -485,11 +485,6 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	_, err = svcclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
 		_, err = svcclient.Create(&svc)
-		if err != nil {
-			return err
-		}
-	} else {
-		_, err = svcclient.Update(&svc)
 		if err != nil {
 			return err
 		}
