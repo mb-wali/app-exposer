@@ -113,8 +113,8 @@ func main() {
 	exposerInit := &ExposerAppInit{
 		Namespace:                     *namespace,
 		ViceNamespace:                 *viceNamespace,
-		PorklockImage:                 cfg.GetString("porklock.image"),
-		PorklockTag:                   cfg.GetString("porklock.tag"),
+		PorklockImage:                 cfg.GetString("vice.file-transfers.image"),
+		PorklockTag:                   cfg.GetString("vice.file-transfers.tag"),
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
 	}
