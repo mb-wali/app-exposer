@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	jobtmpl "gopkg.in/cyverse-de/job-templates.v5"
+	jobtmpl "github.com/cyverse-de/job-templates"
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -34,8 +34,8 @@ const (
 	inputPathListFileName   = "input-path-list"
 	inputPathListVolumeName = "input-path-list"
 
-	outputFilesPortName = "tcp-trigger-output"
-	inputFilesPortName  = "tcp-trigger-input"
+	outputFilesPortName = "tcp-output"
+	inputFilesPortName  = "tcp-input"
 	outputFilesPort     = int32(60000)
 	inputFilesPort      = int32(60001)
 )
@@ -45,13 +45,11 @@ func int64Ptr(i int64) *int64 { return &i }
 
 func labelsFromJob(job *model.Job) map[string]string {
 	return map[string]string{
-		"app":         job.ID,
-		"app-name":    job.AppName,
-		"app-id":      job.AppID,
-		"username":    job.Submitter,
-		"user-id":     job.UserID,
-		"description": job.Description,
-		"output-dir":  job.OutputDirectory(),
+		"app":      job.InvocationID,
+		"app-name": job.AppName,
+		"app-id":   job.AppID,
+		"username": job.Submitter,
+		"user-id":  job.UserID,
 	}
 }
 
@@ -87,7 +85,7 @@ func analysisPorts(step *model.Step) []apiv1.ContainerPort {
 	for i, p := range step.Component.Container.Ports {
 		ports = append(ports, apiv1.ContainerPort{
 			ContainerPort: int32(p.ContainerPort),
-			Name:          fmt.Sprintf("tcp-analysis-port-%d", i),
+			Name:          fmt.Sprintf("tcp-a-%d", i),
 			Protocol:      apiv1.ProtocolTCP,
 		})
 	}
@@ -100,7 +98,7 @@ func inputFilesMountPath(job *model.Job) string {
 }
 
 func excludesConfigMapName(job *model.Job) string {
-	return fmt.Sprintf("excludes-file-%s", job.ID)
+	return fmt.Sprintf("excludes-file-%s", job.InvocationID)
 }
 
 func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
@@ -118,13 +116,13 @@ func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
 }
 
 func inputPathListConfigMapName(job *model.Job) string {
-	return fmt.Sprintf("includes-%s", job.ID)
+	return fmt.Sprintf("includes-%s", job.InvocationID)
 }
 
-func inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
+func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
 	labels := labelsFromJob(job)
 
-	fileContents, err := jobtmpl.InputPathListContents(job)
+	fileContents, err := jobtmpl.InputPathListContents(job, e.InputPathListIdentifier, e.TicketInputPathListIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -333,14 +331,14 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   job.ID,
+			Name:   job.InvocationID,
 			Labels: labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: int32Ptr(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": job.ID,
+					"app": job.InvocationID,
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
@@ -356,6 +354,9 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 		},
 	}
 
+	b, _ := json.Marshal(deployment)
+	log.Info(string(b))
+
 	return deployment, nil
 }
 
@@ -364,12 +365,12 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 
 	svc := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   job.ID,
+			Name:   job.InvocationID,
 			Labels: labels,
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				"app": job.ID,
+				"app": job.InvocationID,
 			},
 			Ports: []apiv1.ServicePort{
 				apiv1.ServicePort{
@@ -388,10 +389,10 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 		},
 	}
 
-	var analysisContainer *apiv1.Container
+	var analysisContainer apiv1.Container
 	for _, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == analysisContainerName {
-			analysisContainer = &container
+			analysisContainer = container
 		}
 	}
 
@@ -405,6 +406,96 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 	}
 
 	return svc
+}
+
+func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
+	excludesCM := excludesConfigMap(job)
+
+	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+
+	_, err := cmclient.Get(excludesConfigMapName(job), metav1.GetOptions{})
+	if err != nil {
+		fmt.Println(err)
+		_, err = cmclient.Create(&excludesCM)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = cmclient.Update(&excludesCM)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *ExposerApp) UpsertInputPathListConfigMap(job *model.Job) error {
+	inputCM, err := e.inputPathListConfigMap(job)
+	if err != nil {
+		return err
+	}
+
+	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+
+	_, err = cmclient.Get(inputPathListConfigMapName(job), metav1.GetOptions{})
+	if err != nil {
+		_, err = cmclient.Create(inputCM)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = cmclient.Update(inputCM)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
+	deployment, err := e.getDeployment(job)
+	if err != nil {
+		return err
+	}
+
+	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+
+	_, err = depclient.Get(job.InvocationID, metav1.GetOptions{})
+	if err != nil {
+		_, err = depclient.Create(deployment)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = depclient.Update(deployment)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create the service for the job.
+	svc := e.createService(job, deployment)
+
+	outputstring, _ := json.Marshal(svc)
+	log.Info(string(outputstring))
+
+	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+
+	_, err = svcclient.Get(job.InvocationID, metav1.GetOptions{})
+	if err != nil {
+		_, err = svcclient.Create(&svc)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = svcclient.Update(&svc)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request) {
@@ -430,73 +521,39 @@ func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	deployment, err := e.getDeployment(job)
-	if err != nil {
-		http.Error(
-			writer,
-			fmt.Errorf("error creating deployment for job : %s", job.InvocationID).Error(),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	svc := e.createService(job, deployment)
-	excludesCM := excludesConfigMap(job)
-	inputCM, err := inputPathListConfigMap(job)
-	if err != nil {
-		http.Error(
-			writer,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
 	// Create the excludes file ConfigMap for the job.
-	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
-	_, err = cmclient.Create(&excludesCM)
-	if err != nil {
-		http.Error(
-			writer,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
+	if err = e.UpsertExcludesConfigMap(job); err != nil {
+		if err != nil {
+			http.Error(
+				writer,
+				err.Error(),
+				http.StatusInternalServerError,
+			)
+			return
+		}
 	}
 
-	// Create the includes file ConfigMap for the job.
-	_, err = cmclient.Create(inputCM)
-	if err != nil {
-		http.Error(
-			writer,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
+	// Create the input path list config map
+	if err = e.UpsertInputPathListConfigMap(job); err != nil {
+		if err != nil {
+			http.Error(
+				writer,
+				err.Error(),
+				http.StatusInternalServerError,
+			)
+			return
+		}
 	}
 
 	// Create the deployment for the job.
-	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
-	_, err = depclient.Create(deployment)
-	if err != nil {
-		http.Error(
-			writer,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
+	if err = e.UpsertDeployment(job); err != nil {
+		if err != nil {
+			http.Error(
+				writer,
+				err.Error(),
+				http.StatusInternalServerError,
+			)
+			return
+		}
 	}
-
-	// Create the service for the job.
-	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
-	_, err = svcclient.Create(&svc)
-	if err != nil {
-		http.Error(
-			writer,
-			err.Error(),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
 }

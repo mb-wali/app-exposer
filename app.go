@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -17,27 +16,43 @@ import (
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
-	namespace          string
-	clientset          kubernetes.Interface
-	viceNamespace      string
-	ServiceController  ServiceCrudder
-	EndpointController EndpointCrudder
-	IngressController  IngressCrudder
-	PorklockImage      string
-	PorklockTag        string
-	router             *mux.Router
+	namespace                     string
+	clientset                     kubernetes.Interface
+	viceNamespace                 string
+	ServiceController             ServiceCrudder
+	EndpointController            EndpointCrudder
+	IngressController             IngressCrudder
+	PorklockImage                 string
+	PorklockTag                   string
+	InputPathListIdentifier       string
+	TicketInputPathListIdentifier string
+	router                        *mux.Router
+}
+
+// ExposerAppInit contains configuration settings for creating a new ExposerApp.
+type ExposerAppInit struct {
+	Namespace                     string // The namespace that the Ingress settings are added to.
+	ViceNamespace                 string // The namespace containing the running VICE apps.
+	PorklockImage                 string // The image containing the porklock tool
+	PorklockTag                   string // The docker tag for the image containing the porklock tool
+	InputPathListIdentifier       string // Header line for input path lists
+	TicketInputPathListIdentifier string // Header line for ticket input path lists
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
-func NewExposerApp(ns, ingressClass, vicens string, cs kubernetes.Interface) *ExposerApp {
+func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Interface) *ExposerApp {
 	app := &ExposerApp{
-		namespace:          ns,
-		clientset:          cs,
-		viceNamespace:      vicens,
-		ServiceController:  NewServicer(cs.CoreV1().Services(ns)),
-		EndpointController: NewEndpointer(cs.CoreV1().Endpoints(ns)),
-		IngressController:  NewIngresser(cs.ExtensionsV1beta1().Ingresses(ns), ingressClass),
-		router:             mux.NewRouter(),
+		namespace:                     init.Namespace,
+		viceNamespace:                 init.ViceNamespace,
+		PorklockImage:                 init.PorklockImage,
+		PorklockTag:                   init.PorklockTag,
+		InputPathListIdentifier:       init.InputPathListIdentifier,
+		TicketInputPathListIdentifier: init.TicketInputPathListIdentifier,
+		clientset:                     cs,
+		ServiceController:             NewServicer(cs.CoreV1().Services(init.Namespace)),
+		EndpointController:            NewEndpointer(cs.CoreV1().Endpoints(init.Namespace)),
+		IngressController:             NewIngresser(cs.ExtensionsV1beta1().Ingresses(init.Namespace), ingressClass),
+		router:                        mux.NewRouter(),
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.LaunchApp).Methods("POST")

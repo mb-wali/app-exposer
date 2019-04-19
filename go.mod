@@ -4,7 +4,8 @@ go 1.12
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9 // indirect
+	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
+	github.com/cyverse-de/job-templates v5.4.0+incompatible
 	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 // indirect
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.0.0 // indirect
@@ -21,13 +22,15 @@ require (
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pkg/errors v0.8.0
-	github.com/spf13/viper v1.3.2 // indirect
+	github.com/sirupsen/logrus v1.4.1
+	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190416223926-c405c3f32e7b
+	gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190419151052-a616a48941dd
+	gopkg.in/cyverse-de/model.v3 v3.0.0-20180723190425-bef877bd8175 // indirect
 	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab

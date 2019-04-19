@@ -7,6 +7,10 @@ github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8Nz
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9 h1:GXDamvpoo7b4k+cEk8ZA06HhHnz86wiJod5Q3zZO9Tg=
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9/go.mod h1:QMZ4G8bX5f0vKiH9+/2JqV687mN1byJ18tjZwIJIagI=
+github.com/cyverse-de/job-templates v4.0.6+incompatible h1:ORCDJrbN+D7+Dts8PDvoLmkp2SQ4EzwyDJuA8UjdO24=
+github.com/cyverse-de/job-templates v4.0.6+incompatible/go.mod h1:H0f7nV67/X6VgWsj4Tzy9YOQ96N8xbmrYV3Xazgfd6Y=
+github.com/cyverse-de/job-templates v5.4.0+incompatible h1:jmUbvh9kaMKJPvrTfdbyaW/6aQLZAkZxjz7OABmfEfo=
+github.com/cyverse-de/job-templates v5.4.0+incompatible/go.mod h1:H0f7nV67/X6VgWsj4Tzy9YOQ96N8xbmrYV3Xazgfd6Y=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 h1:zA3yEPSTCa27WQjKicm+YnFyOkfhe+SL+XbMEJOWYqc=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151/go.mod h1:baDVP9GnFuZ3A/u/vW5CJgaGcs+1C6lKeC0PIE4i8y0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
@@ -39,6 +43,7 @@ github.com/johnworth/model v0.0.0-20180604190733-9435ba8c8862 h1:sJlLbv/y2gY2pQ0
 github.com/johnworth/model v0.0.0-20180604190733-9435ba8c8862/go.mod h1:pisQO92o/Swn0zE5pNGQLkI4YyJyNSwMF1BVGPMVhBU=
 github.com/json-iterator/go v1.1.5 h1:gL2yXlmiIo4+t+y32d4WGwOjKGYcGOuyrg46vadswDE=
 github.com/json-iterator/go v1.1.5/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
+github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
@@ -63,6 +68,8 @@ github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/sirupsen/logrus v1.4.1 h1:GL2rEmy6nsikmW0r8opw9JIRScdMF5hA8cOYLH7In1k=
+github.com/sirupsen/logrus v1.4.1/go.mod h1:ni0Sbl8bgC9z8RoU9G6nDWqqs/fq4eDPysMBDgk/93Q=
 github.com/spf13/afero v1.1.2 h1:m8/z1t7/fwjysjQRYbP0RD+bUIF/8tJwPdEZsI83ACI=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/cast v1.3.0 h1:oget//CVOEoFewqQxwr0Ej5yjygnqGkvggSE/gB35Q8=
@@ -74,6 +81,7 @@ github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnIn
 github.com/spf13/viper v1.3.2 h1:VUFqw5KcqRf7i70GOzW7N+Q7+gxVBkSSqiXB12+JQ4M=
 github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DMA2s=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
+github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
@@ -91,6 +99,7 @@ golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 h1:bjcUS9ztw9kFmmIxJInhon/0Is3p+EHBKNgquIzo1OI=
 golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sys v0.0.0-20180905080454-ebe1bf3edb33/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e h1:o3PsSEY8E4eXWkXrIP9YJALUkVZqzHJT5DOasTyn8Vs=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20181205085412-a5c9d58dba9a h1:1n5lsVfiQW3yfsRGu98756EH1YthsFqr/5mxHduZW2A=
@@ -106,6 +115,10 @@ gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190416223926-c405c3f32e7b h1:s3XwETJyjRJb3acRwoSkRgaiwmGQQX0qmzBVNHA+1aA=
 gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190416223926-c405c3f32e7b/go.mod h1:F9NuFX+DjPPQeEY2vZXxHLWR4qUfvIo1fUtdVfgknHM=
+gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190419151052-a616a48941dd h1:6t5MSLP2s2r0uTG0X2E8Mr17QwovZH6wr+XqUzv2csc=
+gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190419151052-a616a48941dd/go.mod h1:F9NuFX+DjPPQeEY2vZXxHLWR4qUfvIo1fUtdVfgknHM=
+gopkg.in/cyverse-de/model.v3 v3.0.0-20180723190425-bef877bd8175 h1:Jcrnqtx01qaOxVf5KPBcig03bdiRS/wwQs/eJhOOAeE=
+gopkg.in/cyverse-de/model.v3 v3.0.0-20180723190425-bef877bd8175/go.mod h1:Sap3NORgmtrGI5r5VEkADYPcDJcbGONfwrzn51waQJE=
 gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151 h1:R3eWVmNC+b2S+PwEhkQOkrY/jXwMlizmiWyPlTG43lU=
 gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151/go.mod h1:HqIXwDCGrNLg/xyLDsJbg+DkDosGk9pddB/XHw9bcRU=
 gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
