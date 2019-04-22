@@ -23,8 +23,8 @@ const (
 	porklockConfigSecretName = "porklock-config"
 	porklockConfigMountPath  = "/etc/porklock"
 
-	inputFilesVolumeName    = "input-files"
-	inputFilesContainerName = "input-files"
+	fileTransfersVolumeName    = "input-files"
+	fileTransfersContainerName = "input-files"
 
 	excludesMountPath  = "/excludes"
 	excludesFileName   = "excludes-file"
@@ -34,10 +34,10 @@ const (
 	inputPathListFileName   = "input-path-list"
 	inputPathListVolumeName = "input-path-list"
 
-	outputFilesPortName = "tcp-output"
-	inputFilesPortName  = "tcp-input"
-	outputFilesPort     = int32(60000)
-	inputFilesPort      = int32(60001)
+	irodsConfigFilePath = "/etc/porklock/irods-config.properties"
+
+	fileTransfersPortName = "tcp-input"
+	fileTransfersPort     = int32(60001)
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -53,19 +53,18 @@ func labelsFromJob(job *model.Job) map[string]string {
 	}
 }
 
-func inputCommand(job *model.Job) []string {
-	prependArgs := []string{
-		"nc",
-		"-lk",
-		"-p", "60001",
-		"-e",
-		"porklock", "-jar", "/usr/src/app/porklock-standalone.jar",
+func fileTransferCommand(job *model.Job) []string {
+	return []string{
+		"vice-file-transfers",
+		"--listen-port", "60001",
+		"--user", job.Submitter,
+		"--excludes-file", path.Join(excludesMountPath, excludesFileName),
+		"--path-list-file", path.Join(inputPathListMountPath, inputPathListFileName),
+		"--destination", job.OutputDirectory(),
+		"--irods-config", irodsConfigFilePath,
+		"--analysis-id", job.ID,
+		"--invocation-id", job.InvocationID,
 	}
-	appendArgs := []string{
-		"-z", "/etc/porklock/irods-config.properties",
-	}
-	args := job.InputSourceListArguments(path.Join(inputPathListMountPath, inputPathListFileName))
-	return append(append(prependArgs, args...), appendArgs...)
 }
 
 func analysisCommand(step *model.Step) []string {
@@ -93,7 +92,7 @@ func analysisPorts(step *model.Step) []apiv1.ContainerPort {
 	return ports
 }
 
-func inputFilesMountPath(job *model.Job) string {
+func fileTransfersMountPath(job *model.Job) string {
 	return job.Steps[0].Component.Container.WorkingDirectory()
 }
 
@@ -138,17 +137,6 @@ func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, e
 	}, nil
 }
 
-func outputCommand(job *model.Job) []string {
-	prependArgs := []string{
-		"nc", "-lk", "-p", "60000", "-e", "porklock", "-jar", "/usr/src/app/porklock-standalone.jar",
-	}
-	appendArgs := []string{
-		"-z", "/etc/porklock/irods-config.properties",
-	}
-	args := job.FinalOutputArguments(path.Join(excludesMountPath, excludesFileName))
-	return append(append(prependArgs, args...), appendArgs...)
-}
-
 func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	output := []apiv1.Volume{}
 
@@ -167,7 +155,7 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 
 	output = append(output,
 		apiv1.Volume{
-			Name: inputFilesVolumeName,
+			Name: fileTransfersVolumeName,
 			VolumeSource: apiv1.VolumeSource{
 				EmptyDir: &apiv1.EmptyDirVolumeSource{},
 			},
@@ -195,29 +183,44 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
-func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
-	output := []apiv1.Container{}
+func (e *ExposerApp) analysisVolumeMounts(job *model.Job) []apiv1.VolumeMount {
+	retval := []apiv1.VolumeMount{
+		{
+			Name:      porklockConfigVolumeName,
+			MountPath: porklockConfigMountPath,
+		},
+		{
+			Name:      fileTransfersVolumeName,
+			MountPath: fileTransfersMountPath(job),
+		},
+		{
+			Name:      excludesVolumeName,
+			MountPath: excludesMountPath,
+		},
+	}
 
 	if len(job.FilterInputsWithoutTickets()) > 0 {
-		output = append(output, apiv1.Container{
-			Name:       inputFilesContainerName,
-			Image:      fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
-			Command:    inputCommand(job),
-			WorkingDir: inputPathListMountPath,
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      porklockConfigVolumeName,
-					MountPath: porklockConfigMountPath,
-				},
-				{
-					Name:      inputFilesVolumeName,
-					MountPath: inputFilesMountPath(job),
-				},
-			},
+		retval = append(retval, apiv1.VolumeMount{
+			Name:      inputPathListVolumeName,
+			MountPath: inputPathListMountPath,
+		})
+	}
+
+	return retval
+}
+
+func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
+	return []apiv1.Container{
+		apiv1.Container{
+			Name:         fileTransfersContainerName,
+			Image:        fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
+			Command:      fileTransferCommand(job),
+			WorkingDir:   inputPathListMountPath,
+			VolumeMounts: e.analysisVolumeMounts(job),
 			Ports: []apiv1.ContainerPort{
 				{
-					Name:          inputFilesPortName,
-					ContainerPort: inputFilesPort,
+					Name:          fileTransfersPortName,
+					ContainerPort: fileTransfersPort,
 					Protocol:      apiv1.Protocol("TCP"),
 				},
 			},
@@ -239,91 +242,40 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 					},
 				},
 			},
-		})
+		},
+		apiv1.Container{
+			Name: analysisContainerName,
+			Image: fmt.Sprintf(
+				"%s:%s",
+				job.Steps[0].Component.Container.Image.Name,
+				job.Steps[0].Component.Container.Image.Tag,
+			),
+			Command: analysisCommand(&job.Steps[0]),
+			VolumeMounts: []apiv1.VolumeMount{
+				{
+					Name:      fileTransfersVolumeName,
+					MountPath: fileTransfersMountPath(job),
+				},
+			},
+			Ports: analysisPorts(&job.Steps[0]),
+			SecurityContext: &apiv1.SecurityContext{
+				RunAsUser: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				Capabilities: &apiv1.Capabilities{
+					Drop: []apiv1.Capability{
+						"SETPCAP",
+						"AUDIT_WRITE",
+						"KILL",
+						"SETGID",
+						"SETUID",
+						"SYS_CHROOT",
+						"SETFCAP",
+						"FSETID",
+						"MKNOD",
+					},
+				},
+			},
+		},
 	}
-
-	output = append(output, apiv1.Container{
-		Name: analysisContainerName,
-		Image: fmt.Sprintf(
-			"%s:%s",
-			job.Steps[0].Component.Container.Image.Name,
-			job.Steps[0].Component.Container.Image.Tag,
-		),
-		Command: analysisCommand(&job.Steps[0]),
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				Name:      inputFilesVolumeName,
-				MountPath: inputFilesMountPath(job),
-			},
-		},
-		Ports: analysisPorts(&job.Steps[0]),
-		SecurityContext: &apiv1.SecurityContext{
-			RunAsUser: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-			Capabilities: &apiv1.Capabilities{
-				Drop: []apiv1.Capability{
-					"SETPCAP",
-					"AUDIT_WRITE",
-					"KILL",
-					"SETGID",
-					"SETUID",
-					"SYS_CHROOT",
-					"SETFCAP",
-					"FSETID",
-					"MKNOD",
-				},
-			},
-		},
-	})
-
-	output = append(output, apiv1.Container{
-		Name: "output-files",
-		Image: fmt.Sprintf(
-			"%s:%s",
-			e.PorklockImage,
-			e.PorklockTag,
-		),
-		Command: outputCommand(job),
-		VolumeMounts: []apiv1.VolumeMount{
-			{
-				Name:      porklockConfigVolumeName,
-				MountPath: porklockConfigMountPath,
-			},
-			{
-				Name:      inputFilesVolumeName,
-				MountPath: inputFilesMountPath(job),
-			},
-			{
-				Name:      excludesVolumeName,
-				MountPath: excludesMountPath,
-			},
-		},
-		Ports: []apiv1.ContainerPort{
-			apiv1.ContainerPort{
-				Name:          outputFilesPortName,
-				ContainerPort: outputFilesPort,
-			},
-		},
-		SecurityContext: &apiv1.SecurityContext{
-			RunAsUser: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-			Capabilities: &apiv1.Capabilities{
-				Drop: []apiv1.Capability{
-					"SETPCAP",
-					"AUDIT_WRITE",
-					"KILL",
-					"SETGID",
-					"SETUID",
-					"NET_BIND_SERVICE",
-					"SYS_CHROOT",
-					"SETFCAP",
-					"FSETID",
-					"NET_RAW",
-					"MKNOD",
-				},
-			},
-		},
-	})
-
-	return output
 }
 
 func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
@@ -374,16 +326,10 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 			},
 			Ports: []apiv1.ServicePort{
 				apiv1.ServicePort{
-					Name:       outputFilesPortName,
+					Name:       fileTransfersPortName,
 					Protocol:   apiv1.ProtocolTCP,
-					Port:       outputFilesPort,
-					TargetPort: intstr.FromString(outputFilesPortName),
-				},
-				apiv1.ServicePort{
-					Name:       inputFilesPortName,
-					Protocol:   apiv1.ProtocolTCP,
-					Port:       inputFilesPort,
-					TargetPort: intstr.FromString(inputFilesPortName),
+					Port:       fileTransfersPort,
+					TargetPort: intstr.FromString(fileTransfersPortName),
 				},
 			},
 		},
