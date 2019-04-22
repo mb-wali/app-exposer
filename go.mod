@@ -14,7 +14,6 @@ require (
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.1
 	github.com/imdario/mergo v0.0.0-20180119215619-163f41321a19 // indirect
-	github.com/johnworth/model v0.0.0-20180604190733-9435ba8c8862
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
@@ -30,7 +29,6 @@ require (
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190419151052-a616a48941dd
-	gopkg.in/cyverse-de/model.v3 v3.0.0-20180723190425-bef877bd8175 // indirect
 	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
