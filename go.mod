@@ -28,7 +28,6 @@ require (
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
-	gopkg.in/cyverse-de/job-templates.v5 v5.0.0-20190419151052-a616a48941dd
 	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab

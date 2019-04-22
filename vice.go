@@ -23,8 +23,9 @@ const (
 	porklockConfigSecretName = "porklock-config"
 	porklockConfigMountPath  = "/etc/porklock"
 
-	fileTransfersVolumeName    = "input-files"
-	fileTransfersContainerName = "input-files"
+	fileTransfersVolumeName      = "input-files"
+	fileTransfersContainerName   = "input-files"
+	fileTransfersInputsMountPath = "/input-files"
 
 	excludesMountPath  = "/excludes"
 	excludesFileName   = "excludes-file"
@@ -54,17 +55,20 @@ func labelsFromJob(job *model.Job) map[string]string {
 }
 
 func fileTransferCommand(job *model.Job) []string {
-	return []string{
-		"vice-file-transfers",
+	retval := []string{
+		"/vice-file-transfers",
 		"--listen-port", "60001",
 		"--user", job.Submitter,
 		"--excludes-file", path.Join(excludesMountPath, excludesFileName),
 		"--path-list-file", path.Join(inputPathListMountPath, inputPathListFileName),
 		"--destination", job.OutputDirectory(),
 		"--irods-config", irodsConfigFilePath,
-		"--analysis-id", job.ID,
 		"--invocation-id", job.InvocationID,
 	}
+	for _, fm := range job.FileMetadata {
+		retval = append(retval, fm.Argument()...)
+	}
+	return retval
 }
 
 func analysisCommand(step *model.Step) []string {
@@ -183,19 +187,22 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
-func (e *ExposerApp) analysisVolumeMounts(job *model.Job) []apiv1.VolumeMount {
+func (e *ExposerApp) fileTransfersVolumeMounts(job *model.Job) []apiv1.VolumeMount {
 	retval := []apiv1.VolumeMount{
 		{
 			Name:      porklockConfigVolumeName,
 			MountPath: porklockConfigMountPath,
+			ReadOnly:  true,
 		},
 		{
 			Name:      fileTransfersVolumeName,
-			MountPath: fileTransfersMountPath(job),
+			MountPath: fileTransfersInputsMountPath,
+			ReadOnly:  false,
 		},
 		{
 			Name:      excludesVolumeName,
 			MountPath: excludesMountPath,
+			ReadOnly:  true,
 		},
 	}
 
@@ -203,6 +210,7 @@ func (e *ExposerApp) analysisVolumeMounts(job *model.Job) []apiv1.VolumeMount {
 		retval = append(retval, apiv1.VolumeMount{
 			Name:      inputPathListVolumeName,
 			MountPath: inputPathListMountPath,
+			ReadOnly:  true,
 		})
 	}
 
@@ -212,11 +220,12 @@ func (e *ExposerApp) analysisVolumeMounts(job *model.Job) []apiv1.VolumeMount {
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:         fileTransfersContainerName,
-			Image:        fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
-			Command:      fileTransferCommand(job),
-			WorkingDir:   inputPathListMountPath,
-			VolumeMounts: e.analysisVolumeMounts(job),
+			Name:            fileTransfersContainerName,
+			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
+			Command:         fileTransferCommand(job),
+			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
+			WorkingDir:      inputPathListMountPath,
+			VolumeMounts:    e.fileTransfersVolumeMounts(job),
 			Ports: []apiv1.ContainerPort{
 				{
 					Name:          fileTransfersPortName,
@@ -225,22 +234,8 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				},
 			},
 			SecurityContext: &apiv1.SecurityContext{
-				RunAsUser: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-				Capabilities: &apiv1.Capabilities{
-					Drop: []apiv1.Capability{
-						"SETPCAP",
-						"AUDIT_WRITE",
-						"KILL",
-						"SETGID",
-						"SETUID",
-						"NET_BIND_SERVICE",
-						"SYS_CHROOT",
-						"SETFCAP",
-						"FSETID",
-						"NET_RAW",
-						"MKNOD",
-					},
-				},
+				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 			},
 		},
 		apiv1.Container{
@@ -255,11 +250,13 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				{
 					Name:      fileTransfersVolumeName,
 					MountPath: fileTransfersMountPath(job),
+					ReadOnly:  false,
 				},
 			},
 			Ports: analysisPorts(&job.Steps[0]),
 			SecurityContext: &apiv1.SecurityContext{
-				RunAsUser: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 				Capabilities: &apiv1.Capabilities{
 					Drop: []apiv1.Capability{
 						"SETPCAP",
@@ -301,6 +298,11 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 					RestartPolicy: apiv1.RestartPolicy("Always"),
 					Volumes:       deploymentVolumes(job),
 					Containers:    e.deploymentContainers(job),
+					SecurityContext: &apiv1.PodSecurityContext{
+						RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+						RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+						FSGroup:    int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+					},
 				},
 			},
 		},
@@ -317,7 +319,7 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 
 	svc := apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   job.InvocationID,
+			Name:   fmt.Sprintf("vice-%s", job.InvocationID),
 			Labels: labels,
 		},
 		Spec: apiv1.ServiceSpec{
