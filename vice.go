@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -120,6 +122,10 @@ func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
 
 func inputPathListConfigMapName(job *model.Job) string {
 	return fmt.Sprintf("input-path-list-%s", job.InvocationID)
+}
+
+func IngressName(userID, invocationID string) string {
+	return fmt.Sprintf("a%x", sha256.Sum256([]byte(fmt.Sprintf("%s%s", userID, invocationID))))[0:9]
 }
 
 func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
@@ -329,7 +335,7 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment) apiv1.Service {
+func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) apiv1.Service {
 	labels := labelsFromJob(job)
 
 	svc := apiv1.Service{
@@ -369,6 +375,94 @@ func (e *ExposerApp) createService(job *model.Job, deployment *appsv1.Deployment
 	}
 
 	return svc
+}
+
+func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1.Ingress, error) {
+	var (
+		rules        []extv1beta1.IngressRule
+		port80found  bool
+		port443found bool
+		firstPort    int32
+		defaultPort  int32
+	)
+
+	labels := labelsFromJob(job)
+	ingressName := IngressName(job.UserID, job.InvocationID)
+
+	for _, svcport := range svc.Spec.Ports {
+		if svcport.Name != fileTransfersPortName {
+			if svcport.Port == 80 {
+				port80found = true
+			}
+			if svcport.Port == 443 {
+				port443found = true
+			}
+			if firstPort == 0 { // 0 is firstPort's default value
+				firstPort = svcport.Port
+			}
+		}
+
+		rules = append(rules, extv1beta1.IngressRule{
+			Host: fmt.Sprintf("%s-port%d", ingressName, svcport.Port),
+			IngressRuleValue: extv1beta1.IngressRuleValue{
+				HTTP: &extv1beta1.HTTPIngressRuleValue{
+					Paths: []extv1beta1.HTTPIngressPath{
+						{
+							Backend: extv1beta1.IngressBackend{
+								ServiceName: svc.Name,
+								ServicePort: intstr.FromInt(int(svcport.Port)),
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	if port80found {
+		defaultPort = 80 // if any of the ports are 80, then that's the default.
+	} else if port443found {
+		defaultPort = 443 // if not, then any of the ports listed as 443 are the default.
+	} else {
+		defaultPort = firstPort // if not, then the first listed port is the default.
+	}
+
+	if defaultPort == 0 {
+		return nil, fmt.Errorf("default port cannot be 0 for invocation %s", job.InvocationID)
+	}
+
+	backend := &extv1beta1.IngressBackend{
+		ServiceName: svc.Name,
+		ServicePort: intstr.FromInt(int(defaultPort)),
+	}
+
+	// Make sure the default backend is also included
+	rules = append(rules, extv1beta1.IngressRule{
+		Host: ingressName,
+		IngressRuleValue: extv1beta1.IngressRuleValue{
+			HTTP: &extv1beta1.HTTPIngressRuleValue{
+				Paths: []extv1beta1.HTTPIngressPath{
+					{
+						Backend: *backend,
+					},
+				},
+			},
+		},
+	})
+
+	return &extv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: job.InvocationID,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class": "nginx",
+			},
+			Labels: labels,
+		},
+		Spec: extv1beta1.IngressSpec{
+			Backend: backend, // default backend
+			Rules:   rules,
+		},
+	}, nil
 }
 
 func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
@@ -423,7 +517,6 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	}
 
 	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
-
 	_, err = depclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
 		_, err = depclient.Create(deployment)
@@ -438,16 +531,26 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	}
 
 	// Create the service for the job.
-	svc := e.createService(job, deployment)
-
-	outputstring, _ := json.Marshal(svc)
-	log.Info(string(outputstring))
-
+	svc := e.getService(job, deployment)
 	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
-
 	_, err = svcclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
 		_, err = svcclient.Create(&svc)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create the ingress for the job
+	ingress, err := e.getIngress(job, &svc)
+	if err != nil {
+		return err
+	}
+
+	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	_, err = ingressclient.Get(ingress.Name, metav1.GetOptions{})
+	if err != nil {
+		_, err = ingressclient.Create(ingress)
 		if err != nil {
 			return err
 		}
