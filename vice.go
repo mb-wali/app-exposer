@@ -61,7 +61,7 @@ func fileTransferCommand(job *model.Job) []string {
 		"--user", job.Submitter,
 		"--excludes-file", path.Join(excludesMountPath, excludesFileName),
 		"--path-list-file", path.Join(inputPathListMountPath, inputPathListFileName),
-		"--destination", job.OutputDirectory(),
+		"--upload-destination", job.OutputDirectory(),
 		"--irods-config", irodsConfigFilePath,
 		"--invocation-id", job.InvocationID,
 	}
@@ -236,6 +236,21 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 			SecurityContext: &apiv1.SecurityContext{
 				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				Capabilities: &apiv1.Capabilities{
+					Drop: []apiv1.Capability{
+						"SETPCAP",
+						"AUDIT_WRITE",
+						"KILL",
+						"SETGID",
+						"SETUID",
+						"NET_BIND_SERVICE",
+						"SYS_CHROOT",
+						"SETFCAP",
+						"FSETID",
+						"NET_RAW",
+						"MKNOD",
+					},
+				},
 			},
 		},
 		apiv1.Container{
