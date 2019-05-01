@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -20,7 +20,13 @@ import (
 func TestNewExposerApp(t *testing.T) {
 	expectedNS := "testing"
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(expectedNS, "linkerd", testcs)
+
+	testinit := &ExposerAppInit{
+		Namespace:     expectedNS,
+		ViceNamespace: "",
+	}
+
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	if testapp.namespace != expectedNS {
 		t.Errorf("namespace was %s, not %s", testapp.namespace, expectedNS)
@@ -229,7 +235,13 @@ func TestWriteIngress(t *testing.T) {
 func TestCreateService(t *testing.T) {
 	expectedNS := "testing"
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(expectedNS, "linkerd", testcs)
+
+	testinit := &ExposerAppInit{
+		Namespace:     expectedNS,
+		ViceNamespace: "",
+	}
+
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	expectedOpts := &ServiceOptions{
 		TargetPort: 60000,
@@ -281,7 +293,13 @@ func TestCreateService(t *testing.T) {
 // service into it, and returns the app.
 func createAppLoadService(ns, name string) (*ExposerApp, error) {
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(ns, "linkerd", testcs)
+
+	testinit := &ExposerAppInit{
+		Namespace:     ns,
+		ViceNamespace: "",
+	}
+
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	createOpts := &ServiceOptions{
 		TargetPort: 40000,
@@ -451,7 +469,13 @@ func TestCreateEndpoint(t *testing.T) {
 	var expectedPort int32 = 60000
 
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(expectedNS, "linkerd", testcs)
+
+	testinit := &ExposerAppInit{
+		Namespace:     expectedNS,
+		ViceNamespace: "",
+	}
+
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	expectedOpts := &EndpointOptions{
 		IP:   expectedIP,
@@ -499,7 +523,11 @@ func TestCreateEndpoint(t *testing.T) {
 
 func createAppLoadEndpoint(ns, name string) (*ExposerApp, error) {
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(ns, "linkerd", testcs)
+	testinit := &ExposerAppInit{
+		Namespace:     ns,
+		ViceNamespace: "",
+	}
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	createOpts := &EndpointOptions{
 		IP:   "1.1.1.1",
@@ -663,7 +691,12 @@ func TestCreateIngress(t *testing.T) {
 	expectedPort := 60000
 
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(expectedNS, "linkerd", testcs)
+	testinit := &ExposerAppInit{
+		Namespace:     expectedNS,
+		ViceNamespace: "",
+	}
+
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	expectedOpts := &IngressOptions{
 		Service: expectedService,
@@ -711,7 +744,11 @@ func TestCreateIngress(t *testing.T) {
 
 func createAppLoadIngress(ns, name string) (*ExposerApp, error) {
 	testcs := fake.NewSimpleClientset()
-	testapp := NewExposerApp(ns, "linkerd", testcs)
+	testinit := &ExposerAppInit{
+		Namespace:     ns,
+		ViceNamespace: "",
+	}
+	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
 	createOpts := &IngressOptions{
 		Service: "test-service",

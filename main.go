@@ -3,25 +3,36 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 
+	"github.com/cyverse-de/configurate"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+var log = logrus.WithFields(logrus.Fields{
+	"service": "app-exposer",
+	"art-id":  "app-exposer",
+	"group":   "org.cyverse",
+})
+
 func main() {
 	var (
-		err          error
-		kubeconfig   *string
-		namespace    *string
-		listenPort   *int
-		ingressClass *string
+		err           error
+		configPath    *string
+		kubeconfig    *string
+		namespace     *string
+		viceNamespace *string
+		listenPort    *int
+		ingressClass  *string
+		cfg           *viper.Viper
 	)
 
 	// if cluster is set, then
@@ -38,11 +49,24 @@ func main() {
 		}
 	}
 
-	namespace = flag.String("namespace", "default", "The namespace scope this process operates on")
+	configPath = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
+	namespace = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
+	viceNamespace = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
 	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
 	ingressClass = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
 
 	flag.Parse()
+
+	fmt.Printf("Reading config from %s\n", *configPath)
+	if _, err = os.Open(*configPath); err != nil {
+		log.Fatal(*configPath)
+	}
+
+	cfg, err = configurate.Init(*configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Done reading config from %s\n", *configPath)
 
 	// Print error and exit if *kubeconfig is not empty and doesn't actually
 	// exist. If *kubeconfig is blank, then the app may be running inside the
@@ -81,7 +105,21 @@ func main() {
 		log.Fatal(errors.Wrap(err, "error creating clientset from config"))
 	}
 
-	app := NewExposerApp(*namespace, *ingressClass, clientset)
+	cfg, err = configurate.Init(*configPath)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "error reading config file"))
+	}
+
+	exposerInit := &ExposerAppInit{
+		Namespace:                     *namespace,
+		ViceNamespace:                 *viceNamespace,
+		PorklockImage:                 cfg.GetString("vice.file-transfers.image"),
+		PorklockTag:                   cfg.GetString("vice.file-transfers.tag"),
+		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
+		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
+	}
+
+	app := NewExposerApp(exposerInit, *ingressClass, clientset)
 	log.Printf("listening on port %d", *listenPort)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }
