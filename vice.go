@@ -46,6 +46,7 @@ const (
 func int32Ptr(i int32) *int32 { return &i }
 func int64Ptr(i int64) *int64 { return &i }
 
+// labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
 func labelsFromJob(job *model.Job) map[string]string {
 	return map[string]string{
 		"app":      job.InvocationID,
@@ -53,9 +54,11 @@ func labelsFromJob(job *model.Job) map[string]string {
 		"app-id":   job.AppID,
 		"username": job.Submitter,
 		"user-id":  job.UserID,
+		"app-type": "interactive",
 	}
 }
 
+// fileTransferCommand returns a []string containing the command to fire up the vice-file-transfers service.
 func fileTransferCommand(job *model.Job) []string {
 	retval := []string{
 		"/vice-file-transfers",
@@ -73,6 +76,7 @@ func fileTransferCommand(job *model.Job) []string {
 	return retval
 }
 
+// analyisCommand returns a []string containing the command to fire up the VICE analysis.
 func analysisCommand(step *model.Step) []string {
 	output := []string{}
 	if step.Component.Container.EntryPoint != "" {
@@ -84,6 +88,7 @@ func analysisCommand(step *model.Step) []string {
 	return output
 }
 
+// analysisPorts returns a list of container ports needed by the VICE analysis.
 func analysisPorts(step *model.Step) []apiv1.ContainerPort {
 	ports := []apiv1.ContainerPort{}
 
@@ -98,14 +103,21 @@ func analysisPorts(step *model.Step) []apiv1.ContainerPort {
 	return ports
 }
 
+// fileTransferMountPath returns the path to the directory containing file inputs.
 func fileTransfersMountPath(job *model.Job) string {
 	return job.Steps[0].Component.Container.WorkingDirectory()
 }
 
+// excludesConfigMapName returns the name of the ConfigMap containing the list
+// of paths that should be excluded from file uploads to iRODS by porklock.
 func excludesConfigMapName(job *model.Job) string {
 	return fmt.Sprintf("excludes-file-%s", job.InvocationID)
 }
 
+// excludesConfigMap returns the ConfigMap containing the list of paths
+// that should be excluded from file uploads to iRODS by porklock. This does NOT
+// call the k8s API to actually create the ConfigMap, just returns the object
+// that can be passed to the API.
 func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
 	labels := labelsFromJob(job)
 
@@ -120,14 +132,23 @@ func excludesConfigMap(job *model.Job) apiv1.ConfigMap {
 	}
 }
 
+// inputPathListConfigMapName returns the name of the ConfigMap containing
+// the list of paths that should be downloaded from iRODS by porklock
+// as input files for the VICE analysis.
 func inputPathListConfigMapName(job *model.Job) string {
 	return fmt.Sprintf("input-path-list-%s", job.InvocationID)
 }
 
+// IngressName returns the name of the ingress created for the running VICE
+// analysis. This should match the name created in the apps service.
 func IngressName(userID, invocationID string) string {
 	return fmt.Sprintf("a%x", sha256.Sum256([]byte(fmt.Sprintf("%s%s", userID, invocationID))))[0:9]
 }
 
+// inputPathListConfigMap returns the ConfigMap object containing the the
+// list of paths that should be downloaded from iRODS by porklock as input
+// files for the VICE analysis. This does NOT call the k8s API to actually
+// create the ConfigMap, just returns the object that can be passed to the API.
 func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
 	labels := labelsFromJob(job)
 
@@ -147,6 +168,11 @@ func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, e
 	}, nil
 }
 
+// deploymentVolumes returns the Volume objects needed for the VICE analyis
+// Deployment. This does NOT call the k8s API to actually create the Volumes,
+// it returns the objects that can be included in the Deployment object that
+// will get passed to the k8s API later. Also not that these are the Volumes,
+// not the container-specific VolumeMounts.
 func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	output := []apiv1.Volume{}
 
@@ -193,6 +219,9 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
+// fileTransferVolumeMounts returns the list of VolumeMounts needed by the fileTransfer
+// container in the VICE analysis pod. Each VolumeMount should correspond to one of the
+// Volumes returned by the deploymentVolumes() function. This does not call the k8s API.
 func (e *ExposerApp) fileTransfersVolumeMounts(job *model.Job) []apiv1.VolumeMount {
 	retval := []apiv1.VolumeMount{
 		{
@@ -223,6 +252,8 @@ func (e *ExposerApp) fileTransfersVolumeMounts(job *model.Job) []apiv1.VolumeMou
 	return retval
 }
 
+// deploymentContainers returns the Containers needed for the VICE analysis
+// Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
@@ -296,6 +327,8 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	}
 }
 
+// getDeployment assembles and returns the Deployment for the VICE analysis. It does
+// not call the k8s API.
 func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	labels := labelsFromJob(job)
 
@@ -335,6 +368,8 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
+// getService assembles and returns the Service needed for the VICE analysis.
+// It does not call the k8s API.
 func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) apiv1.Service {
 	labels := labelsFromJob(job)
 
@@ -377,6 +412,8 @@ func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) a
 	return svc
 }
 
+// getIngress assembles and returns the Ingress needed for the VICE analysis.
+// It does not call the k8s API.
 func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1.Ingress, error) {
 	var (
 		rules        []extv1beta1.IngressRule
@@ -465,6 +502,10 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 	}, nil
 }
 
+// UpsertExcludesConfigMap uses the Job passed in to assemble the ConfigMap
+// containing the files that should not be uploaded to iRODS. It then calls
+// the k8s API to create the ConfigMap if it does not already exist or to
+// update it if it does.
 func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
 	excludesCM := excludesConfigMap(job)
 
@@ -486,6 +527,10 @@ func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
 	return nil
 }
 
+// UpsertInputPathListConfigMap uses the Job passed in to assemble the ConfigMap
+// containing the path list of files to download from iRODS for the VICE analysis.
+// It then uses the k8s API to create the ConfigMap if it does not already exist or to
+// update it if it does.
 func (e *ExposerApp) UpsertInputPathListConfigMap(job *model.Job) error {
 	inputCM, err := e.inputPathListConfigMap(job)
 	if err != nil {
@@ -510,6 +555,9 @@ func (e *ExposerApp) UpsertInputPathListConfigMap(job *model.Job) error {
 	return nil
 }
 
+// UpsertDeployment uses the Job passed in to assemble a Deployment for the
+// VICE analysis. If then uses the k8s API to create the Deployment if it does
+// not already exist or to update it if it does.
 func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	deployment, err := e.getDeployment(job)
 	if err != nil {
@@ -559,6 +607,9 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	return nil
 }
 
+// LaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
+// the k8s cluster. This get passed to the router to be associated with a route. The Job
+// is passed in as the body of the request.
 func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request) {
 	job := &model.Job{}
 
