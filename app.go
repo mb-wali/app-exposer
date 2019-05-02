@@ -55,7 +55,9 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		router:                        mux.NewRouter(),
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
-	app.router.HandleFunc("/vice/launch", app.LaunchApp).Methods("POST")
+	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/downloads", app.VICETriggerDownloads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/uploads", app.VICETriggerUploads).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")
 	app.router.HandleFunc("/service/{name}", app.GetService).Methods("GET")

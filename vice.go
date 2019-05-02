@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
+	"sync"
 
 	jobtmpl "github.com/cyverse-de/job-templates"
+	"github.com/gorilla/mux"
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -49,12 +52,12 @@ func int64Ptr(i int64) *int64 { return &i }
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
 func labelsFromJob(job *model.Job) map[string]string {
 	return map[string]string{
-		"app":      job.InvocationID,
-		"app-name": job.AppName,
-		"app-id":   job.AppID,
-		"username": job.Submitter,
-		"user-id":  job.UserID,
-		"app-type": "interactive",
+		"external-id": job.InvocationID,
+		"app-name":    job.AppName,
+		"app-id":      job.AppID,
+		"username":    job.Submitter,
+		"user-id":     job.UserID,
+		"app-type":    "interactive",
 	}
 }
 
@@ -610,7 +613,7 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 // LaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
 // the k8s cluster. This get passed to the router to be associated with a route. The Job
 // is passed in as the body of the request.
-func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request) {
+func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Request) {
 	job := &model.Job{}
 
 	buf, err := ioutil.ReadAll(request.Body)
@@ -668,4 +671,70 @@ func (e *ExposerApp) LaunchApp(writer http.ResponseWriter, request *http.Request
 			return
 		}
 	}
+}
+
+// doFileTransfer handles requests to initial file transfers for a VICE
+// analysis. We only need the ID of the job, nothing is required in the
+// body of the request.
+func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Request, reqpath string) {
+	id := mux.Vars(request)["id"]
+
+	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svclist, err := svcclient.List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("external-id=%s", id),
+	})
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(svclist.Items) < 1 {
+		http.Error(
+			writer,
+			fmt.Errorf("no services with a label of 'external-id=%s' were found", id).Error(),
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	var wg sync.WaitGroup
+
+	for _, svc := range svclist.Items {
+		wg.Add(1)
+
+		go func(svc apiv1.Service) {
+			defer wg.Done()
+			svcurl := url.URL{}
+			svcurl.Scheme = "http"
+			svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
+			svcurl.Path = reqpath
+			resp, err := http.Post(svcurl.String(), "", nil)
+			if err != nil {
+				http.Error(
+					writer,
+					err.Error(),
+					http.StatusInternalServerError,
+				)
+				return
+			}
+			if resp.StatusCode < 200 || resp.StatusCode > 399 {
+				http.Error(
+					writer,
+					fmt.Errorf("download request to %s returned %d", svcurl.String(), resp.StatusCode).Error(),
+					resp.StatusCode,
+				)
+				return
+			}
+		}(svc)
+	}
+	wg.Wait()
+}
+
+// VICETriggerDownloads handles requests to trigger file downloads.
+func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
+	e.doFileTransfer(writer, request, "/download")
+}
+
+// VICETriggerUploads handles requests to trigger file uploads.
+func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
+	e.doFileTransfer(writer, request, "/upload")
 }
