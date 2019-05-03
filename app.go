@@ -56,8 +56,10 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/downloads", app.VICETriggerDownloads).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/uploads", app.VICETriggerUploads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/download-input-files", app.VICETriggerDownloads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/save-output-files", app.VICETriggerUploads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/exit", app.VICEExit).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/save-and-exit", app.VICESaveAndExit).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")
 	app.router.HandleFunc("/service/{name}", app.GetService).Methods("GET")

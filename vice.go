@@ -13,6 +13,7 @@ import (
 
 	jobtmpl "github.com/cyverse-de/job-templates"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -676,7 +677,7 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 // doFileTransfer handles requests to initial file transfers for a VICE
 // analysis. We only need the ID of the job, nothing is required in the
 // body of the request.
-func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Request, reqpath string) {
+func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Request, reqpath string) error {
 	id := mux.Vars(request)["id"]
 
 	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
@@ -684,16 +685,10 @@ func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Re
 		LabelSelector: fmt.Sprintf("external-id=%s", id),
 	})
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 	if len(svclist.Items) < 1 {
-		http.Error(
-			writer,
-			fmt.Errorf("no services with a label of 'external-id=%s' were found", id).Error(),
-			http.StatusNotFound,
-		)
-		return
+		return fmt.Errorf("no services with a label of 'external-id=%s' were found", id)
 	}
 
 	var wg sync.WaitGroup
@@ -707,34 +702,111 @@ func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Re
 			svcurl.Scheme = "http"
 			svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
 			svcurl.Path = reqpath
-			resp, err := http.Post(svcurl.String(), "", nil)
+			resp, posterr := http.Post(svcurl.String(), "", nil)
 			if err != nil {
-				http.Error(
-					writer,
-					err.Error(),
-					http.StatusInternalServerError,
-				)
+				err = errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
 				return
 			}
 			if resp.StatusCode < 200 || resp.StatusCode > 399 {
-				http.Error(
-					writer,
-					fmt.Errorf("download request to %s returned %d", svcurl.String(), resp.StatusCode).Error(),
-					resp.StatusCode,
-				)
+				err = errors.Wrapf(posterr, "download request to %s returned %d", svcurl.String(), resp.StatusCode)
 				return
 			}
 		}(svc)
 	}
+
 	wg.Wait()
+
+	return err
 }
 
 // VICETriggerDownloads handles requests to trigger file downloads.
 func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
-	e.doFileTransfer(writer, request, "/download")
+	var err error
+	if err = e.doFileTransfer(writer, request, "/download"); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // VICETriggerUploads handles requests to trigger file uploads.
 func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
-	e.doFileTransfer(writer, request, "/upload")
+	var err error
+	if err = e.doFileTransfer(writer, request, "/upload"); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// VICEExit terminates the VICE analysis deployment and cleans up
+// resources asscociated with it. Does not save outputs first. Uses
+// the external-id label to find all of the objects in the configured
+// namespace associated with the job. Deletes the following objects:
+// ingresses, services, deployments, and configmaps.
+func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request) {
+	id := mux.Vars(request)["id"]
+
+	listoptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("external-id=%s", id),
+	}
+
+	// Delete the ingress
+	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	ingresslist, err := ingressclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, ingress := range ingresslist.Items {
+		if err = ingressclient.Delete(ingress.Name, &metav1.DeleteOptions{}); err != nil {
+			log.Error(err)
+		}
+	}
+
+	// Delete the service
+	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svclist, err := svcclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, svc := range svclist.Items {
+		if err = svcclient.Delete(svc.Name, &metav1.DeleteOptions{}); err != nil {
+			log.Error(err)
+		}
+	}
+
+	// Delete the deployment
+	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	deplist, err := depclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, dep := range deplist.Items {
+		if err = depclient.Delete(dep.Name, &metav1.DeleteOptions{}); err != nil {
+			log.Error(err)
+		}
+	}
+
+	// Delete the input files list and the excludes list config maps
+	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+	cmlist, err := cmclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, cm := range cmlist.Items {
+		if err = cmclient.Delete(cm.Name, &metav1.DeleteOptions{}); err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+// VICESaveAndExit handles requests to save the output files in iRODS and then exit.
+// The exit portion will only occur if the save operation succeeds.
+func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.Request) {
+	var err error
+	if err = e.doFileTransfer(writer, request, "/upload"); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	e.VICEExit(writer, request)
 }
