@@ -19,6 +19,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -743,8 +744,12 @@ func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *htt
 func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["id"]
 
+	set := labels.Set(map[string]string{
+		"external-id": id,
+	})
+
 	listoptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("external-id=%s", id),
+		LabelSelector: set.AsSelector().String(),
 	}
 
 	// Delete the ingress
