@@ -345,7 +345,7 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": job.InvocationID,
+					"external-id": job.InvocationID,
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
