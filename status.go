@@ -9,13 +9,13 @@ import (
 	"os"
 	"path"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/apimachinery/pkg/watch"
-	apiv1 "k8s.io/api/core/v1"
 	"github.com/cyverse-de/messaging"
 	"github.com/pkg/errors"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/kubernetes"
 )
 
 // AnalysisStatusPublisher is the interface for types that need to publish a job
@@ -213,13 +213,13 @@ func (e *ExposerApp) processPodEvent(event *watch.Event) error {
 				continue
 			}
 
-			ii err = e.statusPublisher.Fail(
+			if err = e.statusPublisher.Fail(
 				jobID,
 				fmt.Sprintf(
-					"pod %s for analysis %s failed: %s", 
-					obj.Name, 
-					obj.Labels["analysis-name"], 
-					containerStatus.State.Terminated.Reason
+					"pod %s for analysis %s failed: %s",
+					obj.Name,
+					obj.Labels["analysis-name"],
+					containerStatus.State.Terminated.Reason,
 				),
 			); err != nil {
 				return err
