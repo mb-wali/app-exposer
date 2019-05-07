@@ -105,9 +105,14 @@ func main() {
 		log.Fatal(errors.Wrap(err, "error creating clientset from config"))
 	}
 
-	cfg, err = configurate.Init(*configPath)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "error reading config file"))
+	jobStatusURL := cfg.GetString("vice.job-status.base")
+	if jobStatusURL == "" {
+		jobStatusURL = "http://job-status-listener"
+	}
+
+	// Create the JSLPublisher for job status updates
+	jsl := &JSLPublisher{
+		statusURL: jobStatusURL,
 	}
 
 	exposerInit := &ExposerAppInit{
@@ -117,6 +122,7 @@ func main() {
 		PorklockTag:                   cfg.GetString("vice.file-transfers.tag"),
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
+		statusPublisher:               jsl,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)

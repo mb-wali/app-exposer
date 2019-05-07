@@ -53,13 +53,16 @@ func int64Ptr(i int64) *int64 { return &i }
 
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
 func labelsFromJob(job *model.Job) map[string]string {
+	name := []rune(job.Name)
+
 	return map[string]string{
-		"external-id": job.InvocationID,
-		"app-name":    job.AppName,
-		"app-id":      job.AppID,
-		"username":    job.Submitter,
-		"user-id":     job.UserID,
-		"app-type":    "interactive",
+		"external-id":   job.InvocationID,
+		"app-name":      job.AppName,
+		"app-id":        job.AppID,
+		"username":      job.Submitter,
+		"user-id":       job.UserID,
+		"analysis-name": string(name[:63]),
+		"app-type":      "interactive",
 	}
 }
 

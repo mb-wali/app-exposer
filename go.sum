@@ -9,6 +9,8 @@ github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9 h1:GXDamvpo
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9/go.mod h1:QMZ4G8bX5f0vKiH9+/2JqV687mN1byJ18tjZwIJIagI=
 github.com/cyverse-de/job-templates v5.4.0+incompatible h1:jmUbvh9kaMKJPvrTfdbyaW/6aQLZAkZxjz7OABmfEfo=
 github.com/cyverse-de/job-templates v5.4.0+incompatible/go.mod h1:H0f7nV67/X6VgWsj4Tzy9YOQ96N8xbmrYV3Xazgfd6Y=
+github.com/cyverse-de/messaging v6.0.0+incompatible h1:qt06ANdPHtxtuXW+1Km1u2uvhBrEZjuGMoy9STqfHE4=
+github.com/cyverse-de/messaging v6.0.0+incompatible/go.mod h1:P8+11w9KLDLVt4zlLI0iIvqj4Byj3098+S3xxFuXxwY=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 h1:zA3yEPSTCa27WQjKicm+YnFyOkfhe+SL+XbMEJOWYqc=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151/go.mod h1:baDVP9GnFuZ3A/u/vW5CJgaGcs+1C6lKeC0PIE4i8y0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
@@ -77,6 +79,8 @@ github.com/spf13/pflag v1.0.3 h1:zPAT6CGy6wXeQ7NtTnaTerfKOsV6V6F8agHXFiazDkg=
 github.com/spf13/pflag v1.0.3/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/spf13/viper v1.3.2 h1:VUFqw5KcqRf7i70GOzW7N+Q7+gxVBkSSqiXB12+JQ4M=
 github.com/spf13/viper v1.3.2/go.mod h1:ZiWeW+zYFKm7srdB9IoDzzZXaJaI5eL9QjNiN/DMA2s=
+github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 h1:0ngsPmuP6XIjiFRNFYlvKwSr5zff2v+uPHaffZ6/M4k=
+github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
