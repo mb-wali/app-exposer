@@ -142,10 +142,14 @@ func (e *ExposerApp) MonitorVICEEvents() {
 			for {
 				select {
 				case event := <-podchan:
-					e.processPodEvent(&event)
+					if err := e.processPodEvent(&event); err != nil {
+						log.Error(err)
+					}
 					break
 				case event := <-depchan:
-					e.processDeploymentEvent(&event)
+					if err = e.processDeploymentEvent(&event); err != nil {
+						log.Error(err)
+					}
 					break
 				}
 			}
