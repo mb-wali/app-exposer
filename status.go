@@ -11,6 +11,7 @@ import (
 
 	"github.com/cyverse-de/messaging"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -138,30 +139,16 @@ func (e *ExposerApp) MonitorVICEEvents() {
 			}
 			depchan := depwatcher.ResultChan()
 
-			svcwatcher, err := clientset.CoreV1().Services(e.viceNamespace).Watch(listoptions)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			svcchan := svcwatcher.ResultChan()
-
-			ingwatcher, err := clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace).Watch(listoptions)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			ingchan := ingwatcher.ResultChan()
-
 			for {
 				select {
 				case event := <-podchan:
-
+					e.processPodEvent(&event)
+					break
 				case event := <-depchan:
-				case event := <-svcchan:
-				case event := <-ingchan:
+					e.processDeploymentEvent(&event)
+					break
 				}
 			}
-			log.Debug("stopped monitoring k8s events, probably restarting")
 		}
 	}(e.namespace, e.clientset)
 }
@@ -183,51 +170,147 @@ func (e *ExposerApp) processPodEvent(event *watch.Event) error {
 
 	switch event.Type {
 	case watch.Added:
-		if err = e.statusPublisher.Running(
+		err = e.statusPublisher.Running(
 			jobID,
 			fmt.Sprintf("pod %s has started for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		); err != nil {
-			return err
-		}
+		)
 		break
 	case watch.Modified:
-		if err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("pod %s has been modified for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		); err != nil {
-			return err
-		}
+		err = e.eventPodModified(obj, jobID)
 		break
 	case watch.Deleted:
 		// Deletions are a success. Crashes are a failure. Those usually pop up as a Modified event.
-		if err = e.statusPublisher.Success(
+		err = e.statusPublisher.Success(
 			jobID,
 			fmt.Sprintf("pod %s has been deleted for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		); err != nil {
-			return err
-		}
+		)
 		break
 	default:
-		for _, containerStatus := range obj.Status.ContainerStatuses {
-			if containerStatus.State.Terminated == nil {
-				continue
-			}
-
-			if err = e.statusPublisher.Fail(
-				jobID,
-				fmt.Sprintf(
-					"pod %s for analysis %s failed: %s",
-					obj.Name,
-					obj.Labels["analysis-name"],
-					containerStatus.State.Terminated.Reason,
-				),
-			); err != nil {
-				return err
-			}
-		}
+		err = e.statusPublisher.Fail(
+			jobID,
+			fmt.Sprintf("pod %s is in an unknown state for analysis %s", obj.Name, obj.Labels["analysis-name"]),
+		)
 	}
 
-	return nil
+	return err
+}
+
+// eventPodModified handles emitting job status updates when the pod for the
+// VICE analysis generates a modified event from k8s.
+func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
+	var err error
+
+	analysisName := pod.Labels["analysis-name"]
+
+	if pod.DeletionTimestamp != nil {
+		// Pod was deleted at some point, don't do anything now.
+		return nil
+	}
+
+	switch pod.Status.Phase {
+	case apiv1.PodSucceeded: // unlikely, but we should handle it.
+		err = e.statusPublisher.Success(
+			jobID,
+			fmt.Sprintf("pod %s marked Completed for analysis %s", pod.Name, analysisName),
+		)
+		break
+	case apiv1.PodRunning:
+		err = e.statusPublisher.Running(
+			jobID,
+			fmt.Sprintf("pod %s of analysis %s changed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
+		)
+		break
+	case apiv1.PodFailed:
+		err = e.statusPublisher.Fail(
+			jobID,
+			fmt.Sprintf("pod %s of analysis %s failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
+		)
+		break
+	case apiv1.PodPending:
+		err = e.statusPublisher.Running(
+			jobID,
+			fmt.Sprintf("pod %s of analysis %s is pending", pod.Name, analysisName),
+		)
+		break
+	default:
+		err = e.statusPublisher.Fail(
+			jobID,
+			fmt.Sprintf("pod %s of analysis %s is in an unknown state. Marking as failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
+		)
+		break
+	}
+
+	return err
+}
+
+// processDeploymentEvent sends out notifications based on deployment events.
+// All notifications will be in the Running state since the app is technically
+// still up while the pods are up.
+func (e *ExposerApp) processDeploymentEvent(event *watch.Event) error {
+	var err error
+
+	obj, ok := event.Object.(*appsv1.Deployment)
+	if !ok {
+		return errors.New("unexpected type for pod object")
+	}
+
+	jobID, ok := obj.Labels["external-id"]
+	if !ok {
+		return errors.New("pod is missing external-id label")
+	}
+
+	switch event.Type {
+	case watch.Added:
+		err = e.statusPublisher.Running(
+			jobID,
+			fmt.Sprintf("deployment %s has started for analysis %s", obj.Name, obj.Labels["analysis-name"]),
+		)
+		break
+	case watch.Modified:
+		err = e.eventDeploymentModified(obj, jobID)
+		break
+	case watch.Deleted:
+		err = e.statusPublisher.Running(
+			jobID,
+			fmt.Sprintf("deployment %s has been deleted for analysis %s", obj.Name, obj.Labels["analysis-name"]),
+		)
+		break
+	default:
+		err = e.statusPublisher.Running(
+			jobID,
+			fmt.Sprintf("deployment %s is in an unknown state for analysis %s", obj.Name, obj.Labels["analysis-name"]),
+		)
+	}
+
+	return err
+}
+
+// eventDeploymentModified handles emitting job status updates when the pod for the
+// VICE analysis generates a modified event from k8s.
+func (e *ExposerApp) eventDeploymentModified(deployment *appsv1.Deployment, jobID string) error {
+	var err error
+
+	analysisName := deployment.Labels["analysis-name"]
+
+	if deployment.DeletionTimestamp != nil {
+		// Pod was deleted at some point, don't do anything now.
+		return nil
+	}
+
+	err = e.statusPublisher.Running(
+		jobID,
+		fmt.Sprintf(
+			"deployment %s for analysis %s summary: \n replicas: %d ready replicas: %d \n available replicas: %d \n unavailable replicas: %d",
+			deployment.Name,
+			analysisName,
+			deployment.Status.Replicas,
+			deployment.Status.ReadyReplicas,
+			deployment.Status.AvailableReplicas,
+			deployment.Status.UnavailableReplicas,
+		),
+	)
+
+	return err
 }
 
 func hostname() string {
