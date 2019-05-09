@@ -53,13 +53,16 @@ func int64Ptr(i int64) *int64 { return &i }
 
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
 func labelsFromJob(job *model.Job) map[string]string {
+	name := []rune(job.Name)
+
 	return map[string]string{
-		"external-id": job.InvocationID,
-		"app-name":    job.AppName,
-		"app-id":      job.AppID,
-		"username":    job.Submitter,
-		"user-id":     job.UserID,
-		"app-type":    "interactive",
+		"external-id":   job.InvocationID,
+		"app-name":      job.AppName,
+		"app-id":        job.AppID,
+		"username":      job.Submitter,
+		"user-id":       job.UserID,
+		"analysis-name": string(name[:63]),
+		"app-type":      "interactive",
 	}
 }
 
@@ -612,7 +615,7 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	return nil
 }
 
-// LaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
+// VICELaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
 // the k8s cluster. This get passed to the router to be associated with a route. The Job
 // is passed in as the body of the request.
 func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Request) {

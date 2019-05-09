@@ -6,7 +6,8 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
 	github.com/cyverse-de/job-templates v5.4.0+incompatible
-	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 // indirect
+	github.com/cyverse-de/messaging v6.0.0+incompatible
+	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.0.0 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
@@ -23,6 +24,7 @@ require (
 	github.com/pkg/errors v0.8.0
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/viper v1.3.2
+	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.3.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 // indirect

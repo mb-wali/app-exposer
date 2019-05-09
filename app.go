@@ -27,6 +27,7 @@ type ExposerApp struct {
 	InputPathListIdentifier       string
 	TicketInputPathListIdentifier string
 	router                        *mux.Router
+	statusPublisher               AnalysisStatusPublisher
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -37,6 +38,7 @@ type ExposerAppInit struct {
 	PorklockTag                   string // The docker tag for the image containing the porklock tool
 	InputPathListIdentifier       string // Header line for input path lists
 	TicketInputPathListIdentifier string // Header line for ticket input path lists
+	statusPublisher               AnalysisStatusPublisher
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -53,6 +55,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		EndpointController:            NewEndpointer(cs.CoreV1().Endpoints(init.Namespace)),
 		IngressController:             NewIngresser(cs.ExtensionsV1beta1().Ingresses(init.Namespace), ingressClass),
 		router:                        mux.NewRouter(),
+		statusPublisher:               init.statusPublisher,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
