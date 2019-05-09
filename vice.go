@@ -55,13 +55,20 @@ func int64Ptr(i int64) *int64 { return &i }
 func labelsFromJob(job *model.Job) map[string]string {
 	name := []rune(job.Name)
 
+	var stringmax int
+	if len(name) >= 63 {
+		stringmax = 62
+	} else {
+		stringmax = len(name) - 1
+	}
+
 	return map[string]string{
 		"external-id":   job.InvocationID,
 		"app-name":      job.AppName,
 		"app-id":        job.AppID,
 		"username":      job.Submitter,
 		"user-id":       job.UserID,
-		"analysis-name": string(name[:63]),
+		"analysis-name": string(name[:stringmax]),
 		"app-type":      "interactive",
 	}
 }
