@@ -615,7 +615,7 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	return nil
 }
 
-// LaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
+// VICELaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
 // the k8s cluster. This get passed to the router to be associated with a route. The Job
 // is passed in as the body of the request.
 func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Request) {
