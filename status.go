@@ -141,13 +141,13 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 			for {
 				select {
-				case event := <-podchan:
-					if err := e.processPodEvent(&event); err != nil {
+				case podevent := <-podchan:
+					if err := e.processPodEvent(&podevent); err != nil {
 						log.Error(err)
 					}
 					break
-				case event := <-depchan:
-					if err = e.processDeploymentEvent(&event); err != nil {
+				case depevent := <-depchan:
+					if err = e.processDeploymentEvent(&depevent); err != nil {
 						log.Error(err)
 					}
 					break
@@ -161,6 +161,12 @@ func (e *ExposerApp) MonitorVICEEvents() {
 // adapted/inspired by code at https://github.com/dtan4/k8s-pod-notifier/blob/master/kubernetes/client.go.
 func (e *ExposerApp) processPodEvent(event *watch.Event) error {
 	var err error
+
+	if event.Object == nil {
+		return errors.New("event object was nil")
+	}
+
+	log.Debugf("processing pod event %+v", event)
 
 	obj, ok := event.Object.(*apiv1.Pod)
 	if !ok {
