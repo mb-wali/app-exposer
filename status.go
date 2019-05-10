@@ -166,7 +166,7 @@ func (e *ExposerApp) processPodEvent(event *watch.Event) error {
 		return errors.New("event object was nil")
 	}
 
-	log.Debugf("processing pod event %+v", event)
+	log.Infof("processing pod event %+v", event)
 
 	obj, ok := event.Object.(*apiv1.Pod)
 	if !ok {
