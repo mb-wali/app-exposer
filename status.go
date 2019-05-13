@@ -139,10 +139,14 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 			podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
+					log.Debug("adding a pod")
+
 					podObj := obj.(v1.Object)
 					labels := podObj.GetLabels()
 					jobID := labels["external-id"]
 					analysisName := labels["analysis-name"]
+
+					log.Infof("processing pod addition for job %s", jobID)
 
 					if err := e.statusPublisher.Running(
 						jobID,
@@ -153,10 +157,14 @@ func (e *ExposerApp) MonitorVICEEvents() {
 				},
 
 				DeleteFunc: func(obj interface{}) {
+					log.Debug("deleting a pod")
+
 					podObj := obj.(v1.Object)
 					labels := podObj.GetLabels()
 					jobID := labels["external-id"]
 					analysisName := labels["analysis-name"]
+
+					log.Infof("processing pod deletion for job %s", jobID)
 
 					if err := e.statusPublisher.Success(
 						jobID,
@@ -167,6 +175,8 @@ func (e *ExposerApp) MonitorVICEEvents() {
 				},
 
 				UpdateFunc: func(oldObj, newObj interface{}) {
+					log.Debug("updating a pod")
+
 					newPod := newObj.(*apiv1.Pod)
 
 					jobID, ok := newPod.Labels["external-id"]
@@ -174,6 +184,8 @@ func (e *ExposerApp) MonitorVICEEvents() {
 						log.Error(errors.New("pod is missing external-id label"))
 						return
 					}
+
+					log.Infof("processing pod update for job %s", jobID)
 
 					if err := e.eventPodModified(newPod, jobID); err != nil {
 						log.Error(err)
