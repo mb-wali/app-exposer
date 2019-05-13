@@ -718,6 +718,10 @@ func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Re
 				err = errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
 				return
 			}
+			if resp == nil {
+				err = fmt.Errorf("response from %s was nil", svcurl.String())
+				return
+			}
 			if resp.StatusCode < 200 || resp.StatusCode > 399 {
 				err = errors.Wrapf(posterr, "download request to %s returned %d", svcurl.String(), resp.StatusCode)
 				return
