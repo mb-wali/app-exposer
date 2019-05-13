@@ -13,10 +13,8 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -117,25 +115,27 @@ func (j *JSLPublisher) Running(jobID, msg string) error {
 // MonitorVICEEvents fires up a goroutine that forwards events from the cluster
 // to the status receiving service (probably job-status-listener).
 func (e *ExposerApp) MonitorVICEEvents() {
-	go func(namespace string, clientset kubernetes.Interface) {
+	go func(clientset kubernetes.Interface) {
 		for {
 			log.Debug("beginning to monitor k8s events")
 			set := labels.Set(map[string]string{
 				"app-type": "interactive",
 			})
-
-			listoptions := metav1.ListOptions{
-				LabelSelector: set.AsSelector().String(),
-			}
-
 			factory := informers.NewSharedInformerFactoryWithOptions(
 				clientset,
 				0,
-				informers.WithNamespace(namespace),
+				informers.WithNamespace(e.viceNamespace),
+				informers.WithTweakListOptions(func(listoptions *v1.ListOptions) {
+					listoptions.LabelSelector = set.AsSelector().String()
+				}),
 			)
 			podInformer := factory.Core().V1().Pods().Informer()
 			podInformerStop := make(chan struct{})
 			defer close(podInformerStop)
+
+			deploymentInformer := factory.Apps().V1().Deployments().Informer()
+			deploymentInformerStop := make(chan struct{})
+			defer close(deploymentInformerStop)
 
 			podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
@@ -193,91 +193,104 @@ func (e *ExposerApp) MonitorVICEEvents() {
 				},
 			})
 
-			// podwatcher, err := clientset.CoreV1().Pods(namespace).Watch(listoptions)
-			// if err != nil {
-			// 	log.Error(err)
-			// 	return
-			// }
-			// podchan := podwatcher.ResultChan()
+			deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				AddFunc: func(obj interface{}) {
+					log.Debug("add a deployment")
+					var err error
 
-			depwatcher, err := clientset.AppsV1().Deployments(e.viceNamespace).Watch(listoptions)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			depchan := depwatcher.ResultChan()
+					depObj, ok := obj.(v1.Object)
+					if !ok {
+						log.Error(errors.New("unexpected type deployment object"))
+						return
+					}
 
-			for {
-				select {
-				// case podevent := <-podchan:
-				// 	go func(podevent watch.Event) {
-				// 		log.Info("received pod event")
-				// 		if err := e.processPodEvent(&podevent); err != nil {
-				// 			log.Error(err)
-				// 		}
-				// 	}(podevent)
-				// 	break
-				case depevent := <-depchan:
-					go func(depevent watch.Event) {
-						log.Info("received deployment event")
-						log.Infof("%+v", depevent)
-						if err = e.processDeploymentEvent(&depevent); err != nil {
-							log.Error(err)
-						}
-					}(depevent)
-					break
-				}
-			}
+					labels := depObj.GetLabels()
+
+					jobID, ok := labels["external-id"]
+					if !ok {
+						log.Error(errors.New("deployment is missing external-id label"))
+						return
+					}
+
+					log.Infof("processing deployment addition for job %s", jobID)
+
+					analysisName, ok := labels["analysis-name"]
+					if !ok {
+						log.Error(errors.New("deployment is missing analysis-name label"))
+						return
+					}
+
+					if err = e.statusPublisher.Running(
+						jobID,
+						fmt.Sprintf("deployment %s has started for analysis %s", depObj.GetName(), analysisName),
+					); err != nil {
+						log.Error(err)
+					}
+				},
+
+				DeleteFunc: func(obj interface{}) {
+					log.Debug("delete a deployment")
+					var err error
+
+					depObj, ok := obj.(v1.Object)
+					if !ok {
+						log.Error(errors.New("unexpected type deployment object"))
+						return
+					}
+
+					labels := depObj.GetLabels()
+
+					jobID, ok := labels["external-id"]
+					if !ok {
+						log.Error(errors.New("deployment is missing external-id label"))
+						return
+					}
+
+					log.Infof("processing deployment deletion for job %s", jobID)
+
+					analysisName, ok := labels["analysis-name"]
+					if !ok {
+						log.Error(errors.New("deployment is missing analysis-name label"))
+						return
+					}
+
+					// Success or failure is determined by the pod-level events
+					if err = e.statusPublisher.Running(
+						jobID,
+						fmt.Sprintf("deployment %s has been deleted for analysis %s", depObj.GetName(), analysisName),
+					); err != nil {
+						log.Error(err)
+					}
+				},
+
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					log.Debug("update a deployment")
+					var err error
+
+					depObj, ok := newObj.(*appsv1.Deployment)
+					if !ok {
+						log.Error(errors.New("unexpected type deployment object"))
+						return
+					}
+
+					jobID, ok := depObj.Labels["external-id"]
+					if !ok {
+						log.Error(errors.New("deployment is missing external-id label"))
+						return
+					}
+
+					log.Infof("processing deployment change for job %s", jobID)
+
+					if err = e.eventDeploymentModified(depObj, jobID); err != nil {
+						log.Error(err)
+					}
+				},
+			})
+
+			go podInformer.Run(podInformerStop)
+			deploymentInformer.Run(deploymentInformerStop)
 		}
-	}(e.namespace, e.clientset)
-}
-
-// processPodEvent will send out notifications based on pod events. Partially
-// adapted/inspired by code at https://github.com/dtan4/k8s-pod-notifier/blob/master/kubernetes/client.go.
-func (e *ExposerApp) processPodEvent(event *watch.Event) error {
-	var err error
-
-	if event.Object == nil {
-		return errors.New("event object was nil")
-	}
-
-	log.Infof("processing pod event %+v", event)
-
-	obj, ok := event.Object.(*apiv1.Pod)
-	if !ok {
-		return errors.New("unexpected type for pod object")
-	}
-
-	jobID, ok := obj.Labels["external-id"]
-	if !ok {
-		return errors.New("pod is missing external-id label")
-	}
-
-	switch event.Type {
-	case watch.Added:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("pod %s has started for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
-		break
-	case watch.Modified:
-		err = e.eventPodModified(obj, jobID)
-		break
-	case watch.Deleted:
-		// Deletions are a success. Crashes are a failure. Those usually pop up as a Modified event.
-		err = e.statusPublisher.Success(
-			jobID,
-			fmt.Sprintf("pod %s has been deleted for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
-		break
-	default:
-		err = e.statusPublisher.Fail(
-			jobID,
-			fmt.Sprintf("pod %s is in an unknown state for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
-	}
-
-	return err
+	}(e.clientset)
 }
 
 // eventPodModified handles emitting job status updates when the pod for the
@@ -323,48 +336,6 @@ func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
 			fmt.Sprintf("pod %s of analysis %s is in an unknown state. Marking as failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
 		)
 		break
-	}
-
-	return err
-}
-
-// processDeploymentEvent sends out notifications based on deployment events.
-// All notifications will be in the Running state since the app is technically
-// still up while the pods are up.
-func (e *ExposerApp) processDeploymentEvent(event *watch.Event) error {
-	var err error
-
-	obj, ok := event.Object.(*appsv1.Deployment)
-	if !ok {
-		return errors.New("unexpected type for pod object")
-	}
-
-	jobID, ok := obj.Labels["external-id"]
-	if !ok {
-		return errors.New("pod is missing external-id label")
-	}
-
-	switch event.Type {
-	case watch.Added:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("deployment %s has started for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
-		break
-	case watch.Modified:
-		err = e.eventDeploymentModified(obj, jobID)
-		break
-	case watch.Deleted:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("deployment %s has been deleted for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
-		break
-	default:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("deployment %s is in an unknown state for analysis %s", obj.Name, obj.Labels["analysis-name"]),
-		)
 	}
 
 	return err
