@@ -14,9 +14,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 )
 
 // AnalysisStatusPublisher is the interface for types that need to publish a job
@@ -125,12 +128,65 @@ func (e *ExposerApp) MonitorVICEEvents() {
 				LabelSelector: set.AsSelector().String(),
 			}
 
-			podwatcher, err := clientset.CoreV1().Pods(namespace).Watch(listoptions)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			podchan := podwatcher.ResultChan()
+			factory := informers.NewSharedInformerFactoryWithOptions(
+				clientset,
+				0,
+				informers.WithNamespace(namespace),
+			)
+			podInformer := factory.Core().V1().Pods().Informer()
+			podInformerStop := make(chan struct{})
+			defer close(podInformerStop)
+
+			podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+				AddFunc: func(obj interface{}) {
+					podObj := obj.(v1.Object)
+					labels := podObj.GetLabels()
+					jobID := labels["external-id"]
+					analysisName := labels["analysis-name"]
+
+					if err := e.statusPublisher.Running(
+						jobID,
+						fmt.Sprintf("pod %s has started for analysis %s", podObj.GetName(), analysisName),
+					); err != nil {
+						log.Error(errors.Wrapf(err, "error publishing running status when analysis %s was added", jobID))
+					}
+				},
+
+				DeleteFunc: func(obj interface{}) {
+					podObj := obj.(v1.Object)
+					labels := podObj.GetLabels()
+					jobID := labels["external-id"]
+					analysisName := labels["analysis-name"]
+
+					if err := e.statusPublisher.Success(
+						jobID,
+						fmt.Sprintf("pod %s has been deleted for analysis %s", podObj.GetName(), analysisName),
+					); err != nil {
+						log.Error(errors.Wrapf(err, "error publishing success status when analysis %s was deleted", jobID))
+					}
+				},
+
+				UpdateFunc: func(oldObj, newObj interface{}) {
+					newPod := newObj.(*apiv1.Pod)
+
+					jobID, ok := newPod.Labels["external-id"]
+					if !ok {
+						log.Error(errors.New("pod is missing external-id label"))
+						return
+					}
+
+					if err := e.eventPodModified(newPod, jobID); err != nil {
+						log.Error(err)
+					}
+				},
+			})
+
+			// podwatcher, err := clientset.CoreV1().Pods(namespace).Watch(listoptions)
+			// if err != nil {
+			// 	log.Error(err)
+			// 	return
+			// }
+			// podchan := podwatcher.ResultChan()
 
 			depwatcher, err := clientset.AppsV1().Deployments(e.viceNamespace).Watch(listoptions)
 			if err != nil {
@@ -141,15 +197,22 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 			for {
 				select {
-				case podevent := <-podchan:
-					if err := e.processPodEvent(&podevent); err != nil {
-						log.Error(err)
-					}
-					break
+				// case podevent := <-podchan:
+				// 	go func(podevent watch.Event) {
+				// 		log.Info("received pod event")
+				// 		if err := e.processPodEvent(&podevent); err != nil {
+				// 			log.Error(err)
+				// 		}
+				// 	}(podevent)
+				// 	break
 				case depevent := <-depchan:
-					if err = e.processDeploymentEvent(&depevent); err != nil {
-						log.Error(err)
-					}
+					go func(depevent watch.Event) {
+						log.Info("received deployment event")
+						log.Infof("%+v", depevent)
+						if err = e.processDeploymentEvent(&depevent); err != nil {
+							log.Error(err)
+						}
+					}(depevent)
 					break
 				}
 			}
