@@ -824,17 +824,26 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 // performed inside of a goroutine so that the caller isn't waiting for hours/days for
 // output file transfers to complete.
 func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.Request) {
+	log.Debug("save and exit called")
+
 	// Since file transfers can take a while, we should do this asynchronously by default.
 	go func(writer http.ResponseWriter, request *http.Request) {
 		var err error
 
+		log.Debug("calling doFileTransfer")
+
 		// Trigger a blocking output file transfer request.
 		if err = e.doFileTransfer(writer, request, "/upload"); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
+			log.Error(err)
 			return
 		}
 
+		log.Debug("calling VICEExit")
+
 		// Only tell the deployment to halt if the save worked.
 		e.VICEExit(writer, request)
+
+		log.Debug("after VICEExit")
 	}(writer, request)
 }
