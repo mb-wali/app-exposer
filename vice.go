@@ -688,7 +688,7 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 // doFileTransfer handles requests to initial file transfers for a VICE
 // analysis. We only need the ID of the job, nothing is required in the
 // body of the request.
-func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Request, reqpath string) error {
+func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath string) error {
 	id := mux.Vars(request)["id"]
 
 	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
@@ -713,8 +713,9 @@ func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Re
 			svcurl.Scheme = "http"
 			svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
 			svcurl.Path = reqpath
+			log.Infof("calling %s", svcurl.String())
 			resp, posterr := http.Post(svcurl.String(), "", nil)
-			if err != nil {
+			if posterr != nil {
 				err = errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
 				return
 			}
@@ -737,7 +738,7 @@ func (e *ExposerApp) doFileTransfer(writer http.ResponseWriter, request *http.Re
 // VICETriggerDownloads handles requests to trigger file downloads.
 func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(writer, request, "/download"); err != nil {
+	if err = e.doFileTransfer(request, "/download"); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -745,7 +746,7 @@ func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *h
 // VICETriggerUploads handles requests to trigger file uploads.
 func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(writer, request, "/upload"); err != nil {
+	if err = e.doFileTransfer(request, "/upload"); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -824,26 +825,28 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 // performed inside of a goroutine so that the caller isn't waiting for hours/days for
 // output file transfers to complete.
 func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.Request) {
-	log.Debug("save and exit called")
+	log.Info("save and exit called")
 
 	// Since file transfers can take a while, we should do this asynchronously by default.
 	go func(writer http.ResponseWriter, request *http.Request) {
 		var err error
 
-		log.Debug("calling doFileTransfer")
+		log.Info("calling doFileTransfer")
 
 		// Trigger a blocking output file transfer request.
-		if err = e.doFileTransfer(writer, request, "/upload"); err != nil {
+		if err = e.doFileTransfer(request, "/upload"); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			log.Error(err)
 			return
 		}
 
-		log.Debug("calling VICEExit")
+		log.Info("calling VICEExit")
 
 		// Only tell the deployment to halt if the save worked.
 		e.VICEExit(writer, request)
 
-		log.Debug("after VICEExit")
+		log.Info("after VICEExit")
 	}(writer, request)
+
+	log.Info("leaving save and exit")
 }
