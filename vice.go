@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	jobtmpl "github.com/cyverse-de/job-templates"
 	"github.com/gorilla/mux"
@@ -46,6 +47,11 @@ const (
 
 	fileTransfersPortName = "tcp-input"
 	fileTransfersPort     = int32(60001)
+
+	downloadBasePath = "/download"
+	uploadBasePath   = "/upload"
+	downloadKind     = "download"
+	uploadKind       = "upload"
 )
 
 func int32Ptr(i int32) *int32 { return &i }
@@ -685,23 +691,152 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 	}
 }
 
+type transferResponse struct {
+	UUID   string `json:"uuid"`
+	Status string `json:"status"`
+	Kind   string `json:"kind"`
+}
+
+func requestTransfer(svc apiv1.Service, reqpath string) (*transferResponse, error) {
+	var (
+		bodybytes []byte
+		bodyerr   error
+		jsonerr   error
+		err       error
+	)
+
+	xferresp := &transferResponse{}
+	svcurl := url.URL{}
+
+	svcurl.Scheme = "http"
+	svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
+	svcurl.Path = reqpath
+
+	log.Infof("calling %s", svcurl.String())
+
+	resp, posterr := http.Post(svcurl.String(), "", nil)
+	if posterr != nil {
+		return nil, errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("response from %s was nil", svcurl.String())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 399 {
+		return nil, errors.Wrapf(posterr, "download request to %s returned %d", svcurl.String(), resp.StatusCode)
+	}
+
+	if bodybytes, bodyerr = ioutil.ReadAll(resp.Body); err != nil {
+		return nil, errors.Wrapf(bodyerr, "reading body from %s failed", svcurl.String())
+	}
+
+	if jsonerr = json.Unmarshal(bodybytes, xferresp); jsonerr != nil {
+		return nil, errors.Wrapf(jsonerr, "error unmarshalling json from %s", svcurl.String())
+	}
+
+	return xferresp, nil
+}
+
+func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transferResponse, error) {
+	var (
+		bodybytes []byte
+		bodyerr   error
+		jsonerr   error
+		err       error
+	)
+
+	xferresp := &transferResponse{}
+	svcurl := url.URL{}
+
+	svcurl.Scheme = "http"
+	svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
+	svcurl.Path = reqpath
+
+	log.Infof("calling %s", svcurl.String())
+
+	resp, posterr := http.Get(svcurl.String())
+	if posterr != nil {
+		return nil, errors.Wrapf(posterr, "error on GET %s", svcurl.String())
+	}
+	if resp == nil {
+		return nil, fmt.Errorf("response from GET %s was nil", svcurl.String())
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 399 {
+		return nil, errors.Wrapf(posterr, "status request to %s returned %d", svcurl.String(), resp.StatusCode)
+	}
+
+	if bodybytes, bodyerr = ioutil.ReadAll(resp.Body); err != nil {
+		return nil, errors.Wrapf(bodyerr, "reading body from %s failed", svcurl.String())
+	}
+
+	if jsonerr = json.Unmarshal(bodybytes, xferresp); jsonerr != nil {
+		return nil, errors.Wrapf(jsonerr, "error unmarshalling json from %s", svcurl.String())
+	}
+
+	return xferresp, nil
+}
+
+const (
+	// RequestedStatus means the the transfer has been requested but hasn't started
+	RequestedStatus = "requested"
+
+	// DownloadingStatus means that a downloading request is running
+	DownloadingStatus = "downloading"
+
+	// UploadingStatus means that an uploading request is running
+	UploadingStatus = "uploading"
+
+	// FailedStatus means that the transfer request failed
+	FailedStatus = "failed"
+
+	//CompletedStatus means that the transfer request succeeded
+	CompletedStatus = "completed"
+)
+
+func isFinished(status string) bool {
+	switch status {
+	case FailedStatus:
+		return true
+	case CompletedStatus:
+		return true
+	default:
+		return false
+	}
+}
+
 // doFileTransfer handles requests to initial file transfers for a VICE
 // analysis. We only need the ID of the job, nothing is required in the
 // body of the request.
-func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath string) error {
+func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string) error {
 	id := mux.Vars(request)["id"]
 
+	log.Infof("starting %s transfers for job %s", kind, id)
+
+	// Make sure that the list of services only comes from the VICE namespace.
 	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+
+	// Filter the list of services so only those tagged with an external-id are
+	// returned. external-id is the job ID assigned by the apps service and is
+	// not the same as the analysis ID.
 	svclist, err := svcclient.List(metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("external-id=%s", id),
 	})
 	if err != nil {
 		return err
 	}
+
 	if len(svclist.Items) < 1 {
 		return fmt.Errorf("no services with a label of 'external-id=%s' were found", id)
 	}
 
+	// It's technically possibly for multiple services to provide file transfer services,
+	// so we should block until all of them are complete. We're using a WaitGroup to
+	// coordinate the file transfers, since they occur in separate goroutines.
 	var wg sync.WaitGroup
 
 	for _, svc := range svclist.Items {
@@ -709,27 +844,82 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath string) error
 
 		go func(svc apiv1.Service) {
 			defer wg.Done()
-			svcurl := url.URL{}
-			svcurl.Scheme = "http"
-			svcurl.Host = fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, fileTransfersPort)
-			svcurl.Path = reqpath
-			log.Infof("calling %s", svcurl.String())
-			resp, posterr := http.Post(svcurl.String(), "", nil)
-			if posterr != nil {
-				err = errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
+
+			log.Infof("%s transfer for %s", kind, id)
+
+			transferObj, xfererr := requestTransfer(svc, reqpath)
+			if xfererr != nil {
+				log.Error(xfererr)
+				err = xfererr
 				return
 			}
-			if resp == nil {
-				err = fmt.Errorf("response from %s was nil", svcurl.String())
-				return
-			}
-			if resp.StatusCode < 200 || resp.StatusCode > 399 {
-				err = errors.Wrapf(posterr, "download request to %s returned %d", svcurl.String(), resp.StatusCode)
-				return
+
+			for !isFinished(transferObj.Status) {
+				switch transferObj.Status {
+				case FailedStatus:
+					err = fmt.Errorf("failed to request file transfers from %s", svc.Spec.ClusterIP)
+
+					log.Error(err)
+
+					return // return and not break because we want to fail out
+				case CompletedStatus:
+					msg := fmt.Sprintf("%s succeeded for job %s", kind, id)
+
+					log.Info(msg)
+
+					if successerr := e.statusPublisher.Success(id, msg); successerr != nil {
+						log.Error(successerr)
+					}
+
+					break
+				case RequestedStatus:
+					msg := fmt.Sprintf("%s requested for job %s", kind, id)
+
+					log.Error(err)
+
+					if requestederr := e.statusPublisher.Running(id, msg); requestederr != nil {
+						log.Error(err)
+					}
+
+					break
+				case UploadingStatus:
+					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+
+					log.Info(msg)
+
+					if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
+						log.Error(err)
+					}
+
+					break
+				case DownloadingStatus:
+					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+
+					log.Info(msg)
+
+					if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
+						log.Error(err)
+					}
+
+					break
+				default:
+					err = fmt.Errorf("unknown status from %s: %s", svc.Spec.ClusterIP, transferObj.Status)
+
+					log.Error(err)
+
+					return // return and not break because we want to fail out
+				}
+
+				fullreqpath := path.Join(reqpath, transferObj.UUID)
+				transferObj, xfererr = getTransferDetails(transferObj.UUID, svc, fullreqpath)
+
+				time.Sleep(5 * time.Second)
 			}
 		}(svc)
 	}
 
+	// Block until all of the file transfers are complete. There usually will only
+	// be a single goroutine to wait for, but we should support more.
 	wg.Wait()
 
 	return err
@@ -738,7 +928,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath string) error
 // VICETriggerDownloads handles requests to trigger file downloads.
 func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, "/download"); err != nil {
+	if err = e.doFileTransfer(request, downloadBasePath, downloadKind); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -746,7 +936,7 @@ func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *h
 // VICETriggerUploads handles requests to trigger file uploads.
 func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, "/upload"); err != nil {
+	if err = e.doFileTransfer(request, uploadBasePath, uploadKind); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -834,7 +1024,7 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 		log.Info("calling doFileTransfer")
 
 		// Trigger a blocking output file transfer request.
-		if err = e.doFileTransfer(request, "/upload"); err != nil {
+		if err = e.doFileTransfer(request, uploadBasePath, uploadKind); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			log.Error(err)
 			return
