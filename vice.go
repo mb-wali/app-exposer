@@ -401,7 +401,7 @@ func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) a
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				"app": job.InvocationID,
+				"external-id": job.InvocationID,
 			},
 			Ports: []apiv1.ServicePort{
 				apiv1.ServicePort{
