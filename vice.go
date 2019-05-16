@@ -709,7 +709,7 @@ func requestTransfer(svc apiv1.Service, reqpath string) (*transferResponse, erro
 	svcurl := url.URL{}
 
 	svcurl.Scheme = "http"
-	svcurl.Host = fmt.Sprintf("%s:%d", svc.Name, fileTransfersPort)
+	svcurl.Host = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, fileTransfersPort)
 	svcurl.Path = reqpath
 
 	log.Infof("calling %s", svcurl.String())
@@ -751,7 +751,7 @@ func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transfer
 	svcurl := url.URL{}
 
 	svcurl.Scheme = "http"
-	svcurl.Host = fmt.Sprintf("%s:%d", svc.Name, fileTransfersPort)
+	svcurl.Host = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, fileTransfersPort)
 	svcurl.Path = reqpath
 
 	log.Infof("calling %s", svcurl.String())
