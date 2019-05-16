@@ -859,9 +859,15 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 
 				switch currentStatus {
 				case FailedStatus:
-					err = fmt.Errorf("failed to request file transfers from %s", svc.Spec.ClusterIP)
+					msg := fmt.Sprintf("%s failed for job %s", kind, id)
+
+					err = errors.New(msg)
 
 					log.Error(err)
+
+					if failerr := e.statusPublisher.Running(id, msg); failerr != nil {
+						log.Error(failerr)
+					}
 
 					return
 				case CompletedStatus:
@@ -869,7 +875,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 
 					log.Info(msg)
 
-					if successerr := e.statusPublisher.Success(id, msg); successerr != nil {
+					if successerr := e.statusPublisher.Running(id, msg); successerr != nil {
 						log.Error(successerr)
 					}
 
