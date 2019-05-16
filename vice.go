@@ -774,7 +774,7 @@ func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transfer
 		return nil, errors.Wrapf(bodyerr, "reading body from %s failed", svcurl.String())
 	}
 
-	log.Info(string(bodybytes))
+	log.Infof("body bytes %s", string(bodybytes))
 
 	if jsonerr = json.Unmarshal(bodybytes, xferresp); jsonerr != nil {
 		return nil, errors.Wrapf(jsonerr, "error unmarshalling json from %s", svcurl.String())
@@ -863,16 +863,21 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 
 			log.Infof("transfer object: %+v", transferObj)
 
-			for !isFinished(transferObj.Status) {
+			currentStatus := transferObj.Status
+
+			for !isFinished(currentStatus) {
 				log.Infof("transfer status %s", transferObj.Status)
 
-				switch transferObj.Status {
+				// Set it again here to catch the new values set farther down.
+				currentStatus = transferObj.Status
+
+				switch currentStatus {
 				case FailedStatus:
 					err = fmt.Errorf("failed to request file transfers from %s", svc.Spec.ClusterIP)
 
 					log.Error(err)
 
-					return // return and not break because we want to fail out
+					return
 				case CompletedStatus:
 					msg := fmt.Sprintf("%s succeeded for job %s", kind, id)
 
@@ -882,7 +887,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 						log.Error(successerr)
 					}
 
-					break
+					return
 				case RequestedStatus:
 					msg := fmt.Sprintf("%s requested for job %s", kind, id)
 
