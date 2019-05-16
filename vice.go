@@ -805,7 +805,7 @@ func isFinished(status string) bool {
 // doFileTransfer handles requests to initial file transfers for a VICE
 // analysis. We only need the ID of the job, nothing is required in the
 // body of the request.
-func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string) error {
+func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string, async bool) error {
 	id := mux.Vars(request)["id"]
 
 	log.Infof("starting %s transfers for job %s", kind, id)
@@ -837,10 +837,14 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 	var wg sync.WaitGroup
 
 	for _, svc := range svclist.Items {
-		wg.Add(1)
+		if !async {
+			wg.Add(1)
+		}
 
 		go func(svc apiv1.Service) {
-			defer wg.Done()
+			if !async {
+				defer wg.Done()
+			}
 
 			log.Infof("%s transfer for %s", kind, id)
 
@@ -939,7 +943,9 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 
 	// Block until all of the file transfers are complete. There usually will only
 	// be a single goroutine to wait for, but we should support more.
-	wg.Wait()
+	if !async {
+		wg.Wait()
+	}
 
 	return err
 }
@@ -947,7 +953,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 // VICETriggerDownloads handles requests to trigger file downloads.
 func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, downloadBasePath, downloadKind); err != nil {
+	if err = e.doFileTransfer(request, downloadBasePath, downloadKind, true); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -955,7 +961,7 @@ func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *h
 // VICETriggerUploads handles requests to trigger file uploads.
 func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, uploadBasePath, uploadKind); err != nil {
+	if err = e.doFileTransfer(request, uploadBasePath, uploadKind, true); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -1043,7 +1049,7 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 		log.Info("calling doFileTransfer")
 
 		// Trigger a blocking output file transfer request.
-		if err = e.doFileTransfer(request, uploadBasePath, uploadKind); err != nil {
+		if err = e.doFileTransfer(request, uploadBasePath, uploadKind, false); err != nil {
 			http.Error(writer, err.Error(), http.StatusInternalServerError)
 			log.Error(err)
 			return
