@@ -920,7 +920,20 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 				}
 
 				fullreqpath := path.Join(reqpath, transferObj.UUID)
+
+				log.Infof("full reqpath %s", fullreqpath)
+
 				transferObj, xfererr = getTransferDetails(transferObj.UUID, svc, fullreqpath)
+				if xfererr != nil {
+					log.Error(xfererr)
+					err = xfererr
+					return
+				}
+
+				if transferObj == nil {
+					log.Error("transferObj is nil")
+					return
+				}
 
 				time.Sleep(5 * time.Second)
 			}
