@@ -774,6 +774,8 @@ func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transfer
 		return nil, errors.Wrapf(bodyerr, "reading body from %s failed", svcurl.String())
 	}
 
+	log.Info(string(bodybytes))
+
 	if jsonerr = json.Unmarshal(bodybytes, xferresp); jsonerr != nil {
 		return nil, errors.Wrapf(jsonerr, "error unmarshalling json from %s", svcurl.String())
 	}
