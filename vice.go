@@ -823,8 +823,12 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 	// Filter the list of services so only those tagged with an external-id are
 	// returned. external-id is the job ID assigned by the apps service and is
 	// not the same as the analysis ID.
+	set := labels.Set(map[string]string{
+		"external-id": id,
+	})
+
 	svclist, err := svcclient.List(metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("external-id=%s", id),
+		LabelSelector: set.AsSelector().String(),
 	})
 	if err != nil {
 		return err
