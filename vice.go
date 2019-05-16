@@ -383,8 +383,6 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 		},
 	}
 
-	b, _ := json.Marshal(deployment)
-
 	return deployment, nil
 }
 
