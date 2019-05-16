@@ -384,7 +384,6 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	}
 
 	b, _ := json.Marshal(deployment)
-	log.Info(string(b))
 
 	return deployment, nil
 }
@@ -712,8 +711,6 @@ func requestTransfer(svc apiv1.Service, reqpath string) (*transferResponse, erro
 	svcurl.Host = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, fileTransfersPort)
 	svcurl.Path = reqpath
 
-	log.Infof("calling %s", svcurl.String())
-
 	resp, posterr := http.Post(svcurl.String(), "", nil)
 	if posterr != nil {
 		return nil, errors.Wrapf(posterr, "error POSTing to %s", svcurl.String())
@@ -754,8 +751,6 @@ func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transfer
 	svcurl.Host = fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, fileTransfersPort)
 	svcurl.Path = reqpath
 
-	log.Infof("calling %s", svcurl.String())
-
 	resp, posterr := http.Get(svcurl.String())
 	if posterr != nil {
 		return nil, errors.Wrapf(posterr, "error on GET %s", svcurl.String())
@@ -773,8 +768,6 @@ func getTransferDetails(id string, svc apiv1.Service, reqpath string) (*transfer
 	if bodybytes, bodyerr = ioutil.ReadAll(resp.Body); err != nil {
 		return nil, errors.Wrapf(bodyerr, "reading body from %s failed", svcurl.String())
 	}
-
-	log.Infof("body bytes %s", string(bodybytes))
 
 	if jsonerr = json.Unmarshal(bodybytes, xferresp); jsonerr != nil {
 		return nil, errors.Wrapf(jsonerr, "error unmarshalling json from %s", svcurl.String())
@@ -801,7 +794,6 @@ const (
 )
 
 func isFinished(status string) bool {
-	log.Infof("isFinished status %s", status)
 	switch status {
 	case FailedStatus:
 		return true
@@ -861,13 +853,9 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 				return
 			}
 
-			log.Infof("transfer object: %+v", transferObj)
-
 			currentStatus := transferObj.Status
 
 			for !isFinished(currentStatus) {
-				log.Infof("transfer status %s", transferObj.Status)
-
 				// Set it again here to catch the new values set farther down.
 				currentStatus = transferObj.Status
 
@@ -927,8 +915,6 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 				}
 
 				fullreqpath := path.Join(reqpath, transferObj.UUID)
-
-				log.Infof("full reqpath %s", fullreqpath)
 
 				transferObj, xfererr = getTransferDetails(transferObj.UUID, svc, fullreqpath)
 				if xfererr != nil {
