@@ -858,6 +858,8 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 				return
 			}
 
+			log.Infof("transfer object: %+v", transferObj)
+
 			for !isFinished(transferObj.Status) {
 				switch transferObj.Status {
 				case FailedStatus:
