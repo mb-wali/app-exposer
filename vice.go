@@ -799,6 +799,7 @@ const (
 )
 
 func isFinished(status string) bool {
+	log.Infof("isFinished status %s", status)
 	switch status {
 	case FailedStatus:
 		return true
@@ -861,6 +862,8 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string)
 			log.Infof("transfer object: %+v", transferObj)
 
 			for !isFinished(transferObj.Status) {
+				log.Infof("transfer status %s", transferObj.Status)
+
 				switch transferObj.Status {
 				case FailedStatus:
 					err = fmt.Errorf("failed to request file transfers from %s", svc.Spec.ClusterIP)
