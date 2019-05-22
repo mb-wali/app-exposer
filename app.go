@@ -68,9 +68,12 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		IngressController:             NewIngresser(cs.ExtensionsV1beta1().Ingresses(init.Namespace), ingressClass),
 		router:                        mux.NewRouter(),
 		statusPublisher:               init.statusPublisher,
+		IngressBaseURL:                init.IngressBaseURL,
 		ViceProxyImage:                init.ViceProxyImage,
 		CASBaseURL:                    init.CASBaseURL,
 		FrontendBaseURL:               init.FrontendBaseURL,
+		AnalysisHeader:                init.AnalysisHeader,
+		AccessHeader:                  init.AccessHeader,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
