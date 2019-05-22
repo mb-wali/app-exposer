@@ -9,6 +9,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // analyisCommand returns a []string containing the command to fire up the VICE analysis.
@@ -144,6 +145,15 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 					},
 				},
 			},
+			ReadinessProbe: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					HTTPGet: &apiv1.HTTPGetAction{
+						Port:   intstr.FromInt(int(viceProxyPort)),
+						Scheme: apiv1.URISchemeHTTP,
+						Path:   "/",
+					},
+				},
+			},
 		},
 		apiv1.Container{
 			Name:            fileTransfersContainerName,
@@ -178,6 +188,15 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 					},
 				},
 			},
+			ReadinessProbe: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					HTTPGet: &apiv1.HTTPGetAction{
+						Port:   intstr.FromInt(int(fileTransfersPort)),
+						Scheme: apiv1.URISchemeHTTP,
+						Path:   "/",
+					},
+				},
+			},
 		},
 		apiv1.Container{
 			Name: analysisContainerName,
@@ -209,6 +228,15 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 						"SETFCAP",
 						"FSETID",
 						"MKNOD",
+					},
+				},
+			},
+			ReadinessProbe: &apiv1.Probe{
+				Handler: apiv1.Handler{
+					HTTPGet: &apiv1.HTTPGetAction{
+						Port:   intstr.FromInt(job.Steps[0].Component.Container.Ports[0].ContainerPort),
+						Scheme: apiv1.URISchemeHTTP,
+						Path:   "/",
 					},
 				},
 			},
