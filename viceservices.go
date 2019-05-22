@@ -31,24 +31,14 @@ func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) a
 					Port:       fileTransfersPort,
 					TargetPort: intstr.FromString(fileTransfersPortName),
 				},
+				apiv1.ServicePort{
+					Name:       viceProxyPortName,
+					Protocol:   apiv1.ProtocolTCP,
+					Port:       viceProxyServicePort,
+					TargetPort: intstr.FromString(viceProxyPortName),
+				},
 			},
 		},
-	}
-
-	var analysisContainer apiv1.Container
-	for _, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == analysisContainerName {
-			analysisContainer = container
-		}
-	}
-
-	for _, port := range analysisContainer.Ports {
-		svc.Spec.Ports = append(svc.Spec.Ports, apiv1.ServicePort{
-			Name:       port.Name,
-			Protocol:   port.Protocol,
-			Port:       port.ContainerPort,
-			TargetPort: intstr.FromString(port.Name),
-		})
 	}
 
 	return svc

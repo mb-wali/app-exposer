@@ -21,64 +21,32 @@ func IngressName(userID, invocationID string) string {
 // It does not call the k8s API.
 func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1.Ingress, error) {
 	var (
-		rules        []extv1beta1.IngressRule
-		port80found  bool
-		port443found bool
-		firstPort    int32
-		defaultPort  int32
+		rules       []extv1beta1.IngressRule
+		defaultPort int32
 	)
 
 	labels := labelsFromJob(job)
 	ingressName := IngressName(job.UserID, job.InvocationID)
 
-	for _, svcport := range svc.Spec.Ports {
-		if svcport.Name != fileTransfersPortName {
-			if svcport.Port == 80 {
-				port80found = true
-			}
-			if svcport.Port == 443 {
-				port443found = true
-			}
-			if firstPort == 0 { // 0 is firstPort's default value
-				firstPort = svcport.Port
-			}
+	// Find the proxy port, use it as the default
+	for _, port := range svc.Spec.Ports {
+		if port.Name == viceProxyPortName {
+			defaultPort = port.Port
 		}
-
-		rules = append(rules, extv1beta1.IngressRule{
-			Host: fmt.Sprintf("%s-port%d", ingressName, svcport.Port),
-			IngressRuleValue: extv1beta1.IngressRuleValue{
-				HTTP: &extv1beta1.HTTPIngressRuleValue{
-					Paths: []extv1beta1.HTTPIngressPath{
-						{
-							Backend: extv1beta1.IngressBackend{
-								ServiceName: svc.Name,
-								ServicePort: intstr.FromInt(int(svcport.Port)),
-							},
-						},
-					},
-				},
-			},
-		})
 	}
 
-	if port80found {
-		defaultPort = 80 // if any of the ports are 80, then that's the default.
-	} else if port443found {
-		defaultPort = 443 // if not, then any of the ports listed as 443 are the default.
-	} else {
-		defaultPort = firstPort // if not, then the first listed port is the default.
-	}
-
+	// Handle if the defaultPort isn't set yet.
 	if defaultPort == 0 {
-		return nil, fmt.Errorf("default port cannot be 0 for invocation %s", job.InvocationID)
+		return nil, fmt.Errorf("port %s was not found in the service", viceProxyPortName)
 	}
 
+	// Used as the default backend as well.
 	backend := &extv1beta1.IngressBackend{
 		ServiceName: svc.Name,
 		ServicePort: intstr.FromInt(int(defaultPort)),
 	}
 
-	// Make sure the default backend is also included
+	// Add the rule to pass along requests to the Service's proxy port.
 	rules = append(rules, extv1beta1.IngressRule{
 		Host: ingressName,
 		IngressRuleValue: extv1beta1.IngressRuleValue{

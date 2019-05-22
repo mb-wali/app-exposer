@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/url"
+	"strconv"
 
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
@@ -87,10 +89,62 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
+func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
+	// This should be parsed in main(), so we shouldn't worry about it here.
+	frontURL, _ := url.Parse(e.FrontendBaseURL)
+	frontURL.Host = fmt.Sprintf("%s.%s", IngressName(job.UserID, job.InvocationID), frontURL.Host)
+
+	output := []string{
+		"cas-proxy",
+		"--backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
+		"--ws-backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
+		"--cas-base-url", e.CASBaseURL,
+		"--cas-validate", "validate",
+		"--frontend-url", frontURL.String(),
+		"--external-id", job.InvocationID,
+		"--ingress-url", e.IngressBaseURL,
+		"--analysis-header", e.AnalysisHeader,
+		"--access-header", e.AccessHeader,
+	}
+
+	return output
+}
+
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
+		apiv1.Container{
+			Name:            viceProxyContainerName,
+			Image:           e.ViceProxyImage,
+			Command:         e.viceProxyCommand(job),
+			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
+			Ports: []apiv1.ContainerPort{
+				{
+					Name:          viceProxyPortName,
+					ContainerPort: viceProxyPort,
+					Protocol:      apiv1.Protocol("TCP"),
+				},
+			},
+			SecurityContext: &apiv1.SecurityContext{
+				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				Capabilities: &apiv1.Capabilities{
+					Drop: []apiv1.Capability{
+						"SETPCAP",
+						"AUDIT_WRITE",
+						"KILL",
+						"SETGID",
+						"SETUID",
+						"SYS_CHROOT",
+						"SETFCAP",
+						"FSETID",
+						"NET_RAW",
+						"MKNOD",
+					},
+				},
+			},
+		},
 		apiv1.Container{
 			Name:            fileTransfersContainerName,
 			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),

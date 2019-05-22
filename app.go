@@ -28,6 +28,12 @@ type ExposerApp struct {
 	TicketInputPathListIdentifier string
 	router                        *mux.Router
 	statusPublisher               AnalysisStatusPublisher
+	ViceProxyImage                string
+	CASBaseURL                    string
+	FrontendBaseURL               string
+	IngressBaseURL                string
+	AnalysisHeader                string
+	AccessHeader                  string
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -39,6 +45,12 @@ type ExposerAppInit struct {
 	InputPathListIdentifier       string // Header line for input path lists
 	TicketInputPathListIdentifier string // Header line for ticket input path lists
 	statusPublisher               AnalysisStatusPublisher
+	ViceProxyImage                string
+	CASBaseURL                    string
+	FrontendBaseURL               string
+	IngressBaseURL                string
+	AnalysisHeader                string
+	AccessHeader                  string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -56,6 +68,9 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		IngressController:             NewIngresser(cs.ExtensionsV1beta1().Ingresses(init.Namespace), ingressClass),
 		router:                        mux.NewRouter(),
 		statusPublisher:               init.statusPublisher,
+		ViceProxyImage:                init.ViceProxyImage,
+		CASBaseURL:                    init.CASBaseURL,
+		FrontendBaseURL:               init.FrontendBaseURL,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")

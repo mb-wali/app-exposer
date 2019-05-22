@@ -1,6 +1,5 @@
 package main
 
-
 const (
 	analysisContainerName = "analysis"
 
@@ -11,6 +10,11 @@ const (
 	fileTransfersVolumeName      = "input-files"
 	fileTransfersContainerName   = "input-files"
 	fileTransfersInputsMountPath = "/input-files"
+
+	viceProxyContainerName = "vice-proxy"
+	viceProxyPort          = int32(8080)
+	viceProxyPortName      = "tcp-proxy"
+	viceProxyServicePort   = int32(60000)
 
 	excludesMountPath  = "/excludes"
 	excludesFileName   = "excludes-file"

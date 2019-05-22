@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -25,14 +26,16 @@ var log = logrus.WithFields(logrus.Fields{
 
 func main() {
 	var (
-		err           error
-		configPath    *string
-		kubeconfig    *string
-		namespace     *string
-		viceNamespace *string
-		listenPort    *int
-		ingressClass  *string
-		cfg           *viper.Viper
+		err        error
+		kubeconfig *string
+		cfg        *viper.Viper
+
+		configPath    = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
+		namespace     = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
+		viceNamespace = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
+		listenPort    = flag.Int("port", 60000, "(optional) The port to listen on")
+		ingressClass  = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
+		viceProxy     = flag.String("vice-proxy", "discoenv/cas-proxy", "The image name of the proxy to use for VICE apps. The image tag is set in the config.")
 	)
 
 	// if cluster is set, then
@@ -49,12 +52,6 @@ func main() {
 		}
 	}
 
-	configPath = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
-	namespace = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
-	viceNamespace = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
-	listenPort = flag.Int("port", 60000, "(optional) The port to listen on")
-	ingressClass = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
-
 	flag.Parse()
 
 	fmt.Printf("Reading config from %s\n", *configPath)
@@ -67,6 +64,11 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("Done reading config from %s\n", *configPath)
+
+	// Make sure the frontend base URL is parseable.
+	if _, err = url.Parse(cfg.GetString("k8s.frontend.base")); err != nil {
+		log.Fatal(errors.Wrap(err, "Can't parse k8s.frontend.base in the config file"))
+	}
 
 	// Print error and exit if *kubeconfig is not empty and doesn't actually
 	// exist. If *kubeconfig is blank, then the app may be running inside the
@@ -115,6 +117,14 @@ func main() {
 		statusURL: jobStatusURL,
 	}
 
+	var proxyImage string
+	proxyTag := cfg.GetString("interapps.proxy.tag")
+	if proxyTag == "" {
+		proxyImage = *viceProxy
+	} else {
+		proxyImage = fmt.Sprintf("%s:%s", *viceProxy, proxyTag)
+	}
+
 	exposerInit := &ExposerAppInit{
 		Namespace:                     *namespace,
 		ViceNamespace:                 *viceNamespace,
@@ -123,6 +133,12 @@ func main() {
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
 		statusPublisher:               jsl,
+		ViceProxyImage:                proxyImage,
+		CASBaseURL:                    cfg.GetString("cas.base"),
+		FrontendBaseURL:               cfg.GetString("k8s.frontend.base"),
+		IngressBaseURL:                cfg.GetString("k8s.app-exposer.base"),
+		AnalysisHeader:                cfg.GetString("k8s.get-analysis-id.header"),
+		AccessHeader:                  cfg.GetString("k8s.check-resource-access.header"),
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
