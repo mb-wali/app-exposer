@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -34,6 +34,8 @@ type ExposerApp struct {
 	IngressBaseURL                string
 	AnalysisHeader                string
 	AccessHeader                  string
+	ViceDefaultBackendService     string
+	ViceDefaultBackendServicePort int
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -51,6 +53,8 @@ type ExposerAppInit struct {
 	IngressBaseURL                string
 	AnalysisHeader                string
 	AccessHeader                  string
+	ViceDefaultBackendService     string
+	ViceDefaultBackendServicePort int
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -74,6 +78,8 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		FrontendBaseURL:               init.FrontendBaseURL,
 		AnalysisHeader:                init.AnalysisHeader,
 		AccessHeader:                  init.AccessHeader,
+		ViceDefaultBackendService:     init.ViceDefaultBackendService,
+		ViceDefaultBackendServicePort: init.ViceDefaultBackendServicePort,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
