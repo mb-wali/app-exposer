@@ -106,6 +106,7 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 		"--ingress-url", e.IngressBaseURL,
 		"--analysis-header", e.AnalysisHeader,
 		"--access-header", e.AccessHeader,
+		"--loading-url", "$(loading_url)",
 	}
 
 	return output
@@ -116,9 +117,18 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            viceProxyContainerName,
-			Image:           e.ViceProxyImage,
-			Command:         e.viceProxyCommand(job),
+			Name:    viceProxyContainerName,
+			Image:   e.ViceProxyImage,
+			Command: e.viceProxyCommand(job),
+			EnvFrom: []apiv1.EnvFromSource{
+				{
+					ConfigMapRef: &apiv1.ConfigMapEnvSource{
+						LocalObjectReference: apiv1.LocalObjectReference{
+							Name: "vice-configs",
+						},
+					},
+				},
+			},
 			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
 			Ports: []apiv1.ContainerPort{
 				{
