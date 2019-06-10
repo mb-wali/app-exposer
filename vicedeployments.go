@@ -107,6 +107,7 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 		"--analysis-header", e.AnalysisHeader,
 		"--access-header", e.AccessHeader,
 		"--loading-url", "$(loading_url)",
+		"--do-loading-redirect", "true",
 	}
 
 	return output
