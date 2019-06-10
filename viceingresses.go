@@ -40,7 +40,14 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 		return nil, fmt.Errorf("port %s was not found in the service", viceProxyPortName)
 	}
 
-	// Used as the default backend as well.
+	// default backend, should point at the VICE default backend, which redirects
+	// users to the loading page.
+	defaultBackend := &extv1beta1.IngressBackend{
+		ServiceName: e.ViceDefaultBackendService,
+		ServicePort: intstr.FromInt(e.ViceDefaultBackendServicePort),
+	}
+
+	// Backend for the service, not the default backend
 	backend := &extv1beta1.IngressBackend{
 		ServiceName: svc.Name,
 		ServicePort: intstr.FromInt(int(defaultPort)),
@@ -53,7 +60,7 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 			HTTP: &extv1beta1.HTTPIngressRuleValue{
 				Paths: []extv1beta1.HTTPIngressPath{
 					{
-						Backend: *backend,
+						Backend: *backend, // service backend, not the default backend
 					},
 				},
 			},
@@ -69,7 +76,7 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 			Labels: labels,
 		},
 		Spec: extv1beta1.IngressSpec{
-			Backend: backend, // default backend
+			Backend: defaultBackend, // default backend, not the service backend
 			Rules:   rules,
 		},
 	}, nil

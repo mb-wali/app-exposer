@@ -30,12 +30,14 @@ func main() {
 		kubeconfig *string
 		cfg        *viper.Viper
 
-		configPath    = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
-		namespace     = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
-		viceNamespace = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
-		listenPort    = flag.Int("port", 60000, "(optional) The port to listen on")
-		ingressClass  = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
-		viceProxy     = flag.String("vice-proxy", "discoenv/cas-proxy", "The image name of the proxy to use for VICE apps. The image tag is set in the config.")
+		configPath                    = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
+		namespace                     = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
+		viceNamespace                 = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
+		listenPort                    = flag.Int("port", 60000, "(optional) The port to listen on")
+		ingressClass                  = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
+		viceProxy                     = flag.String("vice-proxy", "discoenv/cas-proxy", "The image name of the proxy to use for VICE apps. The image tag is set in the config.")
+		viceDefaultBackendService     = flag.String("vice-default-backend", "vice-default-backend", "The name of the service to use as the default backend for VICE ingresses")
+		viceDefaultBackendServicePort = flag.Int("vice-default-backend-port", 80, "The port for the default backend for VICE ingresses")
 	)
 
 	// if cluster is set, then
@@ -139,6 +141,8 @@ func main() {
 		IngressBaseURL:                cfg.GetString("k8s.app-exposer.base"),
 		AnalysisHeader:                cfg.GetString("k8s.get-analysis-id.header"),
 		AccessHeader:                  cfg.GetString("k8s.check-resource-access.header"),
+		ViceDefaultBackendService:     *viceDefaultBackendService,
+		ViceDefaultBackendServicePort: *viceDefaultBackendServicePort,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
