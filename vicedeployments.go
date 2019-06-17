@@ -285,6 +285,33 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 						RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 						FSGroup:    int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      "vice",
+							Operator: apiv1.TolerationOperator("Equal"),
+							Value:    "only",
+							Effect:   apiv1.TaintEffect("NoSchedule"),
+						},
+					},
+					Affinity: &apiv1.Affinity{
+						NodeAffinity: &apiv1.NodeAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
+								NodeSelectorTerms: []apiv1.NodeSelectorTerm{
+									{
+										MatchExpressions: []apiv1.NodeSelectorRequirement{
+											{
+												Key:      "vice",
+												Operator: apiv1.NodeSelectorOperator("In"),
+												Values: []string{
+													"true",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
