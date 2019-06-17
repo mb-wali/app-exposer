@@ -287,10 +287,10 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 					},
 					Tolerations: []apiv1.Toleration{
 						{
-							Key:      "vice",
-							Operator: apiv1.TolerationOperator("Equal"),
-							Value:    "only",
-							Effect:   apiv1.TaintEffect("NoSchedule"),
+							Key:      viceTolerationKey,
+							Operator: apiv1.TolerationOperator(viceTolerationOperator),
+							Value:    viceTolerationValue,
+							Effect:   apiv1.TaintEffect(viceTolerationEffect),
 						},
 					},
 					Affinity: &apiv1.Affinity{
@@ -300,10 +300,10 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 									{
 										MatchExpressions: []apiv1.NodeSelectorRequirement{
 											{
-												Key:      "vice",
-												Operator: apiv1.NodeSelectorOperator("In"),
+												Key:      viceAffinityKey,
+												Operator: apiv1.NodeSelectorOperator(viceAffinityOperator),
 												Values: []string{
-													"true",
+													viceAffinityValue,
 												},
 											},
 										},

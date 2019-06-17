@@ -33,6 +33,15 @@ const (
 	uploadBasePath   = "/upload"
 	downloadKind     = "download"
 	uploadKind       = "upload"
+
+	viceTolerationKey      = "vice"
+	viceTolerationOperator = "Equal"
+	viceTolerationValue    = "only"
+	viceTolerationEffect   = "NoSchedule"
+
+	viceAffinityKey      = "vice"
+	viceAffinityOperator = "In"
+	viceAffinityValue    = "true"
 )
 
 func int32Ptr(i int32) *int32 { return &i }
