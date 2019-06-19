@@ -145,7 +145,7 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 					},
 				},
 			},
-			LivenessProbe: &apiv1.Probe{ // Curl the proxy to make sure it's responding
+			ReadinessProbe: &apiv1.Probe{ // Curl the proxy to make sure it's responding
 				Handler: apiv1.Handler{
 					Exec: &apiv1.ExecAction{
 						Command: []string{
@@ -156,15 +156,15 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 					},
 				},
 			},
-			ReadinessProbe: &apiv1.Probe{ // The /url-ready endpoint should return a 200 if everything is ready
-				Handler: apiv1.Handler{
-					HTTPGet: &apiv1.HTTPGetAction{
-						Port:   intstr.FromInt(int(viceProxyPort)),
-						Scheme: apiv1.URISchemeHTTP,
-						Path:   "/url-ready",
-					},
-				},
-			},
+			// ReadinessProbe: &apiv1.Probe{ // The /url-ready endpoint should return a 200 if everything is ready
+			// 	Handler: apiv1.Handler{
+			// 		HTTPGet: &apiv1.HTTPGetAction{
+			// 			Port:   intstr.FromInt(int(viceProxyPort)),
+			// 			Scheme: apiv1.URISchemeHTTP,
+			// 			Path:   "/url-ready",
+			// 		},
+			// 	},
+			// },
 		},
 		apiv1.Container{
 			Name:            fileTransfersContainerName,
