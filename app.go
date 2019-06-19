@@ -36,6 +36,9 @@ type ExposerApp struct {
 	AccessHeader                  string
 	ViceDefaultBackendService     string
 	ViceDefaultBackendServicePort int
+	GetAnalysisIDService          string
+	CheckResourceAccessService    string
+	VICEBackendNamespace          string
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -55,6 +58,9 @@ type ExposerAppInit struct {
 	AccessHeader                  string
 	ViceDefaultBackendService     string
 	ViceDefaultBackendServicePort int
+	GetAnalysisIDService          string
+	CheckResourceAccessService    string
+	VICEBackendNamespace          string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -80,6 +86,9 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		AccessHeader:                  init.AccessHeader,
 		ViceDefaultBackendService:     init.ViceDefaultBackendService,
 		ViceDefaultBackendServicePort: init.ViceDefaultBackendServicePort,
+		GetAnalysisIDService:          init.GetAnalysisIDService,
+		CheckResourceAccessService:    init.CheckResourceAccessService,
+		VICEBackendNamespace:          init.VICEBackendNamespace,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")

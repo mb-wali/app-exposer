@@ -96,13 +96,15 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 	frontURL.Host = fmt.Sprintf("%s.%s", IngressName(job.UserID, job.InvocationID), frontURL.Host)
 
 	output := []string{
-		"cas-proxy",
+		"vice-proxy",
 		"--backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
 		"--ws-backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
 		"--cas-base-url", e.CASBaseURL,
 		"--cas-validate", "validate",
 		"--frontend-url", frontURL.String(),
 		"--external-id", job.InvocationID,
+		"--get-analysis-id-base", fmt.Sprintf("http://%s.%s", e.GetAnalysisIDService, e.VICEBackendNamespace),
+		"--check-resource-access-base", fmt.Sprintf("http://%s.%s", e.CheckResourceAccessService, e.VICEBackendNamespace),
 	}
 
 	return output
