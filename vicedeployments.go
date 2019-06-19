@@ -103,9 +103,6 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 		"--cas-validate", "validate",
 		"--frontend-url", frontURL.String(),
 		"--external-id", job.InvocationID,
-		"--ingress-url", e.IngressBaseURL,
-		"--analysis-header", e.AnalysisHeader,
-		"--access-header", e.AccessHeader,
 	}
 
 	return output

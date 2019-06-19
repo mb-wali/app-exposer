@@ -35,7 +35,7 @@ func main() {
 		viceNamespace                 = flag.String("vice-namespace", "vice-apps", "The namepsace that VICE apps are launched within")
 		listenPort                    = flag.Int("port", 60000, "(optional) The port to listen on")
 		ingressClass                  = flag.String("ingress-class", "nginx", "(optional) the ingress class to use")
-		viceProxy                     = flag.String("vice-proxy", "discoenv/cas-proxy", "The image name of the proxy to use for VICE apps. The image tag is set in the config.")
+		viceProxy                     = flag.String("vice-proxy", "discoenv/vice-proxy", "The image name of the proxy to use for VICE apps. The image tag is set in the config.")
 		viceDefaultBackendService     = flag.String("vice-default-backend", "vice-default-backend", "The name of the service to use as the default backend for VICE ingresses")
 		viceDefaultBackendServicePort = flag.Int("vice-default-backend-port", 80, "The port for the default backend for VICE ingresses")
 	)
