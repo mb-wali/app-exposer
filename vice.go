@@ -289,6 +289,24 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
+func (e *ExposerApp) getIDFromHost(host string) (string, error) {
+	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	ingresslist, err := ingressclient.List(metav1.ListOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	for _, ingress := range ingresslist.Items {
+		for _, rule := range ingress.Spec.Rules {
+			if rule.Host == host {
+				return ingress.Name, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no ingress found for host %s", host)
+}
+
 // VICEStatus handles requests to check the status of a running VICE app in K8s.
 // This will return an overall status and status for the individual containers in
 // the app's pod. Uses the state of the readiness checks in K8s, along with the
@@ -300,7 +318,17 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 		podReady      bool
 	)
 
-	id := mux.Vars(request)["id"]
+	host := mux.Vars(request)["host"]
+
+	id, err := e.getIDFromHost(host)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// If getIDFromHost returns without an error, then the ingress exists
+	// since the ingresses are looked at for the host.
+	ingressExists = true
 
 	set := labels.Set(map[string]string{
 		"external-id": id,
@@ -308,17 +336,6 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 
 	listoptions := metav1.ListOptions{
 		LabelSelector: set.AsSelector().String(),
-	}
-
-	// check the ingress existence
-	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
-	ingresslist, err := ingressclient.List(listoptions)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(ingresslist.Items) > 0 {
-		ingressExists = true
 	}
 
 	// check the service existence
