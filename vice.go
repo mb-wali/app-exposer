@@ -289,6 +289,75 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
+// VICEStatus handles requests to check the status of a running VICE app in K8s.
+// This will return an overall status and status for the individual containers in
+// the app's pod. Uses the state of the readiness checks in K8s, along with the
+// existence of the various resources created for the app.
+func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Request) {
+	var (
+		ingressExists bool
+		serviceExists bool
+		podReady      bool
+	)
+
+	id := mux.Vars(request)["id"]
+
+	set := labels.Set(map[string]string{
+		"external-id": id,
+	})
+
+	listoptions := metav1.ListOptions{
+		LabelSelector: set.AsSelector().String(),
+	}
+
+	// check the ingress existence
+	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	ingresslist, err := ingressclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(ingresslist.Items) > 0 {
+		ingressExists = true
+	}
+
+	// check the service existence
+	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svclist, err := svcclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(svclist.Items) > 0 {
+		serviceExists = true
+	}
+
+	// Check pod status through the deployment
+	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	deplist, err := depclient.List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, dep := range deplist.Items {
+		if dep.Status.ReadyReplicas > 0 {
+			podReady = true
+		}
+	}
+
+	data := map[string]bool{
+		"ready": ingressExists && serviceExists && podReady,
+	}
+
+	body, err := json.Marshal(data)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(writer, string(body))
+}
+
 // VICESaveAndExit handles requests to save the output files in iRODS and then exit.
 // The exit portion will only occur if the save operation succeeds. The operation is
 // performed inside of a goroutine so that the caller isn't waiting for hours/days for
