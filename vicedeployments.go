@@ -96,16 +96,15 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 	frontURL.Host = fmt.Sprintf("%s.%s", IngressName(job.UserID, job.InvocationID), frontURL.Host)
 
 	output := []string{
-		"cas-proxy",
+		"vice-proxy",
 		"--backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
 		"--ws-backend-url", fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort)),
 		"--cas-base-url", e.CASBaseURL,
 		"--cas-validate", "validate",
 		"--frontend-url", frontURL.String(),
 		"--external-id", job.InvocationID,
-		"--ingress-url", e.IngressBaseURL,
-		"--analysis-header", e.AnalysisHeader,
-		"--access-header", e.AccessHeader,
+		"--get-analysis-id-base", fmt.Sprintf("http://%s.%s", e.GetAnalysisIDService, e.VICEBackendNamespace),
+		"--check-resource-access-base", fmt.Sprintf("http://%s.%s", e.CheckResourceAccessService, e.VICEBackendNamespace),
 	}
 
 	return output
@@ -217,19 +216,19 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 			SecurityContext: &apiv1.SecurityContext{
 				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-				Capabilities: &apiv1.Capabilities{
-					Drop: []apiv1.Capability{
-						"SETPCAP",
-						"AUDIT_WRITE",
-						"KILL",
-						"SETGID",
-						"SETUID",
-						"SYS_CHROOT",
-						"SETFCAP",
-						"FSETID",
-						"MKNOD",
-					},
-				},
+				// Capabilities: &apiv1.Capabilities{
+				// 	Drop: []apiv1.Capability{
+				// 		"SETPCAP",
+				// 		"AUDIT_WRITE",
+				// 		"KILL",
+				// 		//"SETGID",
+				// 		//"SETUID",
+				// 		"SYS_CHROOT",
+				// 		"SETFCAP",
+				// 		"FSETID",
+				// 		//"MKNOD",
+				// 	},
+				// },
 			},
 			ReadinessProbe: &apiv1.Probe{
 				Handler: apiv1.Handler{
@@ -273,6 +272,33 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 						RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 						RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 						FSGroup:    int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+					},
+					Tolerations: []apiv1.Toleration{
+						{
+							Key:      viceTolerationKey,
+							Operator: apiv1.TolerationOperator(viceTolerationOperator),
+							Value:    viceTolerationValue,
+							Effect:   apiv1.TaintEffect(viceTolerationEffect),
+						},
+					},
+					Affinity: &apiv1.Affinity{
+						NodeAffinity: &apiv1.NodeAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
+								NodeSelectorTerms: []apiv1.NodeSelectorTerm{
+									{
+										MatchExpressions: []apiv1.NodeSelectorRequirement{
+											{
+												Key:      viceAffinityKey,
+												Operator: apiv1.NodeSelectorOperator(viceAffinityOperator),
+												Values: []string{
+													viceAffinityValue,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
