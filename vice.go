@@ -399,7 +399,6 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 
 		log.Info("calling VICEExit")
 
-		// Only tell the deployment to halt if the save worked.
 		e.VICEExit(writer, request)
 
 		log.Info("after VICEExit")
