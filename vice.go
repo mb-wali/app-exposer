@@ -282,7 +282,11 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Infof("number of configmaps to be deleted for %s: %d", id, len(cmlist.Items))
+
 	for _, cm := range cmlist.Items {
+		log.Infof("deleting configmap %s for %s", cm.Name, id)
 		if err = cmclient.Delete(cm.Name, &metav1.DeleteOptions{}); err != nil {
 			log.Error(err)
 		}
