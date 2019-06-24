@@ -8,11 +8,18 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/gosimple/slug"
 
 	"gopkg.in/cyverse-de/model.v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+func slugString(str string) string {
+	slug.MaxLength = 63
+	text := slug.Make(str)
+	return strings.ReplaceAll(text, "_", "-")
+}
 
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
 func labelsFromJob(job *model.Job) map[string]string {
@@ -27,11 +34,11 @@ func labelsFromJob(job *model.Job) map[string]string {
 
 	return map[string]string{
 		"external-id":   job.InvocationID,
-		"app-name":      job.AppName,
+		"app-name":      slugString(job.AppName),
 		"app-id":        job.AppID,
-		"username":      job.Submitter,
+		"username":      slugString(job.Submitter),
 		"user-id":       job.UserID,
-		"analysis-name": string(name[:stringmax]),
+		"analysis-name": slugString(string(name[:stringmax])),
 		"app-type":      "interactive",
 	}
 }
