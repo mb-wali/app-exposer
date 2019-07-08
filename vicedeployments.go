@@ -247,6 +247,7 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 // not call the k8s API.
 func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	labels := labelsFromJob(job)
+	autoMount := false
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -265,9 +266,10 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 					Labels: labels,
 				},
 				Spec: apiv1.PodSpec{
-					RestartPolicy: apiv1.RestartPolicy("Always"),
-					Volumes:       deploymentVolumes(job),
-					Containers:    e.deploymentContainers(job),
+					RestartPolicy:                apiv1.RestartPolicy("Always"),
+					Volumes:                      deploymentVolumes(job),
+					Containers:                   e.deploymentContainers(job),
+					AutomountServiceAccountToken: &autoMount,
 					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 						RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
