@@ -318,6 +318,54 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 	return "", fmt.Errorf("no ingress found for host %s", host)
 }
 
+// VICELogs handles requests to access the analysis container logs for a running
+// VICE app.
+func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
+
+}
+
+// Contains information about pods returned by the VICEPods handler.
+type retPod struct {
+	name string
+}
+
+// VICEPods lists the k8s pods associated with the provided external-id. For now
+// just returns pod info in the format `{"pods" : [{}]}`
+func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request) {
+	id := mux.Vars(request)["id"]
+
+	set := labels.Set(map[string]string{
+		"external-id": id,
+	})
+
+	listoptions := metav1.ListOptions{
+		LabelSelector: set.AsSelector().String(),
+	}
+
+	returnedPods := []retPod{}
+
+	podlist, err := e.clientset.CoreV1().Pods(e.viceNamespace).List(listoptions)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, p := range podlist.Items {
+		returnedPods = append(returnedPods, retPod{name: p.Name})
+	}
+
+	if err = json.NewEncoder(writer).Encode(
+		struct {
+			Pods []retPod `json:"pods"`
+		}{
+			Pods: returnedPods,
+		},
+	); err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+	}
+
+}
+
 // VICEStatus handles requests to check the status of a running VICE app in K8s.
 // This will return an overall status and status for the individual containers in
 // the app's pod. Uses the state of the readiness checks in K8s, along with the
