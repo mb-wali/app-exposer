@@ -3,14 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
+	"github.com/pkg/errors"
 
 	"gopkg.in/cyverse-de/model.v4"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -318,10 +321,46 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 	return "", fmt.Errorf("no ingress found for host %s", host)
 }
 
-// VICELogs handles requests to access the analysis container logs for a running
-// VICE app.
+// VICELogs handles requests to access the analysis container logs for a pod in a running
+// VICE app. Needs the 'id' and 'pod-name' mux Vars.
 func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
+	id := mux.Vars(request)["id"]
+	podName := mux.Vars(request)["pod-name"]
 
+	pod, err := e.clientset.CoreV1().Pods(e.viceNamespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, ok := pod.Labels["external-id"]; !ok {
+		http.Error(writer, errors.New("pod missing external-id label").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if pod.Labels["external-id"] != id {
+		http.Error(writer, fmt.Errorf("pod's external-id label was not set to %s", id).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, &apiv1.PodLogOptions{})
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	logReadCloser, err := podLogs.Stream()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	defer logReadCloser.Close()
+	_, err = io.Copy(writer, logReadCloser)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 // Contains information about pods returned by the VICEPods handler.
