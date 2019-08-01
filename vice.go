@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -324,8 +325,53 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 // VICELogs handles requests to access the analysis container logs for a pod in a running
 // VICE app. Needs the 'id' and 'pod-name' mux Vars.
 func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
-	id := mux.Vars(request)["id"]
-	podName := mux.Vars(request)["pod-name"]
+	var (
+		err        error
+		id         string
+		since      int64
+		podName    string
+		container  string
+		previous   bool
+		follow     bool
+		tailLines  int64
+		timestamps bool
+	)
+
+	if id = mux.Vars(request)["id"]; id == "" {
+		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if podName = mux.Vars(request)["pod"]; podName == "" {
+		http.Error(writer, errors.New("pod parameter is empty").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if previous, err = strconv.ParseBool(mux.Vars(request)["previous"]); err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if since, err = strconv.ParseInt(mux.Vars(request)["since"], 10, 64); err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if tailLines, err = strconv.ParseInt(mux.Vars(request)["tail-lines"], 10, 64); err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if follow, err = strconv.ParseBool(mux.Vars(request)["follow"]); err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if timestamps, err = strconv.ParseBool(mux.Vars(request)["timestamps"]); err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	container = mux.Vars(request)["container"]
 
 	pod, err := e.clientset.CoreV1().Pods(e.viceNamespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
@@ -343,7 +389,18 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, &apiv1.PodLogOptions{})
+	if container == "" {
+		container = pod.Spec.Containers[0].Name
+	}
+
+	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, &apiv1.PodLogOptions{
+		Container:    container,
+		Follow:       follow,
+		Previous:     previous,
+		SinceSeconds: &since,
+		Timestamps:   timestamps,
+		TailLines:    &tailLines,
+	})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
