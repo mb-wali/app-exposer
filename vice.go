@@ -326,53 +326,93 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 // VICE app. Needs the 'id' and 'pod-name' mux Vars.
 func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
 	var (
-		err        error
-		id         string
-		since      int64
-		podName    string
-		container  string
-		previous   bool
-		follow     bool
-		tailLines  int64
-		timestamps bool
+		err           error
+		id            string
+		since         int64
+		podName       string
+		container     string
+		previous      bool
+		follow        bool
+		tailLines     int64
+		timestamps    bool
+		found         bool
+		logOpts       *apiv1.PodLogOptions
 	)
 
-	if id = mux.Vars(request)["id"]; id == "" {
+	// id is required
+	if id, found = mux.Vars(request)["id"]; !found {
 		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
 		return
 	}
 
-	if podName = mux.Vars(request)["pod"]; podName == "" {
+	//podName is required
+	if podName, found = mux.Vars(request)["pod"]; !found {
 		http.Error(writer, errors.New("pod parameter is empty").Error(), http.StatusBadRequest)
 		return
 	}
 
-	if previous, err = strconv.ParseBool(mux.Vars(request)["previous"]); err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if since, err = strconv.ParseInt(mux.Vars(request)["since"], 10, 64); err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
-	}
+	logOpts = &apiv1.PodLogOptions{}
 
-	if tailLines, err = strconv.ParseInt(mux.Vars(request)["tail-lines"], 10, 64); err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+	// previous is optional
+	if _, found = mux.Vars(request)["previous"]; found {
+		if previous, err = strconv.ParseBool(mux.Vars(request)["previous"]); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		logOpts.Previous = previous
 	}
 
-	if follow, err = strconv.ParseBool(mux.Vars(request)["follow"]); err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+	// since is optional
+	if _, found = mux.Vars(request)["since"]; found {
+		if since, err = strconv.ParseInt(mux.Vars(request)["since"], 10, 64); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		logOpts.SinceSeconds = &since
 	}
 
-	if timestamps, err = strconv.ParseBool(mux.Vars(request)["timestamps"]); err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+	// tail-lines is optional
+	if _, found = mux.Vars(request)["tail-lines"]; found {
+		if tailLines, err = strconv.ParseInt(mux.Vars(request)["tail-lines"], 10, 64); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		logOpts.TailLines = &tailLines
 	}
 
-	container = mux.Vars(request)["container"]
+	// follow is optional
+	if _, found = mux.Vars(request)["follow"]; found {
+		if follow, err = strconv.ParseBool(mux.Vars(request)["follow"]); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
 
+		logOpts.Follow = follow
+	}
+
+	// timestamps is optional
+	if _, found = mux.Vars(request)["timestamps"]; found {
+		if timestamps, err = strconv.ParseBool(mux.Vars(request)["timestamps"]); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		logOpts.Timestamps = timestamps
+	}
+
+	// container is optional, but should have a default value of the name of the first container
+	if _, found = mux.Vars(request)["container"]; found {
+		container = mux.Vars(request)["container"]
+	} else {
+		container = pod.Spec.Containers[0].Name
+	}
+
+	logOpts.Container = container
+
+	// Make sure that the pod is actually part of the job with the provided external-id.
 	pod, err := e.clientset.CoreV1().Pods(e.viceNamespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -389,18 +429,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	if container == "" {
-		container = pod.Spec.Containers[0].Name
-	}
-
-	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, &apiv1.PodLogOptions{
-		Container:    container,
-		Follow:       follow,
-		Previous:     previous,
-		SinceSeconds: &since,
-		Timestamps:   timestamps,
-		TailLines:    &tailLines,
-	})
+	// Finally, actually get the logs and write the response out
+	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
