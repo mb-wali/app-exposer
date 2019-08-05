@@ -483,10 +483,8 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 	}
 
 	if err = json.NewEncoder(writer).Encode(
-		struct {
-			Pods []retPod `json:"pods"`
-		}{
-			Pods: returnedPods,
+		map[string][]retPod{
+			"pods": returnedPods,
 		},
 	); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
