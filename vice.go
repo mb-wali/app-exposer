@@ -326,17 +326,17 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 // VICE app. Needs the 'id' and 'pod-name' mux Vars.
 func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
 	var (
-		err           error
-		id            string
-		since         int64
-		podName       string
-		container     string
-		previous      bool
-		follow        bool
-		tailLines     int64
-		timestamps    bool
-		found         bool
-		logOpts       *apiv1.PodLogOptions
+		err        error
+		id         string
+		since      int64
+		podName    string
+		container  string
+		previous   bool
+		follow     bool
+		tailLines  int64
+		timestamps bool
+		found      bool
+		logOpts    *apiv1.PodLogOptions
 	)
 
 	// id is required
@@ -403,15 +403,6 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		logOpts.Timestamps = timestamps
 	}
 
-	// container is optional, but should have a default value of the name of the first container
-	if _, found = mux.Vars(request)["container"]; found {
-		container = mux.Vars(request)["container"]
-	} else {
-		container = pod.Spec.Containers[0].Name
-	}
-
-	logOpts.Container = container
-
 	// Make sure that the pod is actually part of the job with the provided external-id.
 	pod, err := e.clientset.CoreV1().Pods(e.viceNamespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
@@ -428,6 +419,15 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		http.Error(writer, fmt.Errorf("pod's external-id label was not set to %s", id).Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// container is optional, but should have a default value of the name of the first container
+	if _, found = mux.Vars(request)["container"]; found {
+		container = mux.Vars(request)["container"]
+	} else {
+		container = pod.Spec.Containers[0].Name
+	}
+
+	logOpts.Container = container
 
 	// Finally, actually get the logs and write the response out
 	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
