@@ -452,7 +452,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 
 // Contains information about pods returned by the VICEPods handler.
 type retPod struct {
-	name string
+	Name string `json:"name"`
 }
 
 // VICEPods lists the k8s pods associated with the provided external-id. For now
@@ -476,10 +476,10 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	log.Warnf("%d pods found for external-id %s\n", len(podlist.Items), id)
+	log.Warnf("%d pods found for external-id %s", len(podlist.Items), id)
 
 	for _, p := range podlist.Items {
-		returnedPods = append(returnedPods, retPod{name: p.Name})
+		returnedPods = append(returnedPods, retPod{Name: p.Name})
 	}
 
 	if err = json.NewEncoder(writer).Encode(
