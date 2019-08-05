@@ -476,7 +476,7 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	log.Debugf("%d pods found for external-id %s\n", len(podlist.Items), id)
+	log.Warnf("%d pods found for external-id %s\n", len(podlist.Items), id)
 
 	for _, p := range podlist.Items {
 		returnedPods = append(returnedPods, retPod{name: p.Name})
