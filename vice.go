@@ -324,6 +324,20 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 
 // VICELogs handles requests to access the analysis container logs for a pod in a running
 // VICE app. Needs the 'id' and 'pod-name' mux Vars.
+//
+// Query Parameters:
+//   follow - Converted to a boolean, should be either true or false. Tells whether to
+//            tail the log.
+//   previous - Converted to a boolean, should be either true or false. Return previously
+//              terminated container logs.
+//   since - Converted to a int64. The number of seconds before the current time at which
+//           to begin showing logs. Yeah, that's a sentence.
+//   tail-lines - Converted to an int64. The number of lines from the end of the log to show.
+//                Defaults to the value 200.
+//   timestamps - Converted to a boolean, should be either true or false. Whether or not to
+//                display timestamps at the beginning of each log line.
+//   container - String containing the name of the container to display logs from. Defaults
+//               the value 'analysis', since this is VICE-specific.
 func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
 	var (
 		err        error
@@ -379,9 +393,10 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		logOpts.TailLines = &tailLines
+	} else {
+		tailLines = 200
 	}
+	logOpts.TailLines = &tailLines
 
 	// follow is optional
 	if _, found = mux.Vars(request)["follow"]; found {
@@ -420,11 +435,11 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	// container is optional, but should have a default value of the name of the first container
+	// container is optional, but should have a default value of "analysis"
 	if _, found = mux.Vars(request)["container"]; found {
 		container = mux.Vars(request)["container"]
 	} else {
-		container = pod.Spec.Containers[0].Name
+		container = "analysis"
 	}
 
 	logOpts.Container = container
