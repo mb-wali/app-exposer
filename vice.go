@@ -458,8 +458,13 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
+	flusher := &FlushableResponseWriter{w: writer}
+	if f, ok := writer.(http.Flusher); ok {
+		flusher.f = f
+	}
+
 	defer logReadCloser.Close()
-	_, err = io.Copy(writer, logReadCloser)
+	_, err = io.Copy(flusher, logReadCloser)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -469,6 +474,26 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 // Contains information about pods returned by the VICEPods handler.
 type retPod struct {
 	Name string `json:"name"`
+}
+
+// FlushableResponseWriter is a io.Writer that will be flushed after each call to
+// Write().
+type FlushableResponseWriter struct {
+	f http.Flusher
+	w io.Writer
+}
+
+// Write implements the Write() function needed for the io.Writer interface, adding
+// a call to Flush().
+func (frw *FlushableResponseWriter) Write(content []byte) (n int, err error) {
+	n, err = frw.w.Write(content)
+	if err != nil {
+		return n, err
+	}
+	if frw.f != nil {
+		frw.f.Flush()
+	}
+	return n, nil
 }
 
 // VICEPods lists the k8s pods associated with the provided external-id. For now
