@@ -333,7 +333,6 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 //   since - Converted to a int64. The number of seconds before the current time at which
 //           to begin showing logs. Yeah, that's a sentence.
 //   tail-lines - Converted to an int64. The number of lines from the end of the log to show.
-//                Defaults to the value 200.
 //   timestamps - Converted to a boolean, should be either true or false. Whether or not to
 //                display timestamps at the beginning of each log line.
 //   container - String containing the name of the container to display logs from. Defaults
@@ -394,10 +393,9 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
-	} else {
-		tailLines = 200
+
+		logOpts.TailLines = &tailLines
 	}
-	logOpts.TailLines = &tailLines
 
 	// follow is optional
 	if queryParams.Get("follow") != "" {
