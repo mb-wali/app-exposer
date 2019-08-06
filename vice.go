@@ -369,8 +369,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	queryParams := request.URL.Query()
 
 	// previous is optional
-	if _, found = queryParams["previous"]; found {
-		if previous, err = strconv.ParseBool(mux.Vars(request)["previous"]); err != nil {
+	if queryParams.Get("previous") != "" {
+		if previous, err = strconv.ParseBool(queryParams.Get("previous")); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -379,8 +379,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// since is optional
-	if _, found = queryParams["since"]; found {
-		if since, err = strconv.ParseInt(mux.Vars(request)["since"], 10, 64); err != nil {
+	if queryParams.Get("since") != "" {
+		if since, err = strconv.ParseInt(queryParams.Get("since"), 10, 64); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -389,8 +389,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// tail-lines is optional
-	if _, found = queryParams["tail-lines"]; found {
-		if tailLines, err = strconv.ParseInt(mux.Vars(request)["tail-lines"], 10, 64); err != nil {
+	if queryParams.Get("tail-lines") != "" {
+		if tailLines, err = strconv.ParseInt(queryParams.Get("tail-lines"), 10, 64); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -400,8 +400,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	logOpts.TailLines = &tailLines
 
 	// follow is optional
-	if _, found = queryParams["follow"]; found {
-		if follow, err = strconv.ParseBool(mux.Vars(request)["follow"]); err != nil {
+	if queryParams.Get("follow") != "" {
+		if follow, err = strconv.ParseBool(queryParams.Get("follow")); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -410,8 +410,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// timestamps is optional
-	if _, found = queryParams["timestamps"]; found {
-		if timestamps, err = strconv.ParseBool(mux.Vars(request)["timestamps"]); err != nil {
+	if queryParams.Get("timestamps") != "" {
+		if timestamps, err = strconv.ParseBool(queryParams.Get("timestamps")); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -437,8 +437,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// container is optional, but should have a default value of "analysis"
-	if _, found = mux.Vars(request)["container"]; found {
-		container = mux.Vars(request)["container"]
+	if queryParams.Get("container") != "" {
+		container = queryParams.Get("container")
 	} else {
 		container = "analysis"
 	}
