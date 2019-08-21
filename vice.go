@@ -332,7 +332,7 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 //              terminated container logs.
 //   since - Converted to a int64. The number of seconds before the current time at which
 //           to begin showing logs. Yeah, that's a sentence.
-//   sinceTime - Converted to an int64. The number of seconds since the epoch for the time at
+//   since-time - Converted to an int64. The number of seconds since the epoch for the time at
 //               which to begin showing logs.
 //   tail-lines - Converted to an int64. The number of lines from the end of the log to show.
 //   timestamps - Converted to a boolean, should be either true or false. Whether or not to
@@ -390,7 +390,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		logOpts.SinceSeconds = &since
 	}
 
-	if queryParams.Get("sinceTime") != "" {
+	if queryParams.Get("since-time") != "" {
 		if sinceTime, err = strconv.ParseInt(queryParams.Get("sinceTime"), 10, 64); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
