@@ -391,7 +391,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	if queryParams.Get("since-time") != "" {
-		if sinceTime, err = strconv.ParseInt(queryParams.Get("sinceTime"), 10, 64); err != nil {
+		if sinceTime, err = strconv.ParseInt(queryParams.Get("since-time"), 10, 64); err != nil {
 			http.Error(writer, err.Error(), http.StatusBadRequest)
 			return
 		}
