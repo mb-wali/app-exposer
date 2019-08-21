@@ -332,6 +332,8 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 //              terminated container logs.
 //   since - Converted to a int64. The number of seconds before the current time at which
 //           to begin showing logs. Yeah, that's a sentence.
+//   sinceTime - Converted to an int64. The number of seconds since the epoch for the time at
+//               which to begin showing logs.
 //   tail-lines - Converted to an int64. The number of lines from the end of the log to show.
 //   timestamps - Converted to a boolean, should be either true or false. Whether or not to
 //                display timestamps at the beginning of each log line.
@@ -342,6 +344,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		err        error
 		id         string
 		since      int64
+		sinceTime  int64
 		podName    string
 		container  string
 		previous   bool
@@ -385,6 +388,16 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		}
 
 		logOpts.SinceSeconds = &since
+	}
+
+	if queryParams.Get("sinceTime") != "" {
+		if sinceTime, err = strconv.ParseInt(queryParams.Get("sinceTime"), 10, 64); err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		convertedSinceTime := metav1.Unix(sinceTime, 0)
+		logOpts.SinceTime = &convertedSinceTime
 	}
 
 	// tail-lines is optional
