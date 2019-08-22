@@ -129,19 +129,24 @@ func memResourceLimit(job *model.Job) int64 {
 	return 8589934592 // 8 GB in bytes
 }
 
+var (
+	defaultCPUResourceRequest, _ = resourcev1.ParseQuantity("4000m")
+	defaultMemResourceRequest, _ = resourcev1.ParseQuantity("8589934592")
+)
+
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	cpuLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%fm", cpuResourceLimit(job)*1000))
 	if err != nil {
 		log.Warn(err)
-		cpuLimit, _ = resourcev1.ParseQuantity("4000m")
+		cpuLimit = defaultCPUResourceRequest
 	}
 
 	memLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%d", memResourceLimit(job)))
 	if err != nil {
 		log.Warn(err)
-		memLimit, _ = resourcev1.ParseQuantity("8589934592")
+		memLimit = defaultMemResourceRequest
 	}
 
 	return []apiv1.Container{
@@ -240,6 +245,10 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				Limits: apiv1.ResourceList{
 					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
 					apiv1.ResourceMemory: memLimit, // job contains # bytes mem
+				},
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceCPU:    defaultCPUResourceRequest,
+					apiv1.ResourceMemory: defaultMemResourceRequest,
 				},
 			},
 			VolumeMounts: []apiv1.VolumeMount{
