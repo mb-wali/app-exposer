@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
@@ -455,6 +456,10 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	logOpts.Container = container
+
+	// Set this here to make sure it's right before the logs are actually retrieved.
+	// Should help prevent gaps in the log.
+	writer.Header().Set("DE-VICE-SINCE-TIME", fmt.Sprintf("%d", time.Now().Unix()))
 
 	// Finally, actually get the logs and write the response out
 	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
