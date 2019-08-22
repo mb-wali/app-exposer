@@ -8,6 +8,7 @@ import (
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
+	resourcev1 "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -114,9 +115,35 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 	return output
 }
 
+func cpuResourceLimit(job *model.Job) float32 {
+	if job.Steps[0].Component.Container.MaxCPUCores != 0 {
+		return job.Steps[0].Component.Container.MaxCPUCores
+	}
+	return 4
+}
+
+func memResourceLimit(job *model.Job) int64 {
+	if job.Steps[0].Component.Container.MemoryLimit != 0 {
+		return job.Steps[0].Component.Container.MemoryLimit
+	}
+	return 8589934592 // 8 GB in bytes
+}
+
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
+	cpuLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%fm", cpuResourceLimit(job)*1000))
+	if err != nil {
+		log.Warn(err)
+		cpuLimit, _ = resourcev1.ParseQuantity("4000m")
+	}
+
+	memLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%d", memResourceLimit(job)))
+	if err != nil {
+		log.Warn(err)
+		memLimit, _ = resourcev1.ParseQuantity("8589934592")
+	}
+
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            viceProxyContainerName,
@@ -209,6 +236,12 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				job.Steps[0].Component.Container.Image.Tag,
 			),
 			Command: analysisCommand(&job.Steps[0]),
+			Resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
+					apiv1.ResourceMemory: memLimit, // job contains # bytes mem
+				},
+			},
 			VolumeMounts: []apiv1.VolumeMount{
 				{
 					Name:      fileTransfersVolumeName,
