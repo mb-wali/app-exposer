@@ -130,8 +130,10 @@ func memResourceLimit(job *model.Job) int64 {
 }
 
 var (
-	defaultCPUResourceRequest, _ = resourcev1.ParseQuantity("4000m")
-	defaultMemResourceRequest, _ = resourcev1.ParseQuantity("8589934592")
+	defaultCPUResourceRequest, _ = resourcev1.ParseQuantity("1000m")
+	defaultMemResourceRequest, _ = resourcev1.ParseQuantity("2Gi")
+	defaultCPUResourceLimit, _   = resourcev1.ParseQuantity("4000m")
+	defaultMemResourceLimit, _   = resourcev1.ParseQuantity("32Gi")
 )
 
 // deploymentContainers returns the Containers needed for the VICE analysis
@@ -140,13 +142,13 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	cpuLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%fm", cpuResourceLimit(job)*1000))
 	if err != nil {
 		log.Warn(err)
-		cpuLimit = defaultCPUResourceRequest
+		cpuLimit = defaultCPUResourceLimit
 	}
 
 	memLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%d", memResourceLimit(job)))
 	if err != nil {
 		log.Warn(err)
-		memLimit = defaultMemResourceRequest
+		memLimit = defaultMemResourceLimit
 	}
 
 	return []apiv1.Container{
