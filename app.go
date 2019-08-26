@@ -39,6 +39,7 @@ type ExposerApp struct {
 	GetAnalysisIDService          string
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
+	AppsServiceBaseURL            string
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -61,6 +62,7 @@ type ExposerAppInit struct {
 	GetAnalysisIDService          string
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
+	AppsServiceBaseURL            string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -89,6 +91,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		GetAnalysisIDService:          init.GetAnalysisIDService,
 		CheckResourceAccessService:    init.CheckResourceAccessService,
 		VICEBackendNamespace:          init.VICEBackendNamespace,
+		AppsServiceBaseURL:            init.AppsServiceBaseURL,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
@@ -96,8 +99,8 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/{id}/save-output-files", app.VICETriggerUploads).Methods("POST")
 	app.router.HandleFunc("/vice/{id}/exit", app.VICEExit).Methods("POST")
 	app.router.HandleFunc("/vice/{id}/save-and-exit", app.VICESaveAndExit).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/pods", app.VICEPods).Methods("GET")
-	app.router.HandleFunc("/vice/{id}/pods/{pod}/logs", app.VICELogs).Methods("GET")
+	app.router.HandleFunc("/vice/{analysis-id}/pods", app.VICEPods).Methods("GET")
+	app.router.HandleFunc("/vice/{analysis-id}/pods/{pod}/logs", app.VICELogs).Methods("GET")
 	app.router.HandleFunc("/vice/{host}/url-ready", app.VICEStatus).Methods("GET")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")

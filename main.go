@@ -116,6 +116,11 @@ func main() {
 		jobStatusURL = "http://job-status-listener"
 	}
 
+	appsServiceBaseURL := cfg.GetString("apps.base")
+	if appsServiceBaseURL == "" {
+		appsServiceBaseURL = "http://apps"
+	}
+
 	// Create the JSLPublisher for job status updates
 	jsl := &JSLPublisher{
 		statusURL: jobStatusURL,
@@ -148,6 +153,7 @@ func main() {
 		GetAnalysisIDService:          *getAnalysisIDService,
 		CheckResourceAccessService:    *checkResourceAccessService,
 		VICEBackendNamespace:          cfg.GetString("vice.backend-namespace"),
+		AppsServiceBaseURL:            appsServiceBaseURL,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
