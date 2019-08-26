@@ -102,7 +102,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	)
 
 	// id is required
-	if id, found = mux.Vars(request)["analysis-id"]; !found {
+	if id, found = mux.Vars(request)["id"]; !found {
 		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
 		return
 	}
@@ -113,19 +113,19 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	externalIDs, err := e.getExternalIDs(id)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// externalIDs, err := e.getExternalIDs(id)
+	// if err != nil {
+	// 	http.Error(writer, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	if len(externalIDs) < 1 {
-		http.Error(writer, fmt.Errorf("no external-ids found for analysis-id %s", id).Error(), http.StatusInternalServerError)
-		return
-	}
+	// if len(externalIDs) < 1 {
+	// 	http.Error(writer, fmt.Errorf("no external-ids found for analysis-id %s", id).Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Just use the first external-id for now.
-	externalID := externalIDs[0]
+	//externalID := externalIDs[0]
 
 	logOpts = &apiv1.PodLogOptions{}
 	queryParams := request.URL.Query()
@@ -202,7 +202,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	if pod.Labels["external-id"] != externalID {
+	if pod.Labels["external-id"] != id {
 		http.Error(writer, fmt.Errorf("pod's external-id label was not set to %s", id).Error(), http.StatusInternalServerError)
 		return
 	}
@@ -274,20 +274,20 @@ func (frw *FlushableResponseWriter) Write(content []byte) (n int, err error) {
 // VICEPods lists the k8s pods associated with the provided external-id. For now
 // just returns pod info in the format `{"pods" : [{}]}`
 func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request) {
-	id := mux.Vars(request)["analysis-id"]
+	externalID := mux.Vars(request)["id"]
 
-	externalIDs, err := e.getExternalIDs(id)
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	// externalIDs, err := e.getExternalIDs(id)
+	// if err != nil {
+	// 	http.Error(writer, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	if len(externalIDs) == 0 {
-		http.Error(writer, fmt.Errorf("no external-id found for analysis-id %s", id).Error(), http.StatusInternalServerError)
-		return
-	}
+	// if len(externalIDs) == 0 {
+	// 	http.Error(writer, fmt.Errorf("no external-id found for analysis-id %s", id).Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
-	externalID := externalIDs[0]
+	// externalID := externalIDs[0]
 
 	// For now, just use the first external ID
 	set := labels.Set(map[string]string{
