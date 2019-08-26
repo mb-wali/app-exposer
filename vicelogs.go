@@ -32,6 +32,8 @@ func (e *ExposerApp) getExternalIDs(analysisID string) ([]string, error) {
 	}
 	analysisLookupURL.Path = path.Join("/analyses", analysisID, "steps")
 
+	log.Warnf("analysisLookupURL is %s", analysisLookupURL.String())
+
 	resp, err := http.Get(analysisLookupURL.String())
 	if err != nil {
 		return nil, errors.Wrapf(err, "error from GET %s", analysisLookupURL.String())
