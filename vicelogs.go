@@ -18,12 +18,31 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func (e *ExposerApp) getExternalIDs(analysisID string) ([]string, error) {
+// VICEStep contains information about an analysis step associated with a running
+// VICE job.
+type VICEStep struct {
+	Name          string `json:"name"`
+	ExternalID    string `json:"external_id"`
+	StartDate     string `json:"startdate"`
+	EndDate       string `json:"enddate"`
+	Status        string `json:"status"`
+	AppStepNumber int    `json:"app_step_number"`
+	StepType      string `json:"step_type"`
+}
+
+// VICEAnalysis contains information about an analysis associated with a running
+// VICE job.
+type VICEAnalysis struct {
+	AnalysisID string     `json:"analysis_id"`
+	Steps      []VICEStep `json:"steps"`
+	Timestamp  string     `json:"timestamp"`
+	Total      int        `json:"total"`
+}
+
+func (e *ExposerApp) getExternalIDs(user, analysisID string) ([]string, error) {
 	var (
 		err               error
-		ok                bool
 		analysisLookupURL *url.URL
-		steps             []map[string]interface{}
 	)
 
 	analysisLookupURL, err = url.Parse(e.AppsServiceBaseURL)
@@ -31,8 +50,9 @@ func (e *ExposerApp) getExternalIDs(analysisID string) ([]string, error) {
 		return nil, errors.Wrapf(err, "error parsing url %s", e.AppsServiceBaseURL)
 	}
 	analysisLookupURL.Path = path.Join("/analyses", analysisID, "steps")
-
-	log.Warnf("analysisLookupURL is %s", analysisLookupURL.String())
+	q := analysisLookupURL.Query()
+	q.Set("user", user)
+	analysisLookupURL.RawQuery = q.Encode()
 
 	resp, err := http.Get(analysisLookupURL.String())
 	if err != nil {
@@ -44,25 +64,18 @@ func (e *ExposerApp) getExternalIDs(analysisID string) ([]string, error) {
 		return nil, errors.Wrapf(err, "error reading response body from %s", analysisLookupURL.String())
 	}
 
-	parsedResponse := map[string]interface{}{}
-
-	if err = json.Unmarshal(body, &parsedResponse); err != nil {
-		return nil, errors.Wrapf(err, "error unmarshalling JSON from %s", analysisLookupURL.String())
+	parsedResponse := &VICEAnalysis{
+		Steps: []VICEStep{},
 	}
 
-	if steps, ok = parsedResponse["steps"].([]map[string]interface{}); !ok {
-		return nil, errors.Wrapf(err, "JSON from %s had no 'steps' key", analysisLookupURL.String())
+	if err = json.Unmarshal(body, parsedResponse); err != nil {
+		return nil, errors.Wrapf(err, "error unmarshalling JSON from %s", analysisLookupURL.String())
 	}
 
 	retval := []string{}
 
-	for _, step := range steps {
-		extID, ok := step["external_id"].(string)
-		if !ok {
-			log.Warn("step was missing 'external_id'")
-			continue
-		}
-		retval = append(retval, extID)
+	for _, step := range parsedResponse.Steps {
+		retval = append(retval, step.ExternalID)
 	}
 
 	return retval, nil
@@ -98,6 +111,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		tailLines  int64
 		timestamps bool
 		found      bool
+		user       string
 		logOpts    *apiv1.PodLogOptions
 	)
 
@@ -113,7 +127,13 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	externalIDs, err := e.getExternalIDs(id)
+	// user is required
+	if user, found = mux.Vars(request)["user"]; !found {
+		http.Error(writer, "user is not set", http.StatusForbidden)
+		return
+	}
+
+	externalIDs, err := e.getExternalIDs(user, id)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -275,8 +295,16 @@ func (frw *FlushableResponseWriter) Write(content []byte) (n int, err error) {
 // just returns pod info in the format `{"pods" : [{}]}`
 func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request) {
 	analysisID := mux.Vars(request)["analysis-id"]
+	users, found := request.URL.Query()["user"]
 
-	externalIDs, err := e.getExternalIDs(analysisID)
+	if !found || len(users) < 1 {
+		http.Error(writer, "user not set", http.StatusForbidden)
+		return
+	}
+
+	user := users[0]
+
+	externalIDs, err := e.getExternalIDs(user, analysisID)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -305,8 +333,6 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Warnf("%d pods found for external-id %s", len(podlist.Items), externalID)
 
 	for _, p := range podlist.Items {
 		returnedPods = append(returnedPods, retPod{Name: p.Name})
