@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +8,7 @@ import (
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -84,7 +84,7 @@ func (e *ExposerApp) getExternalIDs(user, analysisID string) ([]string, error) {
 // VICELogEntry contains the data returned for each log request.
 type VICELogEntry struct {
 	SinceTime string   `json:"since_time"`
-	Lines     [][]byte `json:"lines"`
+	Lines     []string `json:"lines"`
 }
 
 // VICELogs handles requests to access the analysis container logs for a pod in a running
@@ -253,7 +253,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	bodyLines := bytes.Split(bodyBytes, []byte("\n"))
+	bodyLines := strings.Split(string(bodyBytes), "\n")
 	newSinceTime := fmt.Sprintf("%d", time.Now().Unix())
 
 	retval := &VICELogEntry{
