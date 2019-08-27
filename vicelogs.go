@@ -254,20 +254,17 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	bodyLines := strings.Split(string(bodyBytes), "\n")
+	log.Warnf("number of lines %d", len(bodyLines))
 	newSinceTime := fmt.Sprintf("%d", time.Now().Unix())
 
-	retval := &VICELogEntry{
-		SinceTime: newSinceTime,
-		Lines:     bodyLines,
-	}
-
-	outBytes, err := json.Marshal(retval)
-	if err != nil {
+	if err = json.NewEncoder(writer).Encode(
+		&VICELogEntry{
+			SinceTime: newSinceTime,
+			Lines:     bodyLines,
+		},
+	); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
 	}
-
-	fmt.Fprint(writer, outBytes)
 
 }
 
