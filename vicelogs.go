@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -81,12 +81,16 @@ func (e *ExposerApp) getExternalIDs(user, analysisID string) ([]string, error) {
 	return retval, nil
 }
 
+// VICELogEntry contains the data returned for each log request.
+type VICELogEntry struct {
+	SinceTime string   `json:"since_time"`
+	Lines     [][]byte `json:"lines"`
+}
+
 // VICELogs handles requests to access the analysis container logs for a pod in a running
 // VICE app. Needs the 'id' and 'pod-name' mux Vars.
 //
 // Query Parameters:
-//   follow - Converted to a boolean, should be either true or false. Tells whether to
-//            tail the log.
 //   previous - Converted to a boolean, should be either true or false. Return previously
 //              terminated container logs.
 //   since - Converted to a int64. The number of seconds before the current time at which
@@ -107,10 +111,10 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		podName    string
 		container  string
 		previous   bool
-		follow     bool
 		tailLines  int64
 		timestamps bool
 		found      bool
+		users      []string
 		user       string
 		logOpts    *apiv1.PodLogOptions
 	)
@@ -128,10 +132,11 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// user is required
-	if user, found = mux.Vars(request)["user"]; !found {
+	if users, found = request.URL.Query()["user"]; !found {
 		http.Error(writer, "user is not set", http.StatusForbidden)
 		return
 	}
+	user = users[0]
 
 	externalIDs, err := e.getExternalIDs(user, id)
 	if err != nil {
@@ -190,15 +195,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		logOpts.TailLines = &tailLines
 	}
 
-	// follow is optional
-	if queryParams.Get("follow") != "" {
-		if follow, err = strconv.ParseBool(queryParams.Get("follow")); err != nil {
-			http.Error(writer, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		logOpts.Follow = follow
-	}
+	logOpts.Follow = false
 
 	// timestamps is optional
 	if queryParams.Get("timestamps") != "" {
@@ -236,10 +233,6 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 
 	logOpts.Container = container
 
-	// Set this here to make sure it's right before the logs are actually retrieved.
-	// Should help prevent gaps in the log.
-	writer.Header().Set("DE-VICE-SINCE-TIME", fmt.Sprintf("%d", time.Now().Unix()))
-
 	// Finally, actually get the logs and write the response out
 	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
 	if err != nil {
@@ -252,43 +245,35 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	flusher := &FlushableResponseWriter{w: writer}
-	if f, ok := writer.(http.Flusher); ok {
-		flusher.f = f
-	}
-
 	defer logReadCloser.Close()
-	_, err = io.Copy(flusher, logReadCloser)
+
+	bodyBytes, err := ioutil.ReadAll(logReadCloser)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	bodyLines := bytes.Split(bodyBytes, []byte("\n"))
+	newSinceTime := fmt.Sprintf("%d", time.Now().Unix())
+
+	retval := &VICELogEntry{
+		SinceTime: newSinceTime,
+		Lines:     bodyLines,
+	}
+
+	outBytes, err := json.Marshal(retval)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(writer, outBytes)
+
 }
 
 // Contains information about pods returned by the VICEPods handler.
 type retPod struct {
 	Name string `json:"name"`
-}
-
-// FlushableResponseWriter is a io.Writer that will be flushed after each call to
-// Write().
-type FlushableResponseWriter struct {
-	f http.Flusher
-	w io.Writer
-}
-
-// Write implements the Write() function needed for the io.Writer interface, adding
-// a call to Flush().
-func (frw *FlushableResponseWriter) Write(content []byte) (n int, err error) {
-	n, err = frw.w.Write(content)
-	if err != nil {
-		return n, err
-	}
-	if frw.f != nil {
-		frw.f.Flush()
-	}
-	return n, nil
 }
 
 // VICEPods lists the k8s pods associated with the provided external-id. For now
