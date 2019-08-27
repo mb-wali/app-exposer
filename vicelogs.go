@@ -125,12 +125,6 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	//podName is required
-	if podName, found = mux.Vars(request)["pod"]; !found {
-		http.Error(writer, errors.New("pod parameter is empty").Error(), http.StatusBadRequest)
-		return
-	}
-
 	// user is required
 	if users, found = request.URL.Query()["user"]; !found {
 		http.Error(writer, "user is not set", http.StatusForbidden)
@@ -195,6 +189,8 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		logOpts.TailLines = &tailLines
 	}
 
+	// follow needs to be false for now since upstream services end up using a full thread to process
+	// a stream of updates
 	logOpts.Follow = false
 
 	// timestamps is optional
@@ -207,23 +203,6 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 		logOpts.Timestamps = timestamps
 	}
 
-	// Make sure that the pod is actually part of the job with the provided external-id.
-	pod, err := e.clientset.CoreV1().Pods(e.viceNamespace).Get(podName, metav1.GetOptions{})
-	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if _, ok := pod.Labels["external-id"]; !ok {
-		http.Error(writer, errors.New("pod missing external-id label").Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if pod.Labels["external-id"] != externalID {
-		http.Error(writer, fmt.Errorf("pod's external-id label was not set to %s", id).Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// container is optional, but should have a default value of "analysis"
 	if queryParams.Get("container") != "" {
 		container = queryParams.Get("container")
@@ -232,6 +211,25 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	logOpts.Container = container
+
+	// We're getting a list of pods associated with the first external-id for the analysis,
+	// but we're only going to use the first pod for now.
+	podList, err := e.getPods(externalID)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(podList) < 1 {
+		http.Error(
+			writer,
+			fmt.Errorf("no pods found for analysis %s with external ID %s", id, externalID).Error(),
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	podName = podList[0].Name
 
 	// Finally, actually get the logs and write the response out
 	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
@@ -254,7 +252,6 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 
 	bodyLines := strings.Split(string(bodyBytes), "\n")
-	log.Warnf("number of lines %d", len(bodyLines))
 	newSinceTime := fmt.Sprintf("%d", time.Now().Unix())
 
 	if err = json.NewEncoder(writer).Encode(
@@ -271,6 +268,29 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 // Contains information about pods returned by the VICEPods handler.
 type retPod struct {
 	Name string `json:"name"`
+}
+
+func (e *ExposerApp) getPods(externalID string) ([]retPod, error) {
+	set := labels.Set(map[string]string{
+		"external-id": externalID,
+	})
+
+	listoptions := metav1.ListOptions{
+		LabelSelector: set.AsSelector().String(),
+	}
+
+	returnedPods := []retPod{}
+
+	podlist, err := e.clientset.CoreV1().Pods(e.viceNamespace).List(listoptions)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range podlist.Items {
+		returnedPods = append(returnedPods, retPod{Name: p.Name})
+	}
+
+	return returnedPods, nil
 }
 
 // VICEPods lists the k8s pods associated with the provided external-id. For now
@@ -297,27 +317,13 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
+	// For now, just use the first external ID
 	externalID := externalIDs[0]
 
-	// For now, just use the first external ID
-	set := labels.Set(map[string]string{
-		"external-id": externalID,
-	})
-
-	listoptions := metav1.ListOptions{
-		LabelSelector: set.AsSelector().String(),
-	}
-
-	returnedPods := []retPod{}
-
-	podlist, err := e.clientset.CoreV1().Pods(e.viceNamespace).List(listoptions)
+	returnedPods, err := e.getPods(externalID)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	for _, p := range podlist.Items {
-		returnedPods = append(returnedPods, retPod{Name: p.Name})
 	}
 
 	if err = json.NewEncoder(writer).Encode(
