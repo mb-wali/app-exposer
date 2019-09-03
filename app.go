@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -40,6 +41,7 @@ type ExposerApp struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
+	db                            *sql.DB
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -63,6 +65,7 @@ type ExposerAppInit struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
+	db                            *sql.DB
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -92,6 +95,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		CheckResourceAccessService:    init.CheckResourceAccessService,
 		VICEBackendNamespace:          init.VICEBackendNamespace,
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
+		db:                            init.db,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
@@ -101,6 +105,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/{id}/save-and-exit", app.VICESaveAndExit).Methods("POST")
 	app.router.HandleFunc("/vice/{analysis-id}/pods", app.VICEPods).Methods("GET")
 	app.router.HandleFunc("/vice/{analysis-id}/logs", app.VICELogs).Methods("GET")
+	app.router.HandleFunc("/vice/{analysis-id}/timelimit", app.VICETimeLimitUpdate).Methods("POST")
 	app.router.HandleFunc("/vice/{host}/url-ready", app.VICEStatus).Methods("GET")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")

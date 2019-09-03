@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
+	"github.com/pkg/errors"
 
 	"gopkg.in/cyverse-de/model.v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -412,4 +413,56 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 	}(writer, request)
 
 	log.Info("leaving save and exit")
+}
+
+const updateTimeLimitSQL = `
+	UPDATE ONLY jobs
+	   SET planned_end_date = old_value.planned_end_date + interval '72 hours'
+	  FROM (SELECT planned_end_date FROM jobs WHERE id = $2) AS old_value
+	 WHERE jobs.id = $2
+	   AND jobs.user_id = $1
+`
+
+const getUserIDSQL = `
+	SELECT users.id
+	  FROM users
+	 WHERE username = $1
+`
+
+// VICETimeLimitUpdate handles requests to update the time limit on an already running VICE app.
+func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *http.Request) {
+	log.Info("update time limit called")
+
+	var (
+		err    error
+		id     string
+		users  []string
+		user   string
+		userID string
+		found  bool
+	)
+
+	// user is required
+	if users, found = request.URL.Query()["user"]; !found {
+		http.Error(writer, "user is not set", http.StatusForbidden)
+		return
+	}
+	user = users[0]
+
+	// id is required
+	if id, found = mux.Vars(request)["analysis-id"]; !found {
+		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = e.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
+		http.Error(writer, errors.Wrapf(err, "error looking user ID for %s", user).Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, err = e.db.Exec(updateTimeLimitSQL, userID, id); err != nil {
+		http.Error(writer, errors.Wrapf(err, "error extending time limit for user %s on analysis %s", userID, id).Error(), http.StatusBadRequest)
+		return
+	}
+
 }

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
+	_ "github.com/lib/pq"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +31,7 @@ func main() {
 		err        error
 		kubeconfig *string
 		cfg        *viper.Viper
+		db         *sql.DB
 
 		configPath                    = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
 		namespace                     = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
@@ -68,6 +71,11 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Printf("Done reading config from %s\n", *configPath)
+
+	// Make sure the db.uri URL is parseable
+	if _, err = url.Parse(cfg.GetString("db.uri")); err != nil {
+		log.Fatal(errors.Wrap(err, "Can't parse db.uri in the config file"))
+	}
 
 	// Make sure the frontend base URL is parseable.
 	if _, err = url.Parse(cfg.GetString("k8s.frontend.base")); err != nil {
@@ -132,6 +140,17 @@ func main() {
 		proxyImage = *viceProxy
 	} else {
 		proxyImage = fmt.Sprintf("%s:%s", *viceProxy, proxyTag)
+	}
+
+	dbURI := cfg.GetString("db.uri")
+	// connect to the database. or not, I don't really care.
+	db, err = sql.Open("postgres", dbURI)
+	if err != nil {
+		log.Fatal(errors.Wrapf(err, "error connecting to database %s", dbURI))
+	}
+
+	if err = db.Ping(); err != nil {
+		log.Fatal(errors.Wrapf(err, "error pinging database %s", dbURI))
 	}
 
 	exposerInit := &ExposerAppInit{
