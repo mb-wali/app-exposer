@@ -6,9 +6,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 
 	"gopkg.in/cyverse-de/model.v4"
@@ -421,6 +423,7 @@ const updateTimeLimitSQL = `
 	  FROM (SELECT planned_end_date FROM jobs WHERE id = $2) AS old_value
 	 WHERE jobs.id = $2
 	   AND jobs.user_id = $1
+ RETURNING jobs.planned_end_date
 `
 
 const getUserIDSQL = `
@@ -449,6 +452,10 @@ func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *ht
 	}
 	user = users[0]
 
+	if !strings.HasSuffix(user, "@iplantcollaborative.org") {
+		user = fmt.Sprintf("%s@iplantcollaborative.org", user)
+	}
+
 	// id is required
 	if id, found = mux.Vars(request)["analysis-id"]; !found {
 		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
@@ -460,9 +467,32 @@ func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	if _, err = e.db.Exec(updateTimeLimitSQL, userID, id); err != nil {
+	var newTimeLimit pq.NullTime
+	if err = e.db.QueryRow(updateTimeLimitSQL, userID, id).Scan(&newTimeLimit); err != nil {
 		http.Error(writer, errors.Wrapf(err, "error extending time limit for user %s on analysis %s", userID, id).Error(), http.StatusBadRequest)
 		return
 	}
+
+	outputMap := map[string]string{}
+	if newTimeLimit.Valid {
+		v, err := newTimeLimit.Value()
+		if err != nil {
+			http.Error(writer, errors.Wrapf(err, "error getting new time limit for user %s on analysis %s", userID, id).Error(), http.StatusInternalServerError)
+			return
+		}
+		outputMap["time_limit"] = fmt.Sprintf("%d", v.(time.Time).Unix())
+	} else {
+		http.Error(writer, errors.Wrapf(err, "the time limit for analysis %s was null after extension", id).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var outputJSON []byte
+	outputJSON, err = json.Marshal(outputMap)
+	if err != nil {
+		http.Error(writer, errors.Wrapf(err, "error marshalling the JSON for the new time limit for analysis %s", id).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(writer, string(outputJSON))
 
 }

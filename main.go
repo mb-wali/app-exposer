@@ -173,6 +173,7 @@ func main() {
 		CheckResourceAccessService:    *checkResourceAccessService,
 		VICEBackendNamespace:          cfg.GetString("vice.backend-namespace"),
 		AppsServiceBaseURL:            appsServiceBaseURL,
+		db:                            db,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
