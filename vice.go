@@ -426,6 +426,13 @@ const updateTimeLimitSQL = `
  RETURNING jobs.planned_end_date
 `
 
+const getTimeLimitSQL = `
+	SELECT planned_end_date
+	  FROM jobs
+	 WHERE jobs.id = $2
+	   AND jobs.user_id = $1
+`
+
 const getUserIDSQL = `
 	SELECT users.id
 	  FROM users
@@ -490,6 +497,69 @@ func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *ht
 	outputJSON, err = json.Marshal(outputMap)
 	if err != nil {
 		http.Error(writer, errors.Wrapf(err, "error marshalling the JSON for the new time limit for analysis %s", id).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprint(writer, string(outputJSON))
+}
+
+// VICEGetTimeLimit implements the handler for getting the current time limit from the database.
+func (e *ExposerApp) VICEGetTimeLimit(writer http.ResponseWriter, request *http.Request) {
+	log.Info("get time limit called")
+
+	var (
+		err    error
+		id     string
+		users  []string
+		user   string
+		userID string
+		found  bool
+	)
+
+	// user is required
+	if users, found = request.URL.Query()["user"]; !found {
+		http.Error(writer, "user is not set", http.StatusForbidden)
+		return
+	}
+	user = users[0]
+
+	if !strings.HasSuffix(user, "@iplantcollaborative.org") {
+		user = fmt.Sprintf("%s@iplantcollaborative.org", user)
+	}
+
+	// id is required
+	if id, found = mux.Vars(request)["analysis-id"]; !found {
+		http.Error(writer, errors.New("id parameter is empty").Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = e.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
+		http.Error(writer, errors.Wrapf(err, "error looking user ID for %s", user).Error(), http.StatusBadRequest)
+		return
+	}
+
+	var timeLimit pq.NullTime
+	if err = e.db.QueryRow(getTimeLimitSQL, userID, id).Scan(&timeLimit); err != nil {
+		http.Error(writer, errors.Wrapf(err, "error retrieving time limit for user %s on analysis %s", userID, id).Error(), http.StatusBadRequest)
+		return
+	}
+
+	outputMap := map[string]string{}
+	if timeLimit.Valid {
+		v, err := timeLimit.Value()
+		if err != nil {
+			http.Error(writer, errors.Wrapf(err, "error getting time limit for user %s on analysis %s", userID, id).Error(), http.StatusInternalServerError)
+			return
+		}
+		outputMap["time_limit"] = fmt.Sprintf("%d", v.(time.Time).Unix())
+	} else {
+		outputMap["time_limit"] = "null"
+	}
+
+	var outputJSON []byte
+	outputJSON, err = json.Marshal(outputMap)
+	if err != nil {
+		http.Error(writer, errors.Wrapf(err, "error marshalling the JSON for the time limit for analysis %s", id).Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -106,6 +106,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/{analysis-id}/pods", app.VICEPods).Methods("GET")
 	app.router.HandleFunc("/vice/{analysis-id}/logs", app.VICELogs).Methods("GET")
 	app.router.HandleFunc("/vice/{analysis-id}/timelimit", app.VICETimeLimitUpdate).Methods("POST")
+	app.router.HandleFunc("/vice/{analysis-id}/timelimit", app.VICEGetTimeLimit).Methods("GET")
 	app.router.HandleFunc("/vice/{host}/url-ready", app.VICEStatus).Methods("GET")
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")
