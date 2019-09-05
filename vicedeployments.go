@@ -136,6 +136,47 @@ var (
 	defaultMemResourceLimit, _   = resourcev1.ParseQuantity("32Gi")
 )
 
+// initContainers returns a []apiv1.Container used for the InitContainers in
+// the VICE app Deployment resource.
+func (e *ExposerApp) initContainers(job *model.Job) []apiv1.Container {
+	return []apiv1.Container{
+		apiv1.Container{
+			Name:            fileTransfersContainerName,
+			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
+			Command:         append(fileTransferCommand(job), "--no-service"),
+			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
+			WorkingDir:      inputPathListMountPath,
+			VolumeMounts:    e.fileTransfersVolumeMounts(job),
+			Ports: []apiv1.ContainerPort{
+				{
+					Name:          fileTransfersPortName,
+					ContainerPort: fileTransfersPort,
+					Protocol:      apiv1.Protocol("TCP"),
+				},
+			},
+			SecurityContext: &apiv1.SecurityContext{
+				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+				Capabilities: &apiv1.Capabilities{
+					Drop: []apiv1.Capability{
+						"SETPCAP",
+						"AUDIT_WRITE",
+						"KILL",
+						"SETGID",
+						"SETUID",
+						"NET_BIND_SERVICE",
+						"SYS_CHROOT",
+						"SETFCAP",
+						"FSETID",
+						"NET_RAW",
+						"MKNOD",
+					},
+				},
+			},
+		},
+	}
+}
+
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
@@ -316,6 +357,7 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 				Spec: apiv1.PodSpec{
 					RestartPolicy:                apiv1.RestartPolicy("Always"),
 					Volumes:                      deploymentVolumes(job),
+					InitContainers:               e.initContainers(job),
 					Containers:                   e.deploymentContainers(job),
 					AutomountServiceAccountToken: &autoMount,
 					SecurityContext: &apiv1.PodSecurityContext{
