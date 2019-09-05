@@ -7,9 +7,10 @@ const (
 	porklockConfigSecretName = "porklock-config"
 	porklockConfigMountPath  = "/etc/porklock"
 
-	fileTransfersVolumeName      = "input-files"
-	fileTransfersContainerName   = "input-files"
-	fileTransfersInputsMountPath = "/input-files"
+	fileTransfersVolumeName        = "input-files"
+	fileTransfersContainerName     = "input-files"
+	fileTransfersInitContainerName = "input-files-init"
+	fileTransfersInputsMountPath   = "/input-files"
 
 	viceProxyContainerName = "vice-proxy"
 	viceProxyPort          = int32(8080)

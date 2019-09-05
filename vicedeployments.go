@@ -141,7 +141,7 @@ var (
 func (e *ExposerApp) initContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
-			Name:            fileTransfersContainerName,
+			Name:            fileTransfersInitContainerName,
 			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
 			Command:         append(fileTransferCommand(job), "--no-service"),
 			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
