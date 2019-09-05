@@ -91,11 +91,15 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
-func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
+func (e *ExposerApp) getFrontendURL(job *model.Job) *url.URL {
 	// This should be parsed in main(), so we shouldn't worry about it here.
 	frontURL, _ := url.Parse(e.FrontendBaseURL)
 	frontURL.Host = fmt.Sprintf("%s.%s", IngressName(job.UserID, job.InvocationID), frontURL.Host)
+	return frontURL
+}
 
+func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
+	frontURL := e.getFrontendURL(job)
 	backendURL := fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort))
 
 	// websocketURL := fmt.Sprintf("ws://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort))
@@ -284,6 +288,12 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				job.Steps[0].Component.Container.Image.Tag,
 			),
 			Command: analysisCommand(&job.Steps[0]),
+			Env: []apiv1.EnvVar{
+				apiv1.EnvVar{
+					Name:  "REDIRECT_URL",
+					Value: e.getFrontendURL(job).String(),
+				},
+			},
 			Resources: apiv1.ResourceRequirements{
 				Limits: apiv1.ResourceList{
 					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
