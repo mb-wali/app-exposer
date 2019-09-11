@@ -196,6 +196,25 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 		memLimit = defaultMemResourceLimit
 	}
 
+	analysisEnvironment := []apiv1.EnvVar{}
+	for envKey, envVal := range job.Steps[0].Environment {
+		analysisEnvironment = append(
+			analysisEnvironment,
+			apiv1.EnvVar{
+				Name:  envKey,
+				Value: envVal,
+			},
+		)
+	}
+
+	analysisEnvironment = append(
+		analysisEnvironment,
+		apiv1.EnvVar{
+			Name:  "REDIRECT_URL",
+			Value: e.getFrontendURL(job).String(),
+		},
+	)
+
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            viceProxyContainerName,
@@ -288,12 +307,7 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				job.Steps[0].Component.Container.Image.Tag,
 			),
 			Command: analysisCommand(&job.Steps[0]),
-			Env: []apiv1.EnvVar{
-				apiv1.EnvVar{
-					Name:  "REDIRECT_URL",
-					Value: e.getFrontendURL(job).String(),
-				},
-			},
+			Env:     analysisEnvironment,
 			Resources: apiv1.ResourceRequirements{
 				Limits: apiv1.ResourceList{
 					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
