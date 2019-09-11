@@ -106,6 +106,7 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 
 	output := []string{
 		"vice-proxy",
+		"--listen-addr", fmt.Sprintf("0.0.0.0:%d", viceProxyPort),
 		"--backend-url", backendURL,
 		"--ws-backend-url", backendURL,
 		"--cas-base-url", e.CASBaseURL,

@@ -13,7 +13,7 @@ const (
 	fileTransfersInputsMountPath   = "/input-files"
 
 	viceProxyContainerName = "vice-proxy"
-	viceProxyPort          = int32(8080)
+	viceProxyPort          = int32(60002)
 	viceProxyPortName      = "tcp-proxy"
 	viceProxyServicePort   = int32(60000)
 
