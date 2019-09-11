@@ -213,6 +213,14 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 			Name:  "REDIRECT_URL",
 			Value: e.getFrontendURL(job).String(),
 		},
+		apiv1.EnvVar{
+			Name:  "IPLANT_USER",
+			Value: job.Submitter,
+		},
+		apiv1.EnvVar{
+			Name:  "IPLANT_EXECUTION_ID",
+			Value: job.InvocationID,
+		},
 	)
 
 	return []apiv1.Container{
