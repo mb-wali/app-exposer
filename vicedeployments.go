@@ -353,6 +353,11 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				// },
 			},
 			ReadinessProbe: &apiv1.Probe{
+				InitialDelaySeconds: 0,
+				TimeoutSeconds:      30,
+				SuccessThreshold:    1,
+				FailureThreshold:    10,
+				PeriodSeconds:       31,
 				Handler: apiv1.Handler{
 					HTTPGet: &apiv1.HTTPGetAction{
 						Port:   intstr.FromInt(job.Steps[0].Component.Container.Ports[0].ContainerPort),
