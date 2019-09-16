@@ -282,23 +282,23 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 					break
 				case UploadingStatus:
-					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+					// msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
 
-					log.Info(msg)
+					// log.Info(msg)
 
-					if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
-						log.Error(err)
-					}
+					// if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
+					// 	log.Error(err)
+					// }
 
 					break
 				case DownloadingStatus:
-					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+					// msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
 
-					log.Info(msg)
+					// log.Info(msg)
 
-					if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
-						log.Error(err)
-					}
+					// if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
+					// 	log.Error(err)
+					// }
 
 					break
 				default:
