@@ -149,16 +149,16 @@ func (e *ExposerApp) MonitorVICEEvents() {
 					podObj := obj.(v1.Object)
 					labels := podObj.GetLabels()
 					jobID := labels["external-id"]
-					//analysisName := labels["analysis-name"]
+					analysisName := labels["analysis-name"]
 
 					log.Infof("processing pod addition for job %s", jobID)
 
-					// if err := e.statusPublisher.Running(
-					// 	jobID,
-					// 	fmt.Sprintf("pod %s has started for analysis %s", podObj.GetName(), analysisName),
-					// ); err != nil {
-					// 	log.Error(errors.Wrapf(err, "error publishing running status when analysis %s was added", jobID))
-					// }
+					if err := e.statusPublisher.Running(
+						jobID,
+						fmt.Sprintf("pod %s has started for analysis %s", podObj.GetName(), analysisName),
+					); err != nil {
+						log.Error(errors.Wrapf(err, "error publishing running status when analysis %s was added", jobID))
+					}
 				},
 
 				DeleteFunc: func(obj interface{}) {
