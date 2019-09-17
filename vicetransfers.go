@@ -274,8 +274,6 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 				case RequestedStatus:
 					msg := fmt.Sprintf("%s requested for job %s", kind, id)
 
-					log.Error(err)
-
 					if requestederr := e.statusPublisher.Running(id, msg); requestederr != nil {
 						log.Error(err)
 					}
