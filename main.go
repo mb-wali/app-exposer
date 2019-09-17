@@ -27,6 +27,8 @@ var log = logrus.WithFields(logrus.Fields{
 })
 
 func main() {
+	logrus.SetReportCaller(true)
+
 	var (
 		err        error
 		kubeconfig *string

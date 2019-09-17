@@ -404,7 +404,7 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 
 		// Trigger a blocking output file transfer request.
 		if err = e.doFileTransfer(request, uploadBasePath, uploadKind, false); err != nil {
-			log.Error(err) // Log but don't exit. Possible to cancel a job that hasn't started yet
+			log.Error(errors.Wrap(err, "error doing file transfer")) // Log but don't exit. Possible to cancel a job that hasn't started yet
 		}
 
 		log.Info("calling VICEExit")

@@ -313,7 +313,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 				transferObj, xfererr = getTransferDetails(transferObj.UUID, svc, fullreqpath)
 				if xfererr != nil {
-					log.Error(xfererr)
+					log.Error(errors.Wrapf(xfererr, "error gettinjg transfer details for transferObj %s", transferObj.UUID))
 					err = xfererr
 					return
 				}
