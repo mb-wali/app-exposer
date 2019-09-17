@@ -98,17 +98,22 @@ func (j *JSLPublisher) postStatus(jobID, msg string, jobState messaging.JobState
 // Fail sends an analysis failure update with the provided message via the AMQP
 // broker. Should be sent once.
 func (j *JSLPublisher) Fail(jobID, msg string) error {
+	log.Warnf("Sending failure job status update for external-id %s", jobID)
+
 	return j.postStatus(jobID, msg, messaging.FailedState)
 }
 
 // Success sends a success update via the AMQP broker. Should be sent once.
 func (j *JSLPublisher) Success(jobID, msg string) error {
+	log.Warnf("Sending success job status update for external-id %s", jobID)
+
 	return j.postStatus(jobID, msg, messaging.SucceededState)
 }
 
 // Running sends an analysis running status update with the provided message via the
 // AMQP broker. May be sent multiple times, preferably with different messages.
 func (j *JSLPublisher) Running(jobID, msg string) error {
+	log.Warnf("Sending running job status update for external-id %s", jobID)
 	return j.postStatus(jobID, msg, messaging.RunningState)
 }
 
@@ -166,12 +171,12 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 					log.Infof("processing pod deletion for job %s", jobID)
 
-					if err := e.statusPublisher.Success(
-						jobID,
-						fmt.Sprintf("pod %s has been deleted for analysis %s", podObj.GetName(), analysisName),
-					); err != nil {
-						log.Error(errors.Wrapf(err, "error publishing success status when analysis %s was deleted", jobID))
-					}
+					// if err := e.statusPublisher.Success(
+					// 	jobID,
+					// 	fmt.Sprintf("pod %s has been deleted for analysis %s", podObj.GetName(), analysisName),
+					// ); err != nil {
+					// 	log.Error(errors.Wrapf(err, "error publishing success status when analysis %s was deleted", jobID))
+					// }
 				},
 
 				UpdateFunc: func(oldObj, newObj interface{}) {
@@ -185,8 +190,6 @@ func (e *ExposerApp) MonitorVICEEvents() {
 						return
 					}
 
-					log.Infof("processing pod update for job %s", jobID)
-
 					if err := e.eventPodModified(newPod, jobID); err != nil {
 						log.Error(err)
 					}
@@ -196,7 +199,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 			deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
 					log.Debug("add a deployment")
-					var err error
+					//var err error
 
 					depObj, ok := obj.(v1.Object)
 					if !ok {
@@ -214,23 +217,23 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 					log.Infof("processing deployment addition for job %s", jobID)
 
-					analysisName, ok := labels["analysis-name"]
-					if !ok {
-						log.Error(errors.New("deployment is missing analysis-name label"))
-						return
-					}
+					// analysisName, ok := labels["analysis-name"]
+					// if !ok {
+					// 	log.Error(errors.New("deployment is missing analysis-name label"))
+					// 	return
+					// }
 
-					if err = e.statusPublisher.Running(
-						jobID,
-						fmt.Sprintf("deployment %s has started for analysis %s", depObj.GetName(), analysisName),
-					); err != nil {
-						log.Error(err)
-					}
+					// if err = e.statusPublisher.Running(
+					// 	jobID,
+					// 	fmt.Sprintf("deployment %s has started for analysis %s", depObj.GetName(), analysisName),
+					// ); err != nil {
+					// 	log.Error(err)
+					// }
 				},
 
 				DeleteFunc: func(obj interface{}) {
 					log.Debug("delete a deployment")
-					var err error
+					//var err error
 
 					depObj, ok := obj.(v1.Object)
 					if !ok {
@@ -248,43 +251,43 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 					log.Infof("processing deployment deletion for job %s", jobID)
 
-					analysisName, ok := labels["analysis-name"]
-					if !ok {
-						log.Error(errors.New("deployment is missing analysis-name label"))
-						return
-					}
+					// analysisName, ok := labels["analysis-name"]
+					// if !ok {
+					// 	log.Error(errors.New("deployment is missing analysis-name label"))
+					// 	return
+					// }
 
-					// Success or failure is determined by the pod-level events
-					if err = e.statusPublisher.Running(
-						jobID,
-						fmt.Sprintf("deployment %s has been deleted for analysis %s", depObj.GetName(), analysisName),
-					); err != nil {
-						log.Error(err)
-					}
+					// // Success or failure is determined by the pod-level events
+					// if err = e.statusPublisher.Running(
+					// 	jobID,
+					// 	fmt.Sprintf("deployment %s has been deleted for analysis %s", depObj.GetName(), analysisName),
+					// ); err != nil {
+					// 	log.Error(err)
+					// }
 				},
 
-				UpdateFunc: func(oldObj, newObj interface{}) {
-					log.Debug("update a deployment")
-					var err error
+				// UpdateFunc: func(oldObj, newObj interface{}) {
+				// 	log.Debug("update a deployment")
+				// 	var err error
 
-					depObj, ok := newObj.(*appsv1.Deployment)
-					if !ok {
-						log.Error(errors.New("unexpected type deployment object"))
-						return
-					}
+				// 	depObj, ok := newObj.(*appsv1.Deployment)
+				// 	if !ok {
+				// 		log.Error(errors.New("unexpected type deployment object"))
+				// 		return
+				// 	}
 
-					jobID, ok := depObj.Labels["external-id"]
-					if !ok {
-						log.Error(errors.New("deployment is missing external-id label"))
-						return
-					}
+				// 	jobID, ok := depObj.Labels["external-id"]
+				// 	if !ok {
+				// 		log.Error(errors.New("deployment is missing external-id label"))
+				// 		return
+				// 	}
 
-					log.Infof("processing deployment change for job %s", jobID)
+				// 	log.Infof("processing deployment change for job %s", jobID)
 
-					if err = e.eventDeploymentModified(depObj, jobID); err != nil {
-						log.Error(err)
-					}
-				},
+				// 	if err = e.eventDeploymentModified(depObj, jobID); err != nil {
+				// 		log.Error(err)
+				// 	}
+				// },
 			})
 
 			go podInformer.Run(podInformerStop)
@@ -307,6 +310,8 @@ func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
 
 	switch pod.Status.Phase {
 	case apiv1.PodSucceeded: // unlikely, but we should handle it.
+		log.Infof("processing pod success for job %s", jobID)
+
 		err = e.statusPublisher.Success(
 			jobID,
 			fmt.Sprintf("pod %s marked Completed for analysis %s", pod.Name, analysisName),
@@ -319,6 +324,8 @@ func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
 		// )
 		break
 	case apiv1.PodFailed:
+		log.Infof("processing pod failure for job %s", jobID)
+
 		err = e.statusPublisher.Fail(
 			jobID,
 			fmt.Sprintf("pod %s of analysis %s failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
@@ -331,6 +338,8 @@ func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
 		// )
 		break
 	default:
+		log.Infof("processing unknown pod update for job %s", jobID)
+
 		err = e.statusPublisher.Fail(
 			jobID,
 			fmt.Sprintf("pod %s of analysis %s is in an unknown state. Marking as failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
