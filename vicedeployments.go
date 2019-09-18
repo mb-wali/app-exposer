@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"gopkg.in/cyverse-de/model.v4"
 	appsv1 "k8s.io/api/apps/v1"
@@ -182,6 +183,16 @@ func (e *ExposerApp) initContainers(job *model.Job) []apiv1.Container {
 	}
 }
 
+func gpuEnabled(job *model.Job) bool {
+	gpuEnabled := false
+	for _, device := range job.Steps[0].Component.Container.Devices {
+		if strings.HasPrefix(strings.ToLower(device.HostPath), "/dev/nvidia") {
+			gpuEnabled = true
+		}
+	}
+	return gpuEnabled
+}
+
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
 func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
@@ -195,6 +206,21 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	if err != nil {
 		log.Warn(err)
 		memLimit = defaultMemResourceLimit
+	}
+
+	limits := apiv1.ResourceList{
+		apiv1.ResourceCPU:    cpuLimit, //job contains # cores
+		apiv1.ResourceMemory: memLimit, // job contains # bytes mem
+	}
+
+	// If a GPU device is configured, then add it to the resource limits.
+	if gpuEnabled(job) {
+		gpuLimit, err := resourcev1.ParseQuantity("1")
+		if err != nil {
+			log.Warn(err)
+		} else {
+			limits[apiv1.ResourceName("nvidia.com")] = gpuLimit
+		}
 	}
 
 	analysisEnvironment := []apiv1.EnvVar{}
@@ -377,6 +403,42 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 	labels := labelsFromJob(job)
 	autoMount := false
 
+	tolerations := []apiv1.Toleration{
+		{
+			Key:      viceTolerationKey,
+			Operator: apiv1.TolerationOperator(viceTolerationOperator),
+			Value:    viceTolerationValue,
+			Effect:   apiv1.TaintEffect(viceTolerationEffect),
+		},
+	}
+
+	nodeSelectorRequirements := []apiv1.NodeSelectorRequirement{
+		{
+			Key:      viceAffinityKey,
+			Operator: apiv1.NodeSelectorOperator(viceAffinityOperator),
+			Values: []string{
+				viceAffinityValue,
+			},
+		},
+	}
+
+	if gpuEnabled(job) {
+		tolerations = append(tolerations, apiv1.Toleration{
+			Key:      gpuTolerationKey,
+			Operator: apiv1.TolerationOperator(gpuTolerationOperator),
+			Value:    gpuTolerationValue,
+			Effect:   apiv1.TaintEffect(gpuTolerationEffect),
+		})
+
+		nodeSelectorRequirements = append(nodeSelectorRequirements, apiv1.NodeSelectorRequirement{
+			Key:      gpuAffinityKey,
+			Operator: apiv1.NodeSelectorOperator(gpuAffinityOperator),
+			Values: []string{
+				gpuAffinityValue,
+			},
+		})
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   job.InvocationID,
@@ -404,28 +466,13 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 						RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 						FSGroup:    int64Ptr(int64(job.Steps[0].Component.Container.UID)),
 					},
-					Tolerations: []apiv1.Toleration{
-						{
-							Key:      viceTolerationKey,
-							Operator: apiv1.TolerationOperator(viceTolerationOperator),
-							Value:    viceTolerationValue,
-							Effect:   apiv1.TaintEffect(viceTolerationEffect),
-						},
-					},
+					Tolerations: tolerations,
 					Affinity: &apiv1.Affinity{
 						NodeAffinity: &apiv1.NodeAffinity{
 							RequiredDuringSchedulingIgnoredDuringExecution: &apiv1.NodeSelector{
 								NodeSelectorTerms: []apiv1.NodeSelectorTerm{
 									{
-										MatchExpressions: []apiv1.NodeSelectorRequirement{
-											{
-												Key:      viceAffinityKey,
-												Operator: apiv1.NodeSelectorOperator(viceAffinityOperator),
-												Values: []string{
-													viceAffinityValue,
-												},
-											},
-										},
+										MatchExpressions: nodeSelectorRequirements,
 									},
 								},
 							},

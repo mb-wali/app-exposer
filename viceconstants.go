@@ -40,9 +40,18 @@ const (
 	viceTolerationValue    = "only"
 	viceTolerationEffect   = "NoSchedule"
 
+	gpuTolerationKey      = "gpu"
+	gpuTolerationOperator = "Equal"
+	gpuTolerationValue    = "true"
+	gpuTolerationEffect   = "NoSchedule"
+
 	viceAffinityKey      = "vice"
 	viceAffinityOperator = "In"
 	viceAffinityValue    = "true"
+
+	gpuAffinityKey      = "gpu"
+	gpuAffinityOperator = "In"
+	gpuAffinityValue    = "true"
 )
 
 func int32Ptr(i int32) *int32 { return &i }
