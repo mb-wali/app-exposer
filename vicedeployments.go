@@ -315,8 +315,9 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				job.Steps[0].Component.Container.Image.Name,
 				job.Steps[0].Component.Container.Image.Tag,
 			),
-			Command: analysisCommand(&job.Steps[0]),
-			Env:     analysisEnvironment,
+			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
+			Command:         analysisCommand(&job.Steps[0]),
+			Env:             analysisEnvironment,
 			Resources: apiv1.ResourceRequirements{
 				Limits: apiv1.ResourceList{
 					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
