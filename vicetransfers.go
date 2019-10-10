@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/cyverse-de/model.v4"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
 	"sync"
 	"time"
+
+	"gopkg.in/cyverse-de/model.v4"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -244,6 +245,11 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 			currentStatus := transferObj.Status
 
+			var (
+				sentUploadStatus   = false
+				sentDownloadStatus = false
+			)
+
 			for !isFinished(currentStatus) {
 				// Set it again here to catch the new values set farther down.
 				currentStatus = transferObj.Status
@@ -280,24 +286,30 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 					break
 				case UploadingStatus:
-					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+					if !sentUploadStatus {
+						msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
 
-					log.Info(msg)
+						log.Info(msg)
 
-					if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
-						log.Error(err)
+						if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
+							log.Error(err)
+						}
+
+						sentUploadStatus = true
 					}
-
 					break
 				case DownloadingStatus:
-					msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
+					if !sentDownloadStatus {
+						msg := fmt.Sprintf("%s is in progress for job %s", kind, id)
 
-					log.Info(msg)
+						log.Info(msg)
 
-					if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
-						log.Error(err)
+						if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
+							log.Error(err)
+						}
+
+						sentDownloadStatus = true
 					}
-
 					break
 				default:
 					err = fmt.Errorf("unknown status from %s: %s", svc.Spec.ClusterIP, transferObj.Status)

@@ -12,7 +12,6 @@ import (
 	"github.com/cyverse-de/messaging"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
@@ -134,67 +133,10 @@ func (e *ExposerApp) MonitorVICEEvents() {
 					listoptions.LabelSelector = set.AsSelector().String()
 				}),
 			)
-			podInformer := factory.Core().V1().Pods().Informer()
-			podInformerStop := make(chan struct{})
-			defer close(podInformerStop)
 
 			deploymentInformer := factory.Apps().V1().Deployments().Informer()
 			deploymentInformerStop := make(chan struct{})
 			defer close(deploymentInformerStop)
-
-			podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-				AddFunc: func(obj interface{}) {
-					log.Debug("adding a pod")
-
-					podObj := obj.(v1.Object)
-					labels := podObj.GetLabels()
-					jobID := labels["external-id"]
-					analysisName := labels["analysis-name"]
-
-					log.Infof("processing pod addition for job %s", jobID)
-
-					if err := e.statusPublisher.Running(
-						jobID,
-						fmt.Sprintf("pod %s has started for analysis %s", podObj.GetName(), analysisName),
-					); err != nil {
-						log.Error(errors.Wrapf(err, "error publishing running status when analysis %s was added", jobID))
-					}
-				},
-
-				DeleteFunc: func(obj interface{}) {
-					log.Debug("deleting a pod")
-
-					podObj := obj.(v1.Object)
-					labels := podObj.GetLabels()
-					jobID := labels["external-id"]
-					analysisName := labels["analysis-name"]
-
-					log.Infof("processing pod deletion for job %s", jobID)
-
-					if err := e.statusPublisher.Success(
-						jobID,
-						fmt.Sprintf("pod %s has been deleted for analysis %s", podObj.GetName(), analysisName),
-					); err != nil {
-						log.Error(errors.Wrapf(err, "error publishing success status when analysis %s was deleted", jobID))
-					}
-				},
-
-				UpdateFunc: func(oldObj, newObj interface{}) {
-					log.Debug("updating a pod")
-
-					newPod := newObj.(*apiv1.Pod)
-
-					jobID, ok := newPod.Labels["external-id"]
-					if !ok {
-						log.Error(errors.New("pod is missing external-id label"))
-						return
-					}
-
-					if err := e.eventPodModified(newPod, jobID); err != nil {
-						log.Error(err)
-					}
-				},
-			})
 
 			deploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 				AddFunc: func(obj interface{}) {
@@ -257,8 +199,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 						return
 					}
 
-					// Success or failure is determined by the pod-level events
-					if err = e.statusPublisher.Running(
+					if err = e.statusPublisher.Success(
 						jobID,
 						fmt.Sprintf("deployment %s has been deleted for analysis %s", depObj.GetName(), analysisName),
 					); err != nil {
@@ -290,64 +231,9 @@ func (e *ExposerApp) MonitorVICEEvents() {
 				},
 			})
 
-			go podInformer.Run(podInformerStop)
 			deploymentInformer.Run(deploymentInformerStop)
 		}
 	}(e.clientset)
-}
-
-// eventPodModified handles emitting job status updates when the pod for the
-// VICE analysis generates a modified event from k8s.
-func (e *ExposerApp) eventPodModified(pod *apiv1.Pod, jobID string) error {
-	var err error
-
-	analysisName := pod.Labels["analysis-name"]
-
-	if pod.DeletionTimestamp != nil {
-		// Pod was deleted at some point, don't do anything now.
-		return nil
-	}
-
-	switch pod.Status.Phase {
-	case apiv1.PodSucceeded: // unlikely, but we should handle it.
-		log.Infof("processing pod success for job %s", jobID)
-
-		err = e.statusPublisher.Success(
-			jobID,
-			fmt.Sprintf("pod %s marked Completed for analysis %s", pod.Name, analysisName),
-		)
-		break
-	case apiv1.PodRunning:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("pod %s of analysis %s changed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
-		)
-		break
-	case apiv1.PodFailed:
-		log.Infof("processing pod failure for job %s", jobID)
-
-		err = e.statusPublisher.Fail(
-			jobID,
-			fmt.Sprintf("pod %s of analysis %s failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
-		)
-		break
-	case apiv1.PodPending:
-		err = e.statusPublisher.Running(
-			jobID,
-			fmt.Sprintf("pod %s of analysis %s is pending", pod.Name, analysisName),
-		)
-		break
-	default:
-		log.Infof("processing unknown pod update for job %s", jobID)
-
-		err = e.statusPublisher.Fail(
-			jobID,
-			fmt.Sprintf("pod %s of analysis %s is in an unknown state. Marking as failed. Reason: %s", pod.Name, analysisName, pod.Status.Reason),
-		)
-		break
-	}
-
-	return err
 }
 
 // eventDeploymentModified handles emitting job status updates when the pod for the
