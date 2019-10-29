@@ -14,18 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// analyisCommand returns a []string containing the command to fire up the VICE analysis.
-func analysisCommand(step *model.Step) []string {
-	output := []string{}
-	if step.Component.Container.EntryPoint != "" {
-		output = append(output, step.Component.Container.EntryPoint)
-	}
-	if len(step.Arguments()) != 0 {
-		output = append(output, step.Arguments()...)
-	}
-	return output
-}
-
 // analysisPorts returns a list of container ports needed by the VICE analysis.
 func analysisPorts(step *model.Step) []apiv1.ContainerPort {
 	ports := []apiv1.ContainerPort{}
@@ -193,36 +181,7 @@ func gpuEnabled(job *model.Job) bool {
 	return gpuEnabled
 }
 
-// deploymentContainers returns the Containers needed for the VICE analysis
-// Deployment. It does not call the k8s API.
-func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
-	cpuLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%fm", cpuResourceLimit(job)*1000))
-	if err != nil {
-		log.Warn(err)
-		cpuLimit = defaultCPUResourceLimit
-	}
-
-	memLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%d", memResourceLimit(job)))
-	if err != nil {
-		log.Warn(err)
-		memLimit = defaultMemResourceLimit
-	}
-
-	limits := apiv1.ResourceList{
-		apiv1.ResourceCPU:    cpuLimit, //job contains # cores
-		apiv1.ResourceMemory: memLimit, // job contains # bytes mem
-	}
-
-	// If a GPU device is configured, then add it to the resource limits.
-	if gpuEnabled(job) {
-		gpuLimit, err := resourcev1.ParseQuantity("1")
-		if err != nil {
-			log.Warn(err)
-		} else {
-			limits[apiv1.ResourceName("nvidia.com")] = gpuLimit
-		}
-	}
-
+func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 	analysisEnvironment := []apiv1.EnvVar{}
 	for envKey, envVal := range job.Steps[0].Environment {
 		analysisEnvironment = append(
@@ -250,6 +209,110 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 		},
 	)
 
+	cpuLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%fm", cpuResourceLimit(job)*1000))
+	if err != nil {
+		log.Warn(err)
+		cpuLimit = defaultCPUResourceLimit
+	}
+
+	memLimit, err := resourcev1.ParseQuantity(fmt.Sprintf("%d", memResourceLimit(job)))
+	if err != nil {
+		log.Warn(err)
+		memLimit = defaultMemResourceLimit
+	}
+
+	limits := apiv1.ResourceList{
+		apiv1.ResourceCPU:    cpuLimit, //job contains # cores
+		apiv1.ResourceMemory: memLimit, // job contains # bytes mem
+	}
+
+	// If a GPU device is configured, then add it to the resource limits.
+	if gpuEnabled(job) {
+		gpuLimit, err := resourcev1.ParseQuantity("1")
+		if err != nil {
+			log.Warn(err)
+		} else {
+			limits[apiv1.ResourceName("nvidia.com")] = gpuLimit
+		}
+	}
+
+	analysisContainer := apiv1.Container{
+		Name: analysisContainerName,
+		Image: fmt.Sprintf(
+			"%s:%s",
+			job.Steps[0].Component.Container.Image.Name,
+			job.Steps[0].Component.Container.Image.Tag,
+		),
+		ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
+		Env:             analysisEnvironment,
+		Resources: apiv1.ResourceRequirements{
+			Limits: apiv1.ResourceList{
+				apiv1.ResourceCPU:    cpuLimit, //job contains # cores
+				apiv1.ResourceMemory: memLimit, // job contains # bytes mem
+			},
+			Requests: apiv1.ResourceList{
+				apiv1.ResourceCPU:    defaultCPUResourceRequest,
+				apiv1.ResourceMemory: defaultMemResourceRequest,
+			},
+		},
+		VolumeMounts: []apiv1.VolumeMount{
+			{
+				Name:      fileTransfersVolumeName,
+				MountPath: fileTransfersMountPath(job),
+				ReadOnly:  false,
+			},
+		},
+		Ports: analysisPorts(&job.Steps[0]),
+		SecurityContext: &apiv1.SecurityContext{
+			RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+			RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
+			// Capabilities: &apiv1.Capabilities{
+			// 	Drop: []apiv1.Capability{
+			// 		"SETPCAP",
+			// 		"AUDIT_WRITE",
+			// 		"KILL",
+			// 		//"SETGID",
+			// 		//"SETUID",
+			// 		"SYS_CHROOT",
+			// 		"SETFCAP",
+			// 		"FSETID",
+			// 		//"MKNOD",
+			// 	},
+			// },
+		},
+		ReadinessProbe: &apiv1.Probe{
+			InitialDelaySeconds: 0,
+			TimeoutSeconds:      30,
+			SuccessThreshold:    1,
+			FailureThreshold:    10,
+			PeriodSeconds:       31,
+			Handler: apiv1.Handler{
+				HTTPGet: &apiv1.HTTPGetAction{
+					Port:   intstr.FromInt(job.Steps[0].Component.Container.Ports[0].ContainerPort),
+					Scheme: apiv1.URISchemeHTTP,
+					Path:   "/",
+				},
+			},
+		},
+	}
+
+	if job.Steps[0].Component.Container.EntryPoint != "" {
+		analysisContainer.Command = []string{
+			job.Steps[0].Component.Container.EntryPoint,
+		}
+	}
+
+	if len(job.Steps[0].Arguments()) != 0 {
+		analysisContainer.Args = append(analysisContainer.Args, job.Steps[0].Arguments()...)
+	}
+
+	return analysisContainer
+
+}
+
+// deploymentContainers returns the Containers needed for the VICE analysis
+// Deployment. It does not call the k8s API.
+func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            viceProxyContainerName,
@@ -334,66 +397,7 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				},
 			},
 		},
-		apiv1.Container{
-			Name: analysisContainerName,
-			Image: fmt.Sprintf(
-				"%s:%s",
-				job.Steps[0].Component.Container.Image.Name,
-				job.Steps[0].Component.Container.Image.Tag,
-			),
-			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
-			Command:         analysisCommand(&job.Steps[0]),
-			Env:             analysisEnvironment,
-			Resources: apiv1.ResourceRequirements{
-				Limits: apiv1.ResourceList{
-					apiv1.ResourceCPU:    cpuLimit, //job contains # cores
-					apiv1.ResourceMemory: memLimit, // job contains # bytes mem
-				},
-				Requests: apiv1.ResourceList{
-					apiv1.ResourceCPU:    defaultCPUResourceRequest,
-					apiv1.ResourceMemory: defaultMemResourceRequest,
-				},
-			},
-			VolumeMounts: []apiv1.VolumeMount{
-				{
-					Name:      fileTransfersVolumeName,
-					MountPath: fileTransfersMountPath(job),
-					ReadOnly:  false,
-				},
-			},
-			Ports: analysisPorts(&job.Steps[0]),
-			SecurityContext: &apiv1.SecurityContext{
-				RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-				RunAsGroup: int64Ptr(int64(job.Steps[0].Component.Container.UID)),
-				// Capabilities: &apiv1.Capabilities{
-				// 	Drop: []apiv1.Capability{
-				// 		"SETPCAP",
-				// 		"AUDIT_WRITE",
-				// 		"KILL",
-				// 		//"SETGID",
-				// 		//"SETUID",
-				// 		"SYS_CHROOT",
-				// 		"SETFCAP",
-				// 		"FSETID",
-				// 		//"MKNOD",
-				// 	},
-				// },
-			},
-			ReadinessProbe: &apiv1.Probe{
-				InitialDelaySeconds: 0,
-				TimeoutSeconds:      30,
-				SuccessThreshold:    1,
-				FailureThreshold:    10,
-				PeriodSeconds:       31,
-				Handler: apiv1.Handler{
-					HTTPGet: &apiv1.HTTPGetAction{
-						Port:   intstr.FromInt(job.Steps[0].Component.Container.Ports[0].ContainerPort),
-						Scheme: apiv1.URISchemeHTTP,
-						Path:   "/",
-					},
-				},
-			},
-		},
+		e.defineAnalysisContainer(job),
 	}
 }
 
