@@ -302,6 +302,11 @@ func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 		}
 	}
 
+	// Default to the container working directory if it isn't set.
+	if job.Steps[0].Component.Container.WorkingDir != "" {
+		analysisContainer.WorkingDir = job.Steps[0].Component.Container.WorkingDir
+	}
+
 	if len(job.Steps[0].Arguments()) != 0 {
 		analysisContainer.Args = append(analysisContainer.Args, job.Steps[0].Arguments()...)
 	}
