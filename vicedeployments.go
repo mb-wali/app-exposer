@@ -232,7 +232,7 @@ func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 		if err != nil {
 			log.Warn(err)
 		} else {
-			limits[apiv1.ResourceName("nvidia.com")] = gpuLimit
+			limits[apiv1.ResourceName("nvidia.com/gpu")] = gpuLimit
 		}
 	}
 
@@ -246,10 +246,7 @@ func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 		ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
 		Env:             analysisEnvironment,
 		Resources: apiv1.ResourceRequirements{
-			Limits: apiv1.ResourceList{
-				apiv1.ResourceCPU:    cpuLimit, //job contains # cores
-				apiv1.ResourceMemory: memLimit, // job contains # bytes mem
-			},
+			Limits: limits,
 			Requests: apiv1.ResourceList{
 				apiv1.ResourceCPU:    defaultCPUResourceRequest,
 				apiv1.ResourceMemory: defaultMemResourceRequest,
