@@ -1,9 +1,11 @@
 #!groovy
 
-stage ('Trigger Build') {
+node {
 	service = readProperties file: 'service.properties'
 
-	build job: 'Build-Tag-Push-Deploy-QA', wait: true, parameters: [
-		[$class: 'StringParameterValue', name: 'PROJECT', value: service.repo]
-	]
+	stage ('Trigger Build') {
+		build job: 'Build-Tag-Push-Deploy-QA', wait: true, parameters: [
+			[$class: 'StringParameterValue', name: 'PROJECT', value: service.repo]
+		]
+	}
 }
