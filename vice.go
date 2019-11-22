@@ -182,7 +182,7 @@ func (e *ExposerApp) getJobLimitForUser(username string) (int, error) {
 	return jobLimit, nil
 }
 
-func (e *ExposerApp) validateJob(job *model.Job, request *http.Request) error {
+func (e *ExposerApp) validateJob(job *model.Job) error {
 
 	// Verify that the job type is supported by this service
 	if strings.ToLower(job.ExecutionTarget) != "interapps" {
@@ -190,11 +190,7 @@ func (e *ExposerApp) validateJob(job *model.Job, request *http.Request) error {
 	}
 
 	// Get the username
-	users, found := request.URL.Query()["user"]
-	if !found {
-		return fmt.Errorf("user is not set")
-	}
-	user := users[0]
+	user := slugString(job.Submitter)
 
 	// Verify that the user hasn't exceeded their limit for the number of concurrent jobs.
 	jobCount, err := e.countJobsForUser(user)
@@ -229,7 +225,7 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	if err = e.validateJob(job, request); err != nil {
+	if err = e.validateJob(job); err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
