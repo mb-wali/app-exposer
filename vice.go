@@ -160,12 +160,13 @@ func (e *ExposerApp) countJobsForUser(username string) (int, error) {
 		LabelSelector: set.AsSelector().String(),
 	}
 
-	podlist, err := e.clientset.CoreV1().Pods(e.viceNamespace).List(listoptions)
+	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	deplist, err := depclient.List(listoptions)
 	if err != nil {
 		return 0, err
 	}
 
-	return len(podlist.Items), nil
+	return len(deplist.Items), nil
 }
 
 const getJobLimitForUserSQL = `
