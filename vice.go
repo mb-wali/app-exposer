@@ -171,7 +171,7 @@ func (e *ExposerApp) countJobsForUser(username string) (int, error) {
 const getJobLimitForUserSQL = `
 	SELECT concurrent_jobs FROM job_limits
 	WHERE launcher = $1 OR launcher IS NULL
-	ORDER BY launcher DESC
+	ORDER BY launcher ASC
 `
 
 func (e *ExposerApp) getJobLimitForUser(username string) (int, error) {
