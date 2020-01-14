@@ -7,9 +7,10 @@ require (
 	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
 	github.com/cyverse-de/job-templates v5.4.0+incompatible
 	github.com/cyverse-de/messaging v6.0.0+incompatible
-	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151
+	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 // indirect
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.0.0 // indirect
+	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
@@ -39,7 +40,7 @@ require (
 	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/klog v0.2.0 // indirect
+	k8s.io/klog v0.2.0
 	k8s.io/kube-openapi v0.0.0-20180201014056-275e2ce91dec // indirect
 	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect

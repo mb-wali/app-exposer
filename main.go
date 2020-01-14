@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog" // pull in to set klog output to stderr
 )
 
 var log = logrus.WithFields(logrus.Fields{
@@ -25,6 +26,17 @@ var log = logrus.WithFields(logrus.Fields{
 	"art-id":  "app-exposer",
 	"group":   "org.cyverse",
 })
+
+func init() {
+	// Set klog, used by the k8s client, to use its "log to stderr"
+	// functionality. Otherwise, it'll crash without a /tmp directory, and
+	// it's not great it's allowed to write files by default anyway. With
+	// thanks to https://github.com/coredns/coredns/pull/2529
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+	logtostderr := klogFlags.Lookup("logtostderr")
+	logtostderr.Value.Set("true")
+}
 
 func main() {
 	logrus.SetReportCaller(true)
