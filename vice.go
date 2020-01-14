@@ -57,7 +57,7 @@ func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
 
 	_, err := cmclient.Get(excludesConfigMapName(job), metav1.GetOptions{})
 	if err != nil {
-		fmt.Println(err)
+		log.Info(err)
 		_, err = cmclient.Create(&excludesCM)
 		if err != nil {
 			return err

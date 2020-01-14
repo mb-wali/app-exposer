@@ -75,7 +75,7 @@ func main() {
 
 	flag.Parse()
 
-	fmt.Printf("Reading config from %s\n", *configPath)
+	log.Infof("Reading config from %s\n", *configPath)
 	if _, err = os.Open(*configPath); err != nil {
 		log.Fatal(*configPath)
 	}
@@ -84,7 +84,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Done reading config from %s\n", *configPath)
+	log.Infof("Done reading config from %s\n", *configPath)
 
 	// Make sure the db.uri URL is parseable
 	if _, err = url.Parse(cfg.GetString("db.uri")); err != nil {
