@@ -99,6 +99,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
+	app.router.HandleFunc("/vice/deployments", app.AllDeployments).Methods("GET")
 	app.router.HandleFunc("/vice/{id}/download-input-files", app.VICETriggerDownloads).Methods("POST")
 	app.router.HandleFunc("/vice/{id}/save-output-files", app.VICETriggerUploads).Methods("POST")
 	app.router.HandleFunc("/vice/{id}/exit", app.VICEExit).Methods("POST")
@@ -108,6 +109,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.VICETimeLimitUpdate).Methods("POST")
 	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.VICEGetTimeLimit).Methods("GET")
 	app.router.HandleFunc("/vice/{host}/url-ready", app.VICEStatus).Methods("GET")
+
 	app.router.HandleFunc("/service/{name}", app.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.UpdateService).Methods("PUT")
 	app.router.HandleFunc("/service/{name}", app.GetService).Methods("GET")
