@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	_ "github.com/lib/pq"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	_ "github.com/lib/pq"
 
 	"github.com/cyverse-de/configurate"
 	"github.com/pkg/errors"
