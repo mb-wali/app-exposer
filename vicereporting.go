@@ -83,22 +83,27 @@ func filterMap(values url.Values) map[string]string {
 	return q
 }
 
+// MetaInfo contains useful information provided by multiple resource types.
+type MetaInfo struct {
+	Name              string `json:"name"`
+	Namespace         string `json:"namespace"`
+	AnalysisName      string `json:"analysis_name"`
+	AppName           string `json:"app_name"`
+	AppID             string `json:"app_id"`
+	ExternalID        string `json:"external_id"`
+	UserID            string `json:"user_id"`
+	Username          string `json:"username"`
+	CreationTimestamp string `json:"creation_timestamp"`
+}
+
 // DeploymentInfo contains information returned about a Deployment.
 type DeploymentInfo struct {
-	Name              string   `json:"name"`
-	Namespace         string   `json:"namespace"`
-	AnalysisName      string   `json:"analysis_name"`
-	AppName           string   `json:"app_name"`
-	AppID             string   `json:"app_id"`
-	ExternalID        string   `json:"external_id"`
-	UserID            string   `json:"user_id"`
-	Username          string   `json:"username"`
-	CreationTimestamp string   `json:"creation_timestamp"`
-	Image             string   `json:"image"`
-	Command           []string `json:"command"`
-	Port              int32    `json:"port"`
-	User              int64    `json:"user"`
-	Group             int64    `json:"group"`
+	MetaInfo
+	Image   string   `json:"image"`
+	Command []string `json:"command"`
+	Port    int32    `json:"port"`
+	User    int64    `json:"user"`
+	Group   int64    `json:"group"`
 }
 
 func deploymentInfo(deployment *v1.Deployment) *DeploymentInfo {
@@ -124,20 +129,129 @@ func deploymentInfo(deployment *v1.Deployment) *DeploymentInfo {
 	}
 
 	return &DeploymentInfo{
-		Name:              deployment.GetName(),
-		Namespace:         deployment.GetNamespace(),
-		AnalysisName:      labels["analysis-name"],
-		AppName:           labels["app-name"],
-		AppID:             labels["app-id"],
-		ExternalID:        labels["external-id"],
-		UserID:            labels["user-id"],
-		Username:          labels["username"],
-		CreationTimestamp: deployment.GetCreationTimestamp().String(),
-		Image:             image,
-		Command:           command,
-		Port:              port,
-		User:              user,
-		Group:             group,
+		MetaInfo: MetaInfo{
+			Name:              deployment.GetName(),
+			Namespace:         deployment.GetNamespace(),
+			AnalysisName:      labels["analysis-name"],
+			AppName:           labels["app-name"],
+			AppID:             labels["app-id"],
+			ExternalID:        labels["external-id"],
+			UserID:            labels["user-id"],
+			Username:          labels["username"],
+			CreationTimestamp: deployment.GetCreationTimestamp().String(),
+		},
+
+		Image:   image,
+		Command: command,
+		Port:    port,
+		User:    user,
+		Group:   group,
+	}
+}
+
+// ConfigMapInfo contains useful info about a config map.
+type ConfigMapInfo struct {
+	MetaInfo
+	Data map[string]string `json:"data"`
+}
+
+func configMapInfo(cm *corev1.ConfigMap) *ConfigMapInfo {
+	labels := cm.GetObjectMeta().GetLabels()
+
+	return &ConfigMapInfo{
+		MetaInfo: MetaInfo{
+			Name:              cm.GetName(),
+			Namespace:         cm.GetNamespace(),
+			AnalysisName:      labels["analysis-name"],
+			AppName:           labels["app-name"],
+			AppID:             labels["app-id"],
+			ExternalID:        labels["external-id"],
+			UserID:            labels["user-id"],
+			Username:          labels["username"],
+			CreationTimestamp: cm.GetCreationTimestamp().String(),
+		},
+		Data: cm.Data,
+	}
+}
+
+// ServiceInfoPort contains information about a service's Port.
+type ServiceInfoPort struct {
+	Name           string `json:"name"`
+	NodePort       int32  `json:"node_port"`
+	TargetPort     int32  `json:"target_port"`
+	TargetPortName string `json:"target_port_name"`
+	Port           int32  `json:"port"`
+	Protocol       string `json:"protocol"`
+}
+
+//ServiceInfo contains info about a service
+type ServiceInfo struct {
+	MetaInfo
+	Ports []ServiceInfoPort `json:"ports"`
+}
+
+func serviceInfo(svc *corev1.Service) *ServiceInfo {
+	labels := svc.GetObjectMeta().GetLabels()
+
+	ports := svc.Spec.Ports
+	svcInfoPorts := []ServiceInfoPort{}
+
+	for _, port := range ports {
+		svcInfoPorts = append(svcInfoPorts, ServiceInfoPort{
+			Name:           port.Name,
+			NodePort:       port.NodePort,
+			TargetPort:     port.TargetPort.IntVal,
+			TargetPortName: port.TargetPort.String(),
+			Port:           port.Port,
+			Protocol:       string(port.Protocol),
+		})
+	}
+
+	return &ServiceInfo{
+		MetaInfo: MetaInfo{
+			Name:              svc.GetName(),
+			Namespace:         svc.GetNamespace(),
+			AnalysisName:      labels["analysis-name"],
+			AppName:           labels["app-name"],
+			AppID:             labels["app-id"],
+			ExternalID:        labels["external-id"],
+			UserID:            labels["user-id"],
+			Username:          labels["username"],
+			CreationTimestamp: svc.GetCreationTimestamp().String(),
+		},
+
+		Ports: svcInfoPorts,
+	}
+}
+
+// IngressInfo contains useful Ingress VICE info.
+type IngressInfo struct {
+	MetaInfo
+	DefaultBackend string                `json:"default_backend"`
+	Rules          []extv1b1.IngressRule `json:"rules"`
+}
+
+func ingressInfo(ingress *extv1b1.Ingress) *IngressInfo {
+	labels := ingress.GetObjectMeta().GetLabels()
+
+	return &IngressInfo{
+		MetaInfo: MetaInfo{
+			Name:              ingress.GetName(),
+			Namespace:         ingress.GetNamespace(),
+			AnalysisName:      labels["analysis-name"],
+			AppName:           labels["app-name"],
+			AppID:             labels["app-id"],
+			ExternalID:        labels["external-id"],
+			UserID:            labels["user-id"],
+			Username:          labels["username"],
+			CreationTimestamp: ingress.GetCreationTimestamp().String(),
+		},
+		Rules: ingress.Spec.Rules,
+		DefaultBackend: fmt.Sprintf(
+			"%s:%d",
+			ingress.Spec.Backend.ServiceName,
+			ingress.Spec.Backend.ServicePort.IntValue(),
+		),
 	}
 }
 
@@ -184,7 +298,16 @@ func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *h
 		return
 	}
 
-	buf, err := json.Marshal(cmList)
+	cms := []ConfigMapInfo{}
+
+	for _, cm := range cmList.Items {
+		info := configMapInfo(&cm)
+		cms = append(cms, *info)
+	}
+
+	buf, err := json.Marshal(map[string][]ConfigMapInfo{
+		"configmaps": cms,
+	})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -206,7 +329,16 @@ func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	buf, err := json.Marshal(svcList)
+	svcs := []ServiceInfo{}
+
+	for _, svc := range svcList.Items {
+		info := serviceInfo(&svc)
+		svcs = append(svcs, *info)
+	}
+
+	buf, err := json.Marshal(map[string][]ServiceInfo{
+		"services": svcs,
+	})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -228,7 +360,16 @@ func (e *ExposerApp) FilterableIngresses(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	buf, err := json.Marshal(ingList)
+	ingresses := []IngressInfo{}
+
+	for _, ingress := range ingList.Items {
+		info := ingressInfo(&ingress)
+		ingresses = append(ingresses, *info)
+	}
+
+	buf, err := json.Marshal(map[string][]IngressInfo{
+		"ingresses": ingresses,
+	})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
