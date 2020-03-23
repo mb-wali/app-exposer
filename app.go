@@ -41,6 +41,7 @@ type ExposerApp struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
+	AppsUser                      string
 	db                            *sql.DB
 }
 
@@ -65,6 +66,7 @@ type ExposerAppInit struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
+	AppsUser                      string
 	db                            *sql.DB
 }
 
@@ -95,6 +97,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		CheckResourceAccessService:    init.CheckResourceAccessService,
 		VICEBackendNamespace:          init.VICEBackendNamespace,
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
+		AppsUser:                      init.AppsUser,
 		db:                            init.db,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")

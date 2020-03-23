@@ -188,6 +188,7 @@ func main() {
 		CheckResourceAccessService:    *checkResourceAccessService,
 		VICEBackendNamespace:          cfg.GetString("vice.backend-namespace"),
 		AppsServiceBaseURL:            appsServiceBaseURL,
+		AppsUser:                      cfg.GetString("apps.admin_user"),
 		db:                            db,
 	}
 
