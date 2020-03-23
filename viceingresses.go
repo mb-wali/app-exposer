@@ -25,7 +25,10 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 		defaultPort int32
 	)
 
-	labels := labelsFromJob(job)
+	labels, err := e.labelsFromJob(job)
+	if err != nil {
+		return nil, err
+	}
 	ingressName := IngressName(job.UserID, job.InvocationID)
 
 	// Find the proxy port, use it as the default

@@ -406,7 +406,11 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 // getDeployment assembles and returns the Deployment for the VICE analysis. It does
 // not call the k8s API.
 func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
-	labels := labelsFromJob(job)
+	labels, err := e.labelsFromJob(job)
+	if err != nil {
+		return nil, err
+	}
+
 	autoMount := false
 
 	tolerations := []apiv1.Toleration{

@@ -27,7 +27,7 @@ func slugString(str string) string {
 }
 
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
-func labelsFromJob(job *model.Job) map[string]string {
+func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 	name := []rune(job.Name)
 
 	var stringmax int
@@ -35,6 +35,11 @@ func labelsFromJob(job *model.Job) map[string]string {
 		stringmax = 62
 	} else {
 		stringmax = len(name) - 1
+	}
+
+	analysisID, err := e.getAnalysisIDByExternalID(job.InvocationID)
+	if err != nil {
+		return nil, err
 	}
 
 	return map[string]string{
@@ -46,7 +51,8 @@ func labelsFromJob(job *model.Job) map[string]string {
 		"analysis-name": slugString(string(name[:stringmax])),
 		"app-type":      "interactive",
 		"subdomain":     IngressName(job.UserID, job.InvocationID),
-	}
+		"analysis-id":   analysisID,
+	}, nil
 }
 
 // UpsertExcludesConfigMap uses the Job passed in to assemble the ConfigMap
@@ -54,19 +60,22 @@ func labelsFromJob(job *model.Job) map[string]string {
 // the k8s API to create the ConfigMap if it does not already exist or to
 // update it if it does.
 func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
-	excludesCM := excludesConfigMap(job)
+	excludesCM, err := e.excludesConfigMap(job)
+	if err != nil {
+		return err
+	}
 
 	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
 
-	_, err := cmclient.Get(excludesConfigMapName(job), metav1.GetOptions{})
+	_, err = cmclient.Get(excludesConfigMapName(job), metav1.GetOptions{})
 	if err != nil {
 		log.Info(err)
-		_, err = cmclient.Create(&excludesCM)
+		_, err = cmclient.Create(excludesCM)
 		if err != nil {
 			return err
 		}
 	} else {
-		_, err = cmclient.Update(&excludesCM)
+		_, err = cmclient.Update(excludesCM)
 		if err != nil {
 			return err
 		}
@@ -126,18 +135,21 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	}
 
 	// Create the service for the job.
-	svc := e.getService(job, deployment)
+	svc, err := e.getService(job, deployment)
+	if err != nil {
+		return err
+	}
 	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
 	_, err = svcclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
-		_, err = svcclient.Create(&svc)
+		_, err = svcclient.Create(svc)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Create the ingress for the job
-	ingress, err := e.getIngress(job, &svc)
+	ingress, err := e.getIngress(job, svc)
 	if err != nil {
 		return err
 	}
