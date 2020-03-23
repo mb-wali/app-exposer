@@ -43,6 +43,7 @@ func labelsFromJob(job *model.Job) map[string]string {
 		"user-id":       job.UserID,
 		"analysis-name": slugString(string(name[:stringmax])),
 		"app-type":      "interactive",
+		"subdomain":     IngressName(job.UserID, job.InvocationID),
 	}
 }
 
