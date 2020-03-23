@@ -99,6 +99,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
 	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
+	app.router.HandleFunc("/vice/listing", app.FilterableResources).Methods("GET")
 	app.router.HandleFunc("/vice/listing/deployments", app.FilterableDeployments).Methods("GET")
 	app.router.HandleFunc("/vice/listing/configmaps", app.FilterableConfigMaps).Methods("GET")
 	app.router.HandleFunc("/vice/listing/services", app.FilterableServices).Methods("GET")

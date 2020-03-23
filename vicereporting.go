@@ -255,16 +255,10 @@ func ingressInfo(ingress *extv1b1.Ingress) *IngressInfo {
 	}
 }
 
-// FilterableDeployments lists all of the deployments.
-func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
-	filter := filterMap(request.URL.Query())
-
+func (e *ExposerApp) getFilteredDeployments(filter map[string]string) ([]DeploymentInfo, error) {
 	depList, err := e.deploymentList(e.viceNamespace, filter)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	deployments := []DeploymentInfo{}
@@ -272,6 +266,21 @@ func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *
 	for _, dep := range depList.Items {
 		info := deploymentInfo(&dep)
 		deployments = append(deployments, *info)
+	}
+
+	return deployments, nil
+}
+
+// FilterableDeployments lists all of the deployments.
+func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	filter := filterMap(request.URL.Query())
+
+	deployments, err := e.getFilteredDeployments(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	buf, err := json.Marshal(map[string][]DeploymentInfo{
@@ -286,16 +295,10 @@ func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *
 	fmt.Fprintf(writer, string(buf))
 }
 
-// FilterableConfigMaps lists configmaps in use by VICE apps.
-func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
-	filter := filterMap(request.URL.Query())
-
+func (e *ExposerApp) getFilteredConfigMaps(filter map[string]string) ([]ConfigMapInfo, error) {
 	cmList, err := e.configmapsList(e.viceNamespace, filter)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	cms := []ConfigMapInfo{}
@@ -303,6 +306,21 @@ func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *h
 	for _, cm := range cmList.Items {
 		info := configMapInfo(&cm)
 		cms = append(cms, *info)
+	}
+
+	return cms, nil
+}
+
+// FilterableConfigMaps lists configmaps in use by VICE apps.
+func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	filter := filterMap(request.URL.Query())
+
+	cms, err := e.getFilteredConfigMaps(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	buf, err := json.Marshal(map[string][]ConfigMapInfo{
@@ -317,16 +335,10 @@ func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *h
 	fmt.Fprintf(writer, string(buf))
 }
 
-// FilterableServices lists services in use by VICE apps.
-func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
-	filter := filterMap(request.URL.Query())
-
+func (e *ExposerApp) getFilteredServices(filter map[string]string) ([]ServiceInfo, error) {
 	svcList, err := e.serviceList(e.viceNamespace, filter)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	svcs := []ServiceInfo{}
@@ -334,6 +346,21 @@ func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *htt
 	for _, svc := range svcList.Items {
 		info := serviceInfo(&svc)
 		svcs = append(svcs, *info)
+	}
+
+	return svcs, nil
+}
+
+// FilterableServices lists services in use by VICE apps.
+func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	filter := filterMap(request.URL.Query())
+
+	svcs, err := e.getFilteredServices(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	buf, err := json.Marshal(map[string][]ServiceInfo{
@@ -348,16 +375,10 @@ func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *htt
 	fmt.Fprintf(writer, string(buf))
 }
 
-//FilterableIngresses lists ingresses in use by VICE apps.
-func (e *ExposerApp) FilterableIngresses(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
-	filter := filterMap(request.URL.Query())
-
+func (e *ExposerApp) getFilteredIngresses(filter map[string]string) ([]IngressInfo, error) {
 	ingList, err := e.ingressList(e.viceNamespace, filter)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	ingresses := []IngressInfo{}
@@ -367,8 +388,77 @@ func (e *ExposerApp) FilterableIngresses(writer http.ResponseWriter, request *ht
 		ingresses = append(ingresses, *info)
 	}
 
+	return ingresses, nil
+}
+
+//FilterableIngresses lists ingresses in use by VICE apps.
+func (e *ExposerApp) FilterableIngresses(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	filter := filterMap(request.URL.Query())
+
+	ingresses, err := e.getFilteredIngresses(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	buf, err := json.Marshal(map[string][]IngressInfo{
 		"ingresses": ingresses,
+	})
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Add("Content-Type", "application/json")
+	fmt.Fprintf(writer, string(buf))
+}
+
+// ResourceInfo contains all of the k8s resource information about a running VICE analysis
+// that we know of and care about.
+type ResourceInfo struct {
+	Deployments []DeploymentInfo `json:"deployments"`
+	ConfigMaps  []ConfigMapInfo  `json:"config_maps"`
+	Services    []ServiceInfo    `json:"services"`
+	Ingresses   []IngressInfo    `json:"ingresses"`
+}
+
+// FilterableResources returns all of the k8s resources associated with a VICE analysis.
+func (e *ExposerApp) FilterableResources(writer http.ResponseWriter, request *http.Request) {
+	defer request.Body.Close()
+
+	filter := filterMap(request.URL.Query())
+
+	deployments, err := e.getFilteredDeployments(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	cms, err := e.getFilteredConfigMaps(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	svcs, err := e.getFilteredServices(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ingresses, err := e.getFilteredIngresses(filter)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	buf, err := json.Marshal(ResourceInfo{
+		Deployments: deployments,
+		ConfigMaps:  cms,
+		Services:    svcs,
+		Ingresses:   ingresses,
 	})
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
