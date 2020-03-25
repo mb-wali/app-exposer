@@ -14,8 +14,8 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-RUN go build ./...
+RUN go install -v ./...
 
-ENTRYPOINT ["/build/app-exposer"]
+ENTRYPOINT ["app-exposer"]
 
 EXPOSE 60000
