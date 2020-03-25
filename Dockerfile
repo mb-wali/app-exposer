@@ -16,11 +16,6 @@ ENV GOARCH=amd64
 
 RUN go build ./...
 
-## Second stage
-FROM scratch
-
-COPY --from=build-root /build/app-exposer /
-
-ENTRYPOINT ["/app-exposer"]
+ENTRYPOINT ["/build/app-exposer"]
 
 EXPOSE 60000
