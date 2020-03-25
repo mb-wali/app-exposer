@@ -50,7 +50,7 @@ func (a *Apps) GetAnalysisIDBySubdomain(subdomain string) (string, error) {
 }
 
 const getUserIPQuery = `
-	SELECT l.ip_addpress
+	SELECT l.ip_address
 	  FROM logins l
 	  JOIN users u on l.user_id = u.id
 	 WHERE u.id = $1
