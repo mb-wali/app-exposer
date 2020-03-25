@@ -48,3 +48,22 @@ func (a *Apps) GetAnalysisIDBySubdomain(subdomain string) (string, error) {
 	}
 	return analysisID, nil
 }
+
+const getUserIPQuery = `
+	SELECT l.ip_addpress
+	  FROM logins l
+	  JOIN users u on l.user_id = u.id
+	 WHERE u.id = $1
+  ORDER BY l.login_time DESC
+     LIMIT 1
+`
+
+// GetUserIP returns the latest login ip address for the given user ID.
+func (a *Apps) GetUserIP(userID string) (string, error) {
+	var ipAddr string
+	err := a.DB.QueryRow(getUserIPQuery, userID).Scan(&ipAddr)
+	if err != nil {
+		return "", err
+	}
+	return ipAddr, nil
+}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cyverse-de/app-exposer/apps"
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
 	"github.com/lib/pq"
@@ -35,6 +36,12 @@ func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 		stringmax = len(name) - 1
 	}
 
+	a := apps.NewApps(e.db)
+	ipAddr, err := a.GetUserIP(job.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]string{
 		"external-id":   job.InvocationID,
 		"app-name":      slugString(job.AppName),
@@ -44,6 +51,7 @@ func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 		"analysis-name": slugString(string(name[:stringmax])),
 		"app-type":      "interactive",
 		"subdomain":     IngressName(job.UserID, job.InvocationID),
+		"login-ip":      ipAddr,
 	}, nil
 }
 
