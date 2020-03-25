@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/cyverse-de/app-exposer/apps"
+	"github.com/pkg/errors"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
@@ -478,9 +480,10 @@ func populateAnalysisID(a *apps.Apps, existingLabels map[string]string) (map[str
 		}
 		analysisID, err := a.GetAnalysisIDByExternalID(externalID)
 		if err != nil {
-			return nil, err
+			log.Error(errors.Wrapf(err, "error getting analysis id for external id %s", externalID))
+		} else {
+			existingLabels["analysis-id"] = analysisID
 		}
-		existingLabels["analysis-id"] = analysisID
 	}
 	return existingLabels, nil
 }
@@ -488,70 +491,108 @@ func populateAnalysisID(a *apps.Apps, existingLabels map[string]string) (map[str
 // ApplyAsyncLabels ensures that the required labels are applied to all running VICE analyses.
 // This is useful to avoid race conditions between the DE database and the k8s cluster,
 // and also for adding new labels to "old" analyses during an update.
-func (e *ExposerApp) ApplyAsyncLabels() error {
+func (e *ExposerApp) ApplyAsyncLabels() []error {
 	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+
+	errors := []error{}
 
 	a := apps.NewApps(e.db)
 
 	deployments, err := e.deploymentList(e.viceNamespace, filter)
 	if err != nil {
-		return err
+		errors = append(errors, err)
+		return errors
 	}
 
 	for _, deployment := range deployments.Items {
 		existingLabels := deployment.GetLabels()
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+		} else {
+			deployment.SetLabels(existingLabels)
+			_, err = e.clientset.AppsV1().Deployments(e.viceNamespace).Update(&deployment)
+			if err != nil {
+				errors = append(errors, err)
+			}
 		}
-
-		deployment.SetLabels(existingLabels)
 	}
 
 	cms, err := e.configmapsList(e.viceNamespace, filter)
 	if err != nil {
-		return err
+		errors = append(errors, err)
+		return errors
 	}
 
 	for _, configmap := range cms.Items {
 		existingLabels := configmap.GetLabels()
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+		} else {
+			configmap.SetLabels(existingLabels)
+			_, err = e.clientset.CoreV1().ConfigMaps(e.viceNamespace).Update(&configmap)
+			if err != nil {
+				errors = append(errors, err)
+			}
 		}
-
-		configmap.SetLabels(existingLabels)
 	}
 
 	svcs, err := e.serviceList(e.viceNamespace, filter)
 	if err != nil {
-		return err
+		errors = append(errors, err)
+		return errors
 	}
 
 	for _, service := range svcs.Items {
 		existingLabels := service.GetLabels()
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+		} else {
+			service.SetLabels(existingLabels)
+			_, err = e.clientset.CoreV1().Services(e.viceNamespace).Update(&service)
+			if err != nil {
+				errors = append(errors, err)
+			}
 		}
-
-		service.SetLabels(existingLabels)
 	}
 
 	ingresses, err := e.ingressList(e.viceNamespace, filter)
 	if err != nil {
-		return err
+		errors = append(errors, err)
+		return errors
 	}
 
 	for _, ingress := range ingresses.Items {
 		existingLabels := ingress.GetLabels()
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+		} else {
+			ingress.SetLabels(existingLabels)
+			_, err = e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace).Update(&ingress)
+			if err != nil {
+				errors = append(errors, err)
+			}
 		}
-
-		ingress.SetLabels(existingLabels)
 	}
 
-	return nil
+	return errors
+}
+
+// ApplyAsyncLabelsHandler is the http handler for triggering the application
+// of labels on running VICE analyses.
+func (e *ExposerApp) ApplyAsyncLabelsHandler(writer http.ResponseWriter, request *http.Request) {
+	errs := e.ApplyAsyncLabels()
+
+	if len(errs) > 0 {
+		var errMsg strings.Builder
+		for _, err := range errs {
+			log.Error(err)
+			fmt.Fprintf(&errMsg, "%s\n", err.Error())
+		}
+
+		http.Error(writer, errMsg.String(), http.StatusInternalServerError)
+	}
 }
