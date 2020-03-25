@@ -476,7 +476,7 @@ func populateAnalysisID(a *apps.Apps, existingLabels map[string]string) (map[str
 	if _, ok := existingLabels["analysis-id"]; !ok {
 		externalID, ok := existingLabels["external-id"]
 		if !ok {
-			return nil, fmt.Errorf("missing external-id key")
+			return existingLabels, fmt.Errorf("missing external-id key")
 		}
 		analysisID, err := a.GetAnalysisIDByExternalID(externalID)
 		if err != nil {
@@ -488,12 +488,34 @@ func populateAnalysisID(a *apps.Apps, existingLabels map[string]string) (map[str
 	return existingLabels, nil
 }
 
-// ApplyAsyncLabels ensures that the required labels are applied to all running VICE analyses.
-// This is useful to avoid race conditions between the DE database and the k8s cluster,
-// and also for adding new labels to "old" analyses during an update.
-func (e *ExposerApp) ApplyAsyncLabels() []error {
-	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+func populateSubdomain(existingLabels map[string]string) map[string]string {
+	if _, ok := existingLabels["subdomain"]; !ok {
+		if externalID, ok := existingLabels["external-id"]; ok {
+			if userID, ok := existingLabels["user-id"]; ok {
+				existingLabels["subdomain"] = IngressName(userID, externalID)
+			}
+		}
+	}
 
+	return existingLabels
+}
+
+func populateLoginIP(a *apps.Apps, existingLabels map[string]string) (map[string]string, error) {
+	if _, ok := existingLabels["login-ip"]; !ok {
+		if userID, ok := existingLabels["user-id"]; ok {
+			ipAddr, err := a.GetUserIP(userID)
+			if err != nil {
+				return existingLabels, err
+			}
+			existingLabels["login-ip"] = ipAddr
+		}
+	}
+
+	return existingLabels, nil
+}
+
+func (e *ExposerApp) relabelDeployments() []error {
+	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
 	errors := []error{}
 
 	a := apps.NewApps(e.db)
@@ -506,17 +528,34 @@ func (e *ExposerApp) ApplyAsyncLabels() []error {
 
 	for _, deployment := range deployments.Items {
 		existingLabels := deployment.GetLabels()
+
+		existingLabels = populateSubdomain(existingLabels)
+
+		existingLabels, err = populateLoginIP(a, existingLabels)
+		if err != nil {
+			errors = append(errors, err)
+		}
+
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
 			errors = append(errors, err)
-		} else {
-			deployment.SetLabels(existingLabels)
-			_, err = e.clientset.AppsV1().Deployments(e.viceNamespace).Update(&deployment)
-			if err != nil {
-				errors = append(errors, err)
-			}
+		}
+
+		deployment.SetLabels(existingLabels)
+		_, err = e.clientset.AppsV1().Deployments(e.viceNamespace).Update(&deployment)
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
+
+	return errors
+}
+
+func (e *ExposerApp) relabelConfigMaps() []error {
+	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+	errors := []error{}
+
+	a := apps.NewApps(e.db)
 
 	cms, err := e.configmapsList(e.viceNamespace, filter)
 	if err != nil {
@@ -526,17 +565,34 @@ func (e *ExposerApp) ApplyAsyncLabels() []error {
 
 	for _, configmap := range cms.Items {
 		existingLabels := configmap.GetLabels()
+
+		existingLabels = populateSubdomain(existingLabels)
+
+		existingLabels, err = populateLoginIP(a, existingLabels)
+		if err != nil {
+			errors = append(errors, err)
+		}
+
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
 			errors = append(errors, err)
-		} else {
-			configmap.SetLabels(existingLabels)
-			_, err = e.clientset.CoreV1().ConfigMaps(e.viceNamespace).Update(&configmap)
-			if err != nil {
-				errors = append(errors, err)
-			}
+		}
+
+		configmap.SetLabels(existingLabels)
+		_, err = e.clientset.CoreV1().ConfigMaps(e.viceNamespace).Update(&configmap)
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
+
+	return errors
+}
+
+func (e *ExposerApp) relabelServices() []error {
+	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+	errors := []error{}
+
+	a := apps.NewApps(e.db)
 
 	svcs, err := e.serviceList(e.viceNamespace, filter)
 	if err != nil {
@@ -546,17 +602,34 @@ func (e *ExposerApp) ApplyAsyncLabels() []error {
 
 	for _, service := range svcs.Items {
 		existingLabels := service.GetLabels()
+
+		existingLabels = populateSubdomain(existingLabels)
+
+		existingLabels, err = populateLoginIP(a, existingLabels)
+		if err != nil {
+			errors = append(errors, err)
+		}
+
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
 			errors = append(errors, err)
-		} else {
-			service.SetLabels(existingLabels)
-			_, err = e.clientset.CoreV1().Services(e.viceNamespace).Update(&service)
-			if err != nil {
-				errors = append(errors, err)
-			}
+		}
+
+		service.SetLabels(existingLabels)
+		_, err = e.clientset.CoreV1().Services(e.viceNamespace).Update(&service)
+		if err != nil {
+			errors = append(errors, err)
 		}
 	}
+
+	return errors
+}
+
+func (e *ExposerApp) relabelIngresses() []error {
+	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+	errors := []error{}
+
+	a := apps.NewApps(e.db)
 
 	ingresses, err := e.ingressList(e.viceNamespace, filter)
 	if err != nil {
@@ -566,15 +639,60 @@ func (e *ExposerApp) ApplyAsyncLabels() []error {
 
 	for _, ingress := range ingresses.Items {
 		existingLabels := ingress.GetLabels()
+
+		existingLabels = populateSubdomain(existingLabels)
+
+		existingLabels, err = populateLoginIP(a, existingLabels)
+		if err != nil {
+			errors = append(errors, err)
+		}
+
 		existingLabels, err = populateAnalysisID(a, existingLabels)
 		if err != nil {
 			errors = append(errors, err)
-		} else {
-			ingress.SetLabels(existingLabels)
-			_, err = e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace).Update(&ingress)
-			if err != nil {
-				errors = append(errors, err)
-			}
+		}
+
+		ingress.SetLabels(existingLabels)
+		_, err = e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace).Update(&ingress)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+
+	return errors
+}
+
+// ApplyAsyncLabels ensures that the required labels are applied to all running VICE analyses.
+// This is useful to avoid race conditions between the DE database and the k8s cluster,
+// and also for adding new labels to "old" analyses during an update.
+func (e *ExposerApp) ApplyAsyncLabels() []error {
+	errors := []error{}
+
+	labelDepsErrors := e.relabelDeployments()
+	if len(labelDepsErrors) > 0 {
+		for _, e := range labelDepsErrors {
+			errors = append(errors, e)
+		}
+	}
+
+	labelCMErrors := e.relabelConfigMaps()
+	if len(labelCMErrors) > 0 {
+		for _, e := range labelCMErrors {
+			errors = append(errors, e)
+		}
+	}
+
+	labelSVCErrors := e.relabelServices()
+	if len(labelSVCErrors) > 0 {
+		for _, e := range labelSVCErrors {
+			errors = append(errors, e)
+		}
+	}
+
+	labelIngressesErrors := e.relabelIngresses()
+	if len(labelIngressesErrors) > 0 {
+		for _, e := range labelIngressesErrors {
+			errors = append(errors, e)
 		}
 	}
 
