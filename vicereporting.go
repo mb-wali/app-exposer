@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/cyverse-de/app-exposer/apps"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extv1b1 "k8s.io/api/extensions/v1beta1"
@@ -467,4 +468,90 @@ func (e *ExposerApp) FilterableResources(writer http.ResponseWriter, request *ht
 
 	writer.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(writer, string(buf))
+}
+
+func populateAnalysisID(a *apps.Apps, existingLabels map[string]string) (map[string]string, error) {
+	if _, ok := existingLabels["analysis-id"]; !ok {
+		externalID, ok := existingLabels["external-id"]
+		if !ok {
+			return nil, fmt.Errorf("missing external-id key")
+		}
+		analysisID, err := a.GetAnalysisIDByExternalID(externalID)
+		if err != nil {
+			return nil, err
+		}
+		existingLabels["analysis-id"] = analysisID
+	}
+	return existingLabels, nil
+}
+
+// ApplyAsyncLabels ensures that the required labels are applied to all running VICE analyses.
+// This is useful to avoid race conditions between the DE database and the k8s cluster,
+// and also for adding new labels to "old" analyses during an update.
+func (e *ExposerApp) ApplyAsyncLabels() error {
+	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
+
+	a := apps.NewApps(e.db)
+
+	deployments, err := e.deploymentList(e.viceNamespace, filter)
+	if err != nil {
+		return err
+	}
+
+	for _, deployment := range deployments.Items {
+		existingLabels := deployment.GetLabels()
+		existingLabels, err = populateAnalysisID(a, existingLabels)
+		if err != nil {
+			return err
+		}
+
+		deployment.SetLabels(existingLabels)
+	}
+
+	cms, err := e.configmapsList(e.viceNamespace, filter)
+	if err != nil {
+		return err
+	}
+
+	for _, configmap := range cms.Items {
+		existingLabels := configmap.GetLabels()
+		existingLabels, err = populateAnalysisID(a, existingLabels)
+		if err != nil {
+			return err
+		}
+
+		configmap.SetLabels(existingLabels)
+	}
+
+	svcs, err := e.serviceList(e.viceNamespace, filter)
+	if err != nil {
+		return err
+	}
+
+	for _, service := range svcs.Items {
+		existingLabels := service.GetLabels()
+		existingLabels, err = populateAnalysisID(a, existingLabels)
+		if err != nil {
+			return err
+		}
+
+		service.SetLabels(existingLabels)
+	}
+
+	ingresses, err := e.ingressList(e.viceNamespace, filter)
+	if err != nil {
+		return err
+	}
+
+	for _, ingress := range ingresses.Items {
+		existingLabels := ingress.GetLabels()
+		existingLabels, err = populateAnalysisID(a, existingLabels)
+		if err != nil {
+			return err
+		}
+
+		ingress.SetLabels(existingLabels)
+	}
+
+	return nil
 }
