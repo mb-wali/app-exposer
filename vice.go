@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/cyverse-de/app-exposer/apps"
 	"github.com/gorilla/mux"
 	"github.com/gosimple/slug"
 	"github.com/lib/pq"
@@ -37,7 +36,8 @@ func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 		stringmax = len(name) - 1
 	}
 
-	analysisID, err := e.getAnalysisIDByExternalID(job.InvocationID)
+	a := apps.NewApps(e.db)
+	analysisID, err := a.GetAnalysisIDByExternalID(job.InvocationID)
 	if err != nil {
 		return nil, err
 	}
@@ -222,48 +222,6 @@ func (e *ExposerApp) validateJob(job *model.Job) error {
 	}
 
 	return nil
-}
-
-// Analysis contains the ID for the Analysis, which gets used as the resource
-// name when checking permissions.
-type Analysis struct {
-	ID string `json:"id"` // Literally all we care about here.
-}
-
-// Analyses is a list of analyses returned by the apps service.
-type Analyses struct {
-	Analyses []Analysis `json:"analyses"`
-}
-
-func (e *ExposerApp) getAnalysisIDByExternalID(externalID string) (string, error) {
-	reqURL, err := url.Parse(e.AppsServiceBaseURL)
-	if err != nil {
-		return "", nil
-	}
-	reqURL.Path = filepath.Join(reqURL.Path, "admin/analyses/by-external-id", externalID)
-
-	v := url.Values{}
-	v.Set("user", e.AppsUser)
-	reqURL.RawQuery = v.Encode()
-
-	resp, err := http.Get(reqURL.String())
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	analyses := &Analyses{}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	if err = json.Unmarshal(b, analyses); err != nil {
-		return "", err
-	}
-	if len(analyses.Analyses) < 1 {
-		return "", errors.New("no analyses found")
-	}
-	return analyses.Analyses[0].ID, nil
 }
 
 // VICELaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
