@@ -85,6 +85,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/apply-labels", app.internal.ApplyAsyncLabelsHandler).Methods("POST")
 	app.router.HandleFunc("/vice/listing", app.internal.FilterableResources).Methods("GET")
 	app.router.HandleFunc("/vice/listing/deployments", app.internal.FilterableDeployments).Methods("GET")
+	app.router.HandleFunc("/vice/listing/pods", app.internal.FilterablePods).Methods("GET")
 	app.router.HandleFunc("/vice/listing/configmaps", app.internal.FilterableConfigMaps).Methods("GET")
 	app.router.HandleFunc("/vice/listing/services", app.internal.FilterableServices).Methods("GET")
 	app.router.HandleFunc("/vice/listing/ingresses", app.internal.FilterableIngresses).Methods("GET")
