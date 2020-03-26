@@ -1,4 +1,4 @@
-package main
+package external
 
 // Ingresser is a concrete implementation of IngressCrudder
 import (

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cyverse-de/app-exposer/external"
 	"github.com/gorilla/mux"
 	v1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -32,15 +33,15 @@ func TestNewExposerApp(t *testing.T) {
 		t.Errorf("namespace was %s, not %s", testapp.namespace, expectedNS)
 	}
 
-	if testapp.ServiceController == nil {
+	if testapp.external.ServiceController == nil {
 		t.Error("ServiceController is nil")
 	}
 
-	if testapp.EndpointController == nil {
+	if testapp.external.EndpointController == nil {
 		t.Error("EndpointController is nil")
 	}
 
-	if testapp.IngressController == nil {
+	if testapp.external.IngressController == nil {
 		t.Error("IngressController is nil")
 	}
 
@@ -107,7 +108,7 @@ func TestWriteService(t *testing.T) {
 	}
 	writer := httptest.NewRecorder()
 
-	WriteService(expected, writer)
+	external.WriteService(expected, writer)
 
 	resp := writer.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
@@ -115,7 +116,7 @@ func TestWriteService(t *testing.T) {
 		t.Error(err)
 	}
 
-	actual := &ServiceOptions{}
+	actual := &external.ServiceOptions{}
 	err = json.Unmarshal(rbody, actual)
 	if err != nil {
 		t.Error(err)
@@ -154,7 +155,7 @@ func TestWriteEndpoints(t *testing.T) {
 
 	writer := httptest.NewRecorder()
 
-	WriteEndpoint(expected, writer)
+	external.WriteEndpoint(expected, writer)
 
 	resp := writer.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
@@ -162,7 +163,7 @@ func TestWriteEndpoints(t *testing.T) {
 		t.Error(err)
 	}
 
-	actual := &EndpointOptions{}
+	actual := &external.EndpointOptions{}
 	err = json.Unmarshal(rbody, actual)
 	if err != nil {
 		t.Error(err)
@@ -201,7 +202,7 @@ func TestWriteIngress(t *testing.T) {
 
 	writer := httptest.NewRecorder()
 
-	WriteIngress(expected, writer)
+	external.WriteIngress(expected, writer)
 
 	resp := writer.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
@@ -209,7 +210,7 @@ func TestWriteIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	actual := &IngressOptions{}
+	actual := &external.IngressOptions{}
 	err = json.Unmarshal(rbody, actual)
 	if err != nil {
 		t.Error(err)
@@ -243,7 +244,7 @@ func TestCreateService(t *testing.T) {
 
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	expectedOpts := &ServiceOptions{
+	expectedOpts := &external.ServiceOptions{
 		TargetPort: 60000,
 		ListenPort: 60001,
 	}
@@ -266,7 +267,7 @@ func TestCreateService(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &ServiceOptions{}
+	actualOpts := &external.ServiceOptions{}
 	err = json.Unmarshal(rbody, actualOpts)
 	if err != nil {
 		t.Error(err)
@@ -301,7 +302,7 @@ func createAppLoadService(ns, name string) (*ExposerApp, error) {
 
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	createOpts := &ServiceOptions{
+	createOpts := &external.ServiceOptions{
 		TargetPort: 40000,
 		ListenPort: 40001,
 	}
@@ -332,7 +333,7 @@ func TestUpdateService(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedOpts := &ServiceOptions{
+	expectedOpts := &external.ServiceOptions{
 		TargetPort: 60000,
 		ListenPort: 60001,
 	}
@@ -357,7 +358,7 @@ func TestUpdateService(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &ServiceOptions{}
+	actualOpts := &external.ServiceOptions{}
 	err = json.Unmarshal(rbody, actualOpts)
 	if err != nil {
 		t.Error(err)
@@ -389,7 +390,7 @@ func TestGetService(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedOpts := &ServiceOptions{
+	expectedOpts := &external.ServiceOptions{
 		TargetPort: 40000,
 		ListenPort: 40001,
 	}
@@ -414,7 +415,7 @@ func TestGetService(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &ServiceOptions{}
+	actualOpts := &external.ServiceOptions{}
 	err = json.Unmarshal(rbody, actualOpts)
 	if err != nil {
 		t.Error(err)
@@ -477,7 +478,7 @@ func TestCreateEndpoint(t *testing.T) {
 
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	expectedOpts := &EndpointOptions{
+	expectedOpts := &external.EndpointOptions{
 		IP:   expectedIP,
 		Port: expectedPort,
 	}
@@ -499,7 +500,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &EndpointOptions{}
+	actualOpts := &external.EndpointOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
@@ -529,7 +530,7 @@ func createAppLoadEndpoint(ns, name string) (*ExposerApp, error) {
 	}
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	createOpts := &EndpointOptions{
+	createOpts := &external.EndpointOptions{
 		IP:   "1.1.1.1",
 		Port: 60000,
 	}
@@ -562,7 +563,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedOpts := &EndpointOptions{
+	expectedOpts := &external.EndpointOptions{
 		IP:   expectedIP,
 		Port: expectedPort,
 	}
@@ -588,7 +589,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &EndpointOptions{}
+	actualOpts := &external.EndpointOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
@@ -637,7 +638,7 @@ func TestGetEndpoint(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &EndpointOptions{}
+	actualOpts := &external.EndpointOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
@@ -698,7 +699,7 @@ func TestCreateIngress(t *testing.T) {
 
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	expectedOpts := &IngressOptions{
+	expectedOpts := &external.IngressOptions{
 		Service: expectedService,
 		Port:    expectedPort,
 	}
@@ -720,7 +721,7 @@ func TestCreateIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &IngressOptions{}
+	actualOpts := &external.IngressOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
@@ -750,7 +751,7 @@ func createAppLoadIngress(ns, name string) (*ExposerApp, error) {
 	}
 	testapp := NewExposerApp(testinit, "linkerd", testcs)
 
-	createOpts := &IngressOptions{
+	createOpts := &external.IngressOptions{
 		Service: "test-service",
 		Port:    60000,
 	}
@@ -783,7 +784,7 @@ func TestUpdateIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedOpts := &IngressOptions{
+	expectedOpts := &external.IngressOptions{
 		Service: expectedService,
 		Port:    expectedPort,
 	}
@@ -809,7 +810,7 @@ func TestUpdateIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &IngressOptions{}
+	actualOpts := &external.IngressOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
@@ -858,7 +859,7 @@ func TestGetIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	actualOpts := &IngressOptions{}
+	actualOpts := &external.IngressOptions{}
 	if err = json.Unmarshal(rbody, actualOpts); err != nil {
 		t.Error(err)
 	}
