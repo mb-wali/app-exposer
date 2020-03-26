@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -80,15 +80,15 @@ func deploymentVolumes(job *model.Job) []apiv1.Volume {
 	return output
 }
 
-func (e *ExposerApp) getFrontendURL(job *model.Job) *url.URL {
+func (i *Internal) getFrontendURL(job *model.Job) *url.URL {
 	// This should be parsed in main(), so we shouldn't worry about it here.
-	frontURL, _ := url.Parse(e.FrontendBaseURL)
+	frontURL, _ := url.Parse(i.FrontendBaseURL)
 	frontURL.Host = fmt.Sprintf("%s.%s", IngressName(job.UserID, job.InvocationID), frontURL.Host)
 	return frontURL
 }
 
-func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
-	frontURL := e.getFrontendURL(job)
+func (i *Internal) viceProxyCommand(job *model.Job) []string {
+	frontURL := i.getFrontendURL(job)
 	backendURL := fmt.Sprintf("http://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort))
 
 	// websocketURL := fmt.Sprintf("ws://localhost:%s", strconv.Itoa(job.Steps[0].Component.Container.Ports[0].ContainerPort))
@@ -98,12 +98,12 @@ func (e *ExposerApp) viceProxyCommand(job *model.Job) []string {
 		"--listen-addr", fmt.Sprintf("0.0.0.0:%d", viceProxyPort),
 		"--backend-url", backendURL,
 		"--ws-backend-url", backendURL,
-		"--cas-base-url", e.CASBaseURL,
+		"--cas-base-url", i.CASBaseURL,
 		"--cas-validate", "validate",
 		"--frontend-url", frontURL.String(),
 		"--external-id", job.InvocationID,
-		"--get-analysis-id-base", fmt.Sprintf("http://%s.%s", e.GetAnalysisIDService, e.VICEBackendNamespace),
-		"--check-resource-access-base", fmt.Sprintf("http://%s.%s", e.CheckResourceAccessService, e.VICEBackendNamespace),
+		"--get-analysis-id-base", fmt.Sprintf("http://%s.%s", i.GetAnalysisIDService, i.VICEBackendNamespace),
+		"--check-resource-access-base", fmt.Sprintf("http://%s.%s", i.CheckResourceAccessService, i.VICEBackendNamespace),
 	}
 
 	return output
@@ -132,15 +132,15 @@ var (
 
 // initContainers returns a []apiv1.Container used for the InitContainers in
 // the VICE app Deployment resource.
-func (e *ExposerApp) initContainers(job *model.Job) []apiv1.Container {
+func (i *Internal) initContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            fileTransfersInitContainerName,
-			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
+			Image:           fmt.Sprintf("%s:%s", i.PorklockImage, i.PorklockTag),
 			Command:         append(fileTransferCommand(job), "--no-service"),
 			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
 			WorkingDir:      inputPathListMountPath,
-			VolumeMounts:    e.fileTransfersVolumeMounts(job),
+			VolumeMounts:    i.fileTransfersVolumeMounts(job),
 			Ports: []apiv1.ContainerPort{
 				{
 					Name:          fileTransfersPortName,
@@ -181,7 +181,7 @@ func gpuEnabled(job *model.Job) bool {
 	return gpuEnabled
 }
 
-func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
+func (i *Internal) defineAnalysisContainer(job *model.Job) apiv1.Container {
 	analysisEnvironment := []apiv1.EnvVar{}
 	for envKey, envVal := range job.Steps[0].Environment {
 		analysisEnvironment = append(
@@ -197,7 +197,7 @@ func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 		analysisEnvironment,
 		apiv1.EnvVar{
 			Name:  "REDIRECT_URL",
-			Value: e.getFrontendURL(job).String(),
+			Value: i.getFrontendURL(job).String(),
 		},
 		apiv1.EnvVar{
 			Name:  "IPLANT_USER",
@@ -314,12 +314,12 @@ func (e *ExposerApp) defineAnalysisContainer(job *model.Job) apiv1.Container {
 
 // deploymentContainers returns the Containers needed for the VICE analysis
 // Deployment. It does not call the k8s API.
-func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
+func (i *Internal) deploymentContainers(job *model.Job) []apiv1.Container {
 	return []apiv1.Container{
 		apiv1.Container{
 			Name:            viceProxyContainerName,
-			Image:           e.ViceProxyImage,
-			Command:         e.viceProxyCommand(job),
+			Image:           i.ViceProxyImage,
+			Command:         i.viceProxyCommand(job),
 			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
 			Ports: []apiv1.ContainerPort{
 				{
@@ -358,11 +358,11 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 		},
 		apiv1.Container{
 			Name:            fileTransfersContainerName,
-			Image:           fmt.Sprintf("%s:%s", e.PorklockImage, e.PorklockTag),
+			Image:           fmt.Sprintf("%s:%s", i.PorklockImage, i.PorklockTag),
 			Command:         fileTransferCommand(job),
 			ImagePullPolicy: apiv1.PullPolicy(apiv1.PullAlways),
 			WorkingDir:      inputPathListMountPath,
-			VolumeMounts:    e.fileTransfersVolumeMounts(job),
+			VolumeMounts:    i.fileTransfersVolumeMounts(job),
 			Ports: []apiv1.ContainerPort{
 				{
 					Name:          fileTransfersPortName,
@@ -399,14 +399,14 @@ func (e *ExposerApp) deploymentContainers(job *model.Job) []apiv1.Container {
 				},
 			},
 		},
-		e.defineAnalysisContainer(job),
+		i.defineAnalysisContainer(job),
 	}
 }
 
 // getDeployment assembles and returns the Deployment for the VICE analysis. It does
 // not call the k8s API.
-func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
-	labels, err := e.labelsFromJob(job)
+func (i *Internal) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
+	labels, err := i.labelsFromJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -468,8 +468,8 @@ func (e *ExposerApp) getDeployment(job *model.Job) (*appsv1.Deployment, error) {
 				Spec: apiv1.PodSpec{
 					RestartPolicy:                apiv1.RestartPolicy("Always"),
 					Volumes:                      deploymentVolumes(job),
-					InitContainers:               e.initContainers(job),
-					Containers:                   e.deploymentContainers(job),
+					InitContainers:               i.initContainers(job),
+					Containers:                   i.deploymentContainers(job),
 					AutomountServiceAccountToken: &autoMount,
 					SecurityContext: &apiv1.PodSecurityContext{
 						RunAsUser:  int64Ptr(int64(job.Steps[0].Component.Container.UID)),

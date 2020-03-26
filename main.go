@@ -144,11 +144,6 @@ func main() {
 		appsServiceBaseURL = "http://apps"
 	}
 
-	// Create the JSLPublisher for job status updates
-	jsl := &JSLPublisher{
-		statusURL: jobStatusURL,
-	}
-
 	var proxyImage string
 	proxyTag := cfg.GetString("interapps.proxy.tag")
 	if proxyTag == "" {
@@ -175,7 +170,7 @@ func main() {
 		PorklockTag:                   cfg.GetString("vice.file-transfers.tag"),
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
-		statusPublisher:               jsl,
+		JobStatusURL:                  jobStatusURL,
 		ViceProxyImage:                proxyImage,
 		CASBaseURL:                    cfg.GetString("cas.base"),
 		FrontendBaseURL:               cfg.GetString("k8s.frontend.base"),
@@ -194,6 +189,6 @@ func main() {
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
 	log.Printf("listening on port %d", *listenPort)
-	app.MonitorVICEEvents()
+	app.internal.MonitorVICEEvents()
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", strconv.Itoa(*listenPort)), app.router))
 }

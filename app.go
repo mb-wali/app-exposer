@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/external"
+	"github.com/cyverse-de/app-exposer/internal"
 	"github.com/gorilla/mux"
 	"k8s.io/client-go/kubernetes"
 )
@@ -14,30 +15,12 @@ import (
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
-	external                      *external.External
-	namespace                     string
-	clientset                     kubernetes.Interface
-	viceNamespace                 string
-	PorklockImage                 string
-	PorklockTag                   string
-	InputPathListIdentifier       string
-	TicketInputPathListIdentifier string
-	router                        *mux.Router
-	statusPublisher               AnalysisStatusPublisher
-	ViceProxyImage                string
-	CASBaseURL                    string
-	FrontendBaseURL               string
-	IngressBaseURL                string
-	AnalysisHeader                string
-	AccessHeader                  string
-	ViceDefaultBackendService     string
-	ViceDefaultBackendServicePort int
-	GetAnalysisIDService          string
-	CheckResourceAccessService    string
-	VICEBackendNamespace          string
-	AppsServiceBaseURL            string
-	AppsUser                      string
-	db                            *sql.DB
+	external  *external.External
+	internal  *internal.Internal
+	namespace string
+	clientset kubernetes.Interface
+	router    *mux.Router
+	db        *sql.DB
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -48,7 +31,7 @@ type ExposerAppInit struct {
 	PorklockTag                   string // The docker tag for the image containing the porklock tool
 	InputPathListIdentifier       string // Header line for input path lists
 	TicketInputPathListIdentifier string // Header line for ticket input path lists
-	statusPublisher               AnalysisStatusPublisher
+	JobStatusURL                  string
 	ViceProxyImage                string
 	CASBaseURL                    string
 	FrontendBaseURL               string
@@ -67,18 +50,12 @@ type ExposerAppInit struct {
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
 func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Interface) *ExposerApp {
-	app := &ExposerApp{
-		external:                      external.New(cs, init.Namespace, ingressClass),
-		namespace:                     init.Namespace,
-		viceNamespace:                 init.ViceNamespace,
+	internalInit := &internal.Init{
+		ViceNamespace:                 init.ViceNamespace,
 		PorklockImage:                 init.PorklockImage,
 		PorklockTag:                   init.PorklockTag,
 		InputPathListIdentifier:       init.InputPathListIdentifier,
 		TicketInputPathListIdentifier: init.TicketInputPathListIdentifier,
-		clientset:                     cs,
-
-		router:                        mux.NewRouter(),
-		statusPublisher:               init.statusPublisher,
 		IngressBaseURL:                init.IngressBaseURL,
 		ViceProxyImage:                init.ViceProxyImage,
 		CASBaseURL:                    init.CASBaseURL,
@@ -92,25 +69,34 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		VICEBackendNamespace:          init.VICEBackendNamespace,
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
 		AppsUser:                      init.AppsUser,
-		db:                            init.db,
+		JobStatusURL:                  init.JobStatusURL,
+	}
+
+	app := &ExposerApp{
+		external:  external.New(cs, init.Namespace, ingressClass),
+		internal:  internal.New(internalInit, init.db, cs),
+		namespace: init.Namespace,
+		clientset: cs,
+		router:    mux.NewRouter(),
+		db:        init.db,
 	}
 	app.router.HandleFunc("/", app.Greeting).Methods("GET")
-	app.router.HandleFunc("/vice/launch", app.VICELaunchApp).Methods("POST")
-	app.router.HandleFunc("/vice/apply-labels", app.ApplyAsyncLabelsHandler).Methods("POST")
-	app.router.HandleFunc("/vice/listing", app.FilterableResources).Methods("GET")
-	app.router.HandleFunc("/vice/listing/deployments", app.FilterableDeployments).Methods("GET")
-	app.router.HandleFunc("/vice/listing/configmaps", app.FilterableConfigMaps).Methods("GET")
-	app.router.HandleFunc("/vice/listing/services", app.FilterableServices).Methods("GET")
-	app.router.HandleFunc("/vice/listing/ingresses", app.FilterableIngresses).Methods("GET")
-	app.router.HandleFunc("/vice/{id}/download-input-files", app.VICETriggerDownloads).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/save-output-files", app.VICETriggerUploads).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/exit", app.VICEExit).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/save-and-exit", app.VICESaveAndExit).Methods("POST")
-	app.router.HandleFunc("/vice/{analysis-id}/pods", app.VICEPods).Methods("GET")
-	app.router.HandleFunc("/vice/{analysis-id}/logs", app.VICELogs).Methods("GET")
-	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.VICETimeLimitUpdate).Methods("POST")
-	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.VICEGetTimeLimit).Methods("GET")
-	app.router.HandleFunc("/vice/{host}/url-ready", app.VICEStatus).Methods("GET")
+	app.router.HandleFunc("/vice/launch", app.internal.VICELaunchApp).Methods("POST")
+	app.router.HandleFunc("/vice/apply-labels", app.internal.ApplyAsyncLabelsHandler).Methods("POST")
+	app.router.HandleFunc("/vice/listing", app.internal.FilterableResources).Methods("GET")
+	app.router.HandleFunc("/vice/listing/deployments", app.internal.FilterableDeployments).Methods("GET")
+	app.router.HandleFunc("/vice/listing/configmaps", app.internal.FilterableConfigMaps).Methods("GET")
+	app.router.HandleFunc("/vice/listing/services", app.internal.FilterableServices).Methods("GET")
+	app.router.HandleFunc("/vice/listing/ingresses", app.internal.FilterableIngresses).Methods("GET")
+	app.router.HandleFunc("/vice/{id}/download-input-files", app.internal.VICETriggerDownloads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/save-output-files", app.internal.VICETriggerUploads).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/exit", app.internal.VICEExit).Methods("POST")
+	app.router.HandleFunc("/vice/{id}/save-and-exit", app.internal.VICESaveAndExit).Methods("POST")
+	app.router.HandleFunc("/vice/{analysis-id}/pods", app.internal.VICEPods).Methods("GET")
+	app.router.HandleFunc("/vice/{analysis-id}/logs", app.internal.VICELogs).Methods("GET")
+	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.internal.VICETimeLimitUpdate).Methods("POST")
+	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.internal.VICEGetTimeLimit).Methods("GET")
+	app.router.HandleFunc("/vice/{host}/url-ready", app.internal.VICEStatus).Methods("GET")
 
 	app.router.HandleFunc("/service/{name}", app.external.CreateService).Methods("POST")
 	app.router.HandleFunc("/service/{name}", app.external.UpdateService).Methods("PUT")

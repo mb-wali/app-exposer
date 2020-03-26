@@ -8,6 +8,7 @@ require (
 	github.com/cyverse-de/messaging v6.0.0+incompatible
 	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 // indirect
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
+	github.com/google/martian v2.1.0+incompatible
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.1

@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -39,15 +39,15 @@ type VICEAnalysis struct {
 	Total      int        `json:"total"`
 }
 
-func (e *ExposerApp) getExternalIDs(user, analysisID string) ([]string, error) {
+func (i *Internal) getExternalIDs(user, analysisID string) ([]string, error) {
 	var (
 		err               error
 		analysisLookupURL *url.URL
 	)
 
-	analysisLookupURL, err = url.Parse(e.AppsServiceBaseURL)
+	analysisLookupURL, err = url.Parse(i.AppsServiceBaseURL)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error parsing url %s", e.AppsServiceBaseURL)
+		return nil, errors.Wrapf(err, "error parsing url %s", i.AppsServiceBaseURL)
 	}
 	analysisLookupURL.Path = path.Join("/analyses", analysisID, "steps")
 	q := analysisLookupURL.Query()
@@ -102,7 +102,7 @@ type VICELogEntry struct {
 //                display timestamps at the beginning of each log line.
 //   container - String containing the name of the container to display logs from. Defaults
 //               the value 'analysis', since this is VICE-specific.
-func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICELogs(writer http.ResponseWriter, request *http.Request) {
 	var (
 		err        error
 		id         string
@@ -132,7 +132,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	}
 	user = users[0]
 
-	externalIDs, err := e.getExternalIDs(user, id)
+	externalIDs, err := i.getExternalIDs(user, id)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -214,7 +214,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 
 	// We're getting a list of pods associated with the first external-id for the analysis,
 	// but we're only going to use the first pod for now.
-	podList, err := e.getPods(externalID)
+	podList, err := i.getPods(externalID)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -232,7 +232,7 @@ func (e *ExposerApp) VICELogs(writer http.ResponseWriter, request *http.Request)
 	podName = podList[0].Name
 
 	// Finally, actually get the logs and write the response out
-	podLogs := e.clientset.CoreV1().Pods(e.viceNamespace).GetLogs(podName, logOpts)
+	podLogs := i.clientset.CoreV1().Pods(i.ViceNamespace).GetLogs(podName, logOpts)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -270,7 +270,7 @@ type retPod struct {
 	Name string `json:"name"`
 }
 
-func (e *ExposerApp) getPods(externalID string) ([]retPod, error) {
+func (i *Internal) getPods(externalID string) ([]retPod, error) {
 	set := labels.Set(map[string]string{
 		"external-id": externalID,
 	})
@@ -281,7 +281,7 @@ func (e *ExposerApp) getPods(externalID string) ([]retPod, error) {
 
 	returnedPods := []retPod{}
 
-	podlist, err := e.clientset.CoreV1().Pods(e.viceNamespace).List(listoptions)
+	podlist, err := i.clientset.CoreV1().Pods(i.ViceNamespace).List(listoptions)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func (e *ExposerApp) getPods(externalID string) ([]retPod, error) {
 
 // VICEPods lists the k8s pods associated with the provided external-id. For now
 // just returns pod info in the format `{"pods" : [{}]}`
-func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICEPods(writer http.ResponseWriter, request *http.Request) {
 	analysisID := mux.Vars(request)["analysis-id"]
 	users, found := request.URL.Query()["user"]
 
@@ -306,7 +306,7 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 
 	user := users[0]
 
-	externalIDs, err := e.getExternalIDs(user, analysisID)
+	externalIDs, err := i.getExternalIDs(user, analysisID)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -320,7 +320,7 @@ func (e *ExposerApp) VICEPods(writer http.ResponseWriter, request *http.Request)
 	// For now, just use the first external ID
 	externalID := externalIDs[0]
 
-	returnedPods, err := e.getPods(externalID)
+	returnedPods, err := i.getPods(externalID)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return

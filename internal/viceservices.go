@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ import (
 
 // getService assembles and returns the Service needed for the VICE analysis.
 // It does not call the k8s API.
-func (e *ExposerApp) getService(job *model.Job, deployment *appsv1.Deployment) (*apiv1.Service, error) {
-	labels, err := e.labelsFromJob(job)
+func (i *Internal) getService(job *model.Job, deployment *appsv1.Deployment) (*apiv1.Service, error) {
+	labels, err := i.labelsFromJob(job)
 	if err != nil {
 		return nil, err
 	}

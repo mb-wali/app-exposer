@@ -1,6 +1,7 @@
-package main
+package internal
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,11 +14,19 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"gopkg.in/cyverse-de/model.v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/kubernetes"
 )
+
+var log = logrus.WithFields(logrus.Fields{
+	"service": "app-exposer",
+	"art-id":  "app-exposer",
+	"group":   "org.cyverse",
+})
 
 func slugString(str string) string {
 	slug.MaxLength = 63
@@ -25,8 +34,52 @@ func slugString(str string) string {
 	return strings.ReplaceAll(text, "_", "-")
 }
 
+// Init contains configuration for configuring an *Internal.
+type Init struct {
+	PorklockImage                 string
+	PorklockTag                   string
+	InputPathListIdentifier       string
+	TicketInputPathListIdentifier string
+	ViceProxyImage                string
+	CASBaseURL                    string
+	FrontendBaseURL               string
+	IngressBaseURL                string
+	AnalysisHeader                string
+	AccessHeader                  string
+	ViceDefaultBackendService     string
+	ViceDefaultBackendServicePort int
+	GetAnalysisIDService          string
+	CheckResourceAccessService    string
+	VICEBackendNamespace          string
+	AppsServiceBaseURL            string
+	AppsUser                      string
+	ViceNamespace                 string
+	JobStatusURL                  string
+}
+
+// Internal contains information and operations for launching VICE apps inside the
+// local k8s cluster.
+type Internal struct {
+	Init
+	clientset       kubernetes.Interface
+	db              *sql.DB
+	statusPublisher AnalysisStatusPublisher
+}
+
+// New creates a new *Internal.
+func New(init *Init, db *sql.DB, clientset kubernetes.Interface) *Internal {
+	return &Internal{
+		Init:      *init,
+		db:        db,
+		clientset: clientset,
+		statusPublisher: &JSLPublisher{
+			statusURL: init.JobStatusURL,
+		},
+	}
+}
+
 // labelsFromJob returns a map[string]string that can be used as labels for K8s resources.
-func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
+func (i *Internal) labelsFromJob(job *model.Job) (map[string]string, error) {
 	name := []rune(job.Name)
 
 	var stringmax int
@@ -36,7 +89,7 @@ func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 		stringmax = len(name) - 1
 	}
 
-	a := apps.NewApps(e.db)
+	a := apps.NewApps(i.db)
 	ipAddr, err := a.GetUserIP(job.UserID)
 	if err != nil {
 		return nil, err
@@ -59,13 +112,13 @@ func (e *ExposerApp) labelsFromJob(job *model.Job) (map[string]string, error) {
 // containing the files that should not be uploaded to iRODS. It then calls
 // the k8s API to create the ConfigMap if it does not already exist or to
 // update it if it does.
-func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
-	excludesCM, err := e.excludesConfigMap(job)
+func (i *Internal) UpsertExcludesConfigMap(job *model.Job) error {
+	excludesCM, err := i.excludesConfigMap(job)
 	if err != nil {
 		return err
 	}
 
-	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+	cmclient := i.clientset.CoreV1().ConfigMaps(i.ViceNamespace)
 
 	_, err = cmclient.Get(excludesConfigMapName(job), metav1.GetOptions{})
 	if err != nil {
@@ -87,13 +140,13 @@ func (e *ExposerApp) UpsertExcludesConfigMap(job *model.Job) error {
 // containing the path list of files to download from iRODS for the VICE analysis.
 // It then uses the k8s API to create the ConfigMap if it does not already exist or to
 // update it if it does.
-func (e *ExposerApp) UpsertInputPathListConfigMap(job *model.Job) error {
-	inputCM, err := e.inputPathListConfigMap(job)
+func (i *Internal) UpsertInputPathListConfigMap(job *model.Job) error {
+	inputCM, err := i.inputPathListConfigMap(job)
 	if err != nil {
 		return err
 	}
 
-	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+	cmclient := i.clientset.CoreV1().ConfigMaps(i.ViceNamespace)
 
 	_, err = cmclient.Get(inputPathListConfigMapName(job), metav1.GetOptions{})
 	if err != nil {
@@ -114,13 +167,13 @@ func (e *ExposerApp) UpsertInputPathListConfigMap(job *model.Job) error {
 // UpsertDeployment uses the Job passed in to assemble a Deployment for the
 // VICE analysis. If then uses the k8s API to create the Deployment if it does
 // not already exist or to update it if it does.
-func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
-	deployment, err := e.getDeployment(job)
+func (i *Internal) UpsertDeployment(job *model.Job) error {
+	deployment, err := i.getDeployment(job)
 	if err != nil {
 		return err
 	}
 
-	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	depclient := i.clientset.AppsV1().Deployments(i.ViceNamespace)
 	_, err = depclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
 		_, err = depclient.Create(deployment)
@@ -135,11 +188,11 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	}
 
 	// Create the service for the job.
-	svc, err := e.getService(job, deployment)
+	svc, err := i.getService(job, deployment)
 	if err != nil {
 		return err
 	}
-	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svcclient := i.clientset.CoreV1().Services(i.ViceNamespace)
 	_, err = svcclient.Get(job.InvocationID, metav1.GetOptions{})
 	if err != nil {
 		_, err = svcclient.Create(svc)
@@ -149,12 +202,12 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	}
 
 	// Create the ingress for the job
-	ingress, err := e.getIngress(job, svc)
+	ingress, err := i.getIngress(job, svc)
 	if err != nil {
 		return err
 	}
 
-	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	ingressclient := i.clientset.ExtensionsV1beta1().Ingresses(i.ViceNamespace)
 	_, err = ingressclient.Get(ingress.Name, metav1.GetOptions{})
 	if err != nil {
 		_, err = ingressclient.Create(ingress)
@@ -166,7 +219,7 @@ func (e *ExposerApp) UpsertDeployment(job *model.Job) error {
 	return nil
 }
 
-func (e *ExposerApp) countJobsForUser(username string) (int, error) {
+func (i *Internal) countJobsForUser(username string) (int, error) {
 	set := labels.Set(map[string]string{
 		"username": username,
 	})
@@ -175,7 +228,7 @@ func (e *ExposerApp) countJobsForUser(username string) (int, error) {
 		LabelSelector: set.AsSelector().String(),
 	}
 
-	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	depclient := i.clientset.AppsV1().Deployments(i.ViceNamespace)
 	deplist, err := depclient.List(listoptions)
 	if err != nil {
 		return 0, err
@@ -190,15 +243,15 @@ const getJobLimitForUserSQL = `
 	ORDER BY launcher ASC
 `
 
-func (e *ExposerApp) getJobLimitForUser(username string) (int, error) {
+func (i *Internal) getJobLimitForUser(username string) (int, error) {
 	var jobLimit int
-	if err := e.db.QueryRow(getJobLimitForUserSQL, username).Scan(&jobLimit); err != nil {
+	if err := i.db.QueryRow(getJobLimitForUserSQL, username).Scan(&jobLimit); err != nil {
 		return 0, err
 	}
 	return jobLimit, nil
 }
 
-func (e *ExposerApp) validateJob(job *model.Job) error {
+func (i *Internal) validateJob(job *model.Job) error {
 
 	// Verify that the job type is supported by this service
 	if strings.ToLower(job.ExecutionTarget) != "interapps" {
@@ -209,11 +262,11 @@ func (e *ExposerApp) validateJob(job *model.Job) error {
 	user := slugString(job.Submitter)
 
 	// Verify that the user hasn't exceeded their limit for the number of concurrent jobs.
-	jobCount, err := e.countJobsForUser(user)
+	jobCount, err := i.countJobsForUser(user)
 	if err != nil {
 		return errors.Wrapf(err, "unable to determine the number of jobs the %s is currently running", user)
 	}
-	jobLimit, err := e.getJobLimitForUser(user)
+	jobLimit, err := i.getJobLimitForUser(user)
 	if err != nil {
 		return errors.Wrapf(err, "unable to determine the concurrent job limit for %s", user)
 	}
@@ -227,7 +280,7 @@ func (e *ExposerApp) validateJob(job *model.Job) error {
 // VICELaunchApp is the HTTP handler that orchestrates the launching of a VICE analysis inside
 // the k8s cluster. This get passed to the router to be associated with a route. The Job
 // is passed in as the body of the request.
-func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICELaunchApp(writer http.ResponseWriter, request *http.Request) {
 	job := &model.Job{}
 
 	buf, err := ioutil.ReadAll(request.Body)
@@ -241,13 +294,13 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	if err = e.validateJob(job); err != nil {
+	if err = i.validateJob(job); err != nil {
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// Create the excludes file ConfigMap for the job.
-	if err = e.UpsertExcludesConfigMap(job); err != nil {
+	if err = i.UpsertExcludesConfigMap(job); err != nil {
 		if err != nil {
 			http.Error(
 				writer,
@@ -259,7 +312,7 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 	}
 
 	// Create the input path list config map
-	if err = e.UpsertInputPathListConfigMap(job); err != nil {
+	if err = i.UpsertInputPathListConfigMap(job); err != nil {
 		if err != nil {
 			http.Error(
 				writer,
@@ -271,7 +324,7 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 	}
 
 	// Create the deployment for the job.
-	if err = e.UpsertDeployment(job); err != nil {
+	if err = i.UpsertDeployment(job); err != nil {
 		if err != nil {
 			http.Error(
 				writer,
@@ -284,17 +337,17 @@ func (e *ExposerApp) VICELaunchApp(writer http.ResponseWriter, request *http.Req
 }
 
 // VICETriggerDownloads handles requests to trigger file downloads.
-func (e *ExposerApp) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICETriggerDownloads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, downloadBasePath, downloadKind, true); err != nil {
+	if err = i.doFileTransfer(request, downloadBasePath, downloadKind, true); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 // VICETriggerUploads handles requests to trigger file uploads.
-func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICETriggerUploads(writer http.ResponseWriter, request *http.Request) {
 	var err error
-	if err = e.doFileTransfer(request, uploadBasePath, uploadKind, true); err != nil {
+	if err = i.doFileTransfer(request, uploadBasePath, uploadKind, true); err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -304,7 +357,7 @@ func (e *ExposerApp) VICETriggerUploads(writer http.ResponseWriter, request *htt
 // the external-id label to find all of the objects in the configured
 // namespace associated with the job. Deletes the following objects:
 // ingresses, services, deployments, and configmaps.
-func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICEExit(writer http.ResponseWriter, request *http.Request) {
 	id := mux.Vars(request)["id"]
 
 	set := labels.Set(map[string]string{
@@ -316,7 +369,7 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// Delete the ingress
-	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+	ingressclient := i.clientset.ExtensionsV1beta1().Ingresses(i.ViceNamespace)
 	ingresslist, err := ingressclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -329,7 +382,7 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// Delete the service
-	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svcclient := i.clientset.CoreV1().Services(i.ViceNamespace)
 	svclist, err := svcclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -342,7 +395,7 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// Delete the deployment
-	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	depclient := i.clientset.AppsV1().Deployments(i.ViceNamespace)
 	deplist, err := depclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -355,7 +408,7 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 
 	// Delete the input files list and the excludes list config maps
-	cmclient := e.clientset.CoreV1().ConfigMaps(e.viceNamespace)
+	cmclient := i.clientset.CoreV1().ConfigMaps(i.ViceNamespace)
 	cmlist, err := cmclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -372,8 +425,8 @@ func (e *ExposerApp) VICEExit(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
-func (e *ExposerApp) getIDFromHost(host string) (string, error) {
-	ingressclient := e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace)
+func (i *Internal) getIDFromHost(host string) (string, error) {
+	ingressclient := i.clientset.ExtensionsV1beta1().Ingresses(i.ViceNamespace)
 	ingresslist, err := ingressclient.List(metav1.ListOptions{})
 	if err != nil {
 		return "", err
@@ -394,7 +447,7 @@ func (e *ExposerApp) getIDFromHost(host string) (string, error) {
 // This will return an overall status and status for the individual containers in
 // the app's pod. Uses the state of the readiness checks in K8s, along with the
 // existence of the various resources created for the app.
-func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICEStatus(writer http.ResponseWriter, request *http.Request) {
 	var (
 		ingressExists bool
 		serviceExists bool
@@ -403,7 +456,7 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 
 	host := mux.Vars(request)["host"]
 
-	id, err := e.getIDFromHost(host)
+	id, err := i.getIDFromHost(host)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusNotFound)
 		return
@@ -422,7 +475,7 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 	}
 
 	// check the service existence
-	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svcclient := i.clientset.CoreV1().Services(i.ViceNamespace)
 	svclist, err := svcclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -433,7 +486,7 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 	}
 
 	// Check pod status through the deployment
-	depclient := e.clientset.AppsV1().Deployments(e.viceNamespace)
+	depclient := i.clientset.AppsV1().Deployments(i.ViceNamespace)
 	deplist, err := depclient.List(listoptions)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -462,7 +515,7 @@ func (e *ExposerApp) VICEStatus(writer http.ResponseWriter, request *http.Reques
 // The exit portion will only occur if the save operation succeeds. The operation is
 // performed inside of a goroutine so that the caller isn't waiting for hours/days for
 // output file transfers to complete.
-func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICESaveAndExit(writer http.ResponseWriter, request *http.Request) {
 	log.Info("save and exit called")
 
 	// Since file transfers can take a while, we should do this asynchronously by default.
@@ -472,13 +525,13 @@ func (e *ExposerApp) VICESaveAndExit(writer http.ResponseWriter, request *http.R
 		log.Info("calling doFileTransfer")
 
 		// Trigger a blocking output file transfer request.
-		if err = e.doFileTransfer(request, uploadBasePath, uploadKind, false); err != nil {
+		if err = i.doFileTransfer(request, uploadBasePath, uploadKind, false); err != nil {
 			log.Error(errors.Wrap(err, "error doing file transfer")) // Log but don't exit. Possible to cancel a job that hasn't started yet
 		}
 
 		log.Info("calling VICEExit")
 
-		e.VICEExit(writer, request)
+		i.VICEExit(writer, request)
 
 		log.Info("after VICEExit")
 	}(writer, request)
@@ -509,7 +562,7 @@ const getUserIDSQL = `
 `
 
 // VICETimeLimitUpdate handles requests to update the time limit on an already running VICE app.
-func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICETimeLimitUpdate(writer http.ResponseWriter, request *http.Request) {
 	log.Info("update time limit called")
 
 	var (
@@ -538,13 +591,13 @@ func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	if err = e.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
+	if err = i.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
 		http.Error(writer, errors.Wrapf(err, "error looking user ID for %s", user).Error(), http.StatusBadRequest)
 		return
 	}
 
 	var newTimeLimit pq.NullTime
-	if err = e.db.QueryRow(updateTimeLimitSQL, userID, id).Scan(&newTimeLimit); err != nil {
+	if err = i.db.QueryRow(updateTimeLimitSQL, userID, id).Scan(&newTimeLimit); err != nil {
 		http.Error(writer, errors.Wrapf(err, "error extending time limit for user %s on analysis %s", userID, id).Error(), http.StatusBadRequest)
 		return
 	}
@@ -573,7 +626,7 @@ func (e *ExposerApp) VICETimeLimitUpdate(writer http.ResponseWriter, request *ht
 }
 
 // VICEGetTimeLimit implements the handler for getting the current time limit from the database.
-func (e *ExposerApp) VICEGetTimeLimit(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) VICEGetTimeLimit(writer http.ResponseWriter, request *http.Request) {
 	log.Info("get time limit called")
 
 	var (
@@ -602,13 +655,13 @@ func (e *ExposerApp) VICEGetTimeLimit(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	if err = e.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
+	if err = i.db.QueryRow(getUserIDSQL, user).Scan(&userID); err != nil {
 		http.Error(writer, errors.Wrapf(err, "error looking user ID for %s", user).Error(), http.StatusBadRequest)
 		return
 	}
 
 	var timeLimit pq.NullTime
-	if err = e.db.QueryRow(getTimeLimitSQL, userID, id).Scan(&timeLimit); err != nil {
+	if err = i.db.QueryRow(getTimeLimitSQL, userID, id).Scan(&timeLimit); err != nil {
 		http.Error(writer, errors.Wrapf(err, "error retrieving time limit for user %s on analysis %s", userID, id).Error(), http.StatusBadRequest)
 		return
 	}

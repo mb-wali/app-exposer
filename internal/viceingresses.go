@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"crypto/sha256"
@@ -19,13 +19,13 @@ func IngressName(userID, invocationID string) string {
 
 // getIngress assembles and returns the Ingress needed for the VICE analysis.
 // It does not call the k8s API.
-func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1.Ingress, error) {
+func (i *Internal) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1.Ingress, error) {
 	var (
 		rules       []extv1beta1.IngressRule
 		defaultPort int32
 	)
 
-	labels, err := e.labelsFromJob(job)
+	labels, err := i.labelsFromJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,8 @@ func (e *ExposerApp) getIngress(job *model.Job, svc *apiv1.Service) (*extv1beta1
 	// default backend, should point at the VICE default backend, which redirects
 	// users to the loading page.
 	defaultBackend := &extv1beta1.IngressBackend{
-		ServiceName: e.ViceDefaultBackendService,
-		ServicePort: intstr.FromInt(e.ViceDefaultBackendServicePort),
+		ServiceName: i.ViceDefaultBackendService,
+		ServicePort: intstr.FromInt(i.ViceDefaultBackendServicePort),
 	}
 
 	// Backend for the service, not the default backend

@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -69,7 +69,7 @@ func fileTransferCommand(job *model.Job) []string {
 // fileTransferVolumeMounts returns the list of VolumeMounts needed by the fileTransfer
 // container in the VICE analysis pod. Each VolumeMount should correspond to one of the
 // Volumes returned by the deploymentVolumes() function. This does not call the k8s API.
-func (e *ExposerApp) fileTransfersVolumeMounts(job *model.Job) []apiv1.VolumeMount {
+func (i *Internal) fileTransfersVolumeMounts(job *model.Job) []apiv1.VolumeMount {
 	retval := []apiv1.VolumeMount{
 		{
 			Name:      porklockConfigVolumeName,
@@ -193,13 +193,13 @@ func isFinished(status string) bool {
 // doFileTransfer handles requests to initial file transfers for a VICE
 // analysis. We only need the ID of the job, nothing is required in the
 // body of the request.
-func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string, async bool) error {
+func (i *Internal) doFileTransfer(request *http.Request, reqpath, kind string, async bool) error {
 	id := mux.Vars(request)["id"]
 
 	log.Infof("starting %s transfers for job %s", kind, id)
 
 	// Make sure that the list of services only comes from the VICE namespace.
-	svcclient := e.clientset.CoreV1().Services(e.viceNamespace)
+	svcclient := i.clientset.CoreV1().Services(i.ViceNamespace)
 
 	// Filter the list of services so only those tagged with an external-id are
 	// returned. external-id is the job ID assigned by the apps service and is
@@ -262,7 +262,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 					log.Error(err)
 
-					if failerr := e.statusPublisher.Running(id, msg); failerr != nil {
+					if failerr := i.statusPublisher.Running(id, msg); failerr != nil {
 						log.Error(failerr)
 					}
 
@@ -272,7 +272,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 					log.Info(msg)
 
-					if successerr := e.statusPublisher.Running(id, msg); successerr != nil {
+					if successerr := i.statusPublisher.Running(id, msg); successerr != nil {
 						log.Error(successerr)
 					}
 
@@ -280,7 +280,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 				case RequestedStatus:
 					msg := fmt.Sprintf("%s requested for job %s", kind, id)
 
-					if requestederr := e.statusPublisher.Running(id, msg); requestederr != nil {
+					if requestederr := i.statusPublisher.Running(id, msg); requestederr != nil {
 						log.Error(err)
 					}
 
@@ -291,7 +291,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 						log.Info(msg)
 
-						if uploadingerr := e.statusPublisher.Running(id, msg); uploadingerr != nil {
+						if uploadingerr := i.statusPublisher.Running(id, msg); uploadingerr != nil {
 							log.Error(err)
 						}
 
@@ -304,7 +304,7 @@ func (e *ExposerApp) doFileTransfer(request *http.Request, reqpath, kind string,
 
 						log.Info(msg)
 
-						if downloadingerr := e.statusPublisher.Running(id, msg); downloadingerr != nil {
+						if downloadingerr := i.statusPublisher.Running(id, msg); downloadingerr != nil {
 							log.Error(err)
 						}
 

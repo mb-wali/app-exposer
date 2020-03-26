@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -19,8 +19,8 @@ func excludesConfigMapName(job *model.Job) string {
 // that should be excluded from file uploads to iRODS by porklock. This does NOT
 // call the k8s API to actually create the ConfigMap, just returns the object
 // that can be passed to the API.
-func (e *ExposerApp) excludesConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
-	labels, err := e.labelsFromJob(job)
+func (i *Internal) excludesConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
+	labels, err := i.labelsFromJob(job)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +47,13 @@ func inputPathListConfigMapName(job *model.Job) string {
 // list of paths that should be downloaded from iRODS by porklock as input
 // files for the VICE analysis. This does NOT call the k8s API to actually
 // create the ConfigMap, just returns the object that can be passed to the API.
-func (e *ExposerApp) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
-	labels, err := e.labelsFromJob(job)
+func (i *Internal) inputPathListConfigMap(job *model.Job) (*apiv1.ConfigMap, error) {
+	labels, err := i.labelsFromJob(job)
 	if err != nil {
 		return nil, err
 	}
 
-	fileContents, err := jobtmpl.InputPathListContents(job, e.InputPathListIdentifier, e.TicketInputPathListIdentifier)
+	fileContents, err := jobtmpl.InputPathListContents(job, i.InputPathListIdentifier, i.TicketInputPathListIdentifier)
 	if err != nil {
 		return nil, err
 	}

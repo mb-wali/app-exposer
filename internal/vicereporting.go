@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"encoding/json"
@@ -32,10 +32,10 @@ func getListOptions(customLabels map[string]string) metav1.ListOptions {
 	}
 }
 
-func (e *ExposerApp) deploymentList(namespace string, customLabels map[string]string) (*v1.DeploymentList, error) {
+func (i *Internal) deploymentList(namespace string, customLabels map[string]string) (*v1.DeploymentList, error) {
 	listOptions := getListOptions(customLabels)
 
-	depList, err := e.clientset.AppsV1().Deployments(namespace).List(listOptions)
+	depList, err := i.clientset.AppsV1().Deployments(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -43,10 +43,10 @@ func (e *ExposerApp) deploymentList(namespace string, customLabels map[string]st
 	return depList, nil
 }
 
-func (e *ExposerApp) configmapsList(namespace string, customLabels map[string]string) (*corev1.ConfigMapList, error) {
+func (i *Internal) configmapsList(namespace string, customLabels map[string]string) (*corev1.ConfigMapList, error) {
 	listOptions := getListOptions(customLabels)
 
-	cfgList, err := e.clientset.CoreV1().ConfigMaps(namespace).List(listOptions)
+	cfgList, err := i.clientset.CoreV1().ConfigMaps(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -54,10 +54,10 @@ func (e *ExposerApp) configmapsList(namespace string, customLabels map[string]st
 	return cfgList, nil
 }
 
-func (e *ExposerApp) serviceList(namespace string, customLabels map[string]string) (*corev1.ServiceList, error) {
+func (i *Internal) serviceList(namespace string, customLabels map[string]string) (*corev1.ServiceList, error) {
 	listOptions := getListOptions(customLabels)
 
-	svcList, err := e.clientset.CoreV1().Services(namespace).List(listOptions)
+	svcList, err := i.clientset.CoreV1().Services(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -65,10 +65,10 @@ func (e *ExposerApp) serviceList(namespace string, customLabels map[string]strin
 	return svcList, nil
 }
 
-func (e *ExposerApp) ingressList(namespace string, customLabels map[string]string) (*extv1b1.IngressList, error) {
+func (i *Internal) ingressList(namespace string, customLabels map[string]string) (*extv1b1.IngressList, error) {
 	listOptions := getListOptions(customLabels)
 
-	ingList, err := e.clientset.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
+	ingList, err := i.clientset.ExtensionsV1beta1().Ingresses(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -258,8 +258,8 @@ func ingressInfo(ingress *extv1b1.Ingress) *IngressInfo {
 	}
 }
 
-func (e *ExposerApp) getFilteredDeployments(filter map[string]string) ([]DeploymentInfo, error) {
-	depList, err := e.deploymentList(e.viceNamespace, filter)
+func (i *Internal) getFilteredDeployments(filter map[string]string) ([]DeploymentInfo, error) {
+	depList, err := i.deploymentList(i.ViceNamespace, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -275,12 +275,12 @@ func (e *ExposerApp) getFilteredDeployments(filter map[string]string) ([]Deploym
 }
 
 // FilterableDeployments lists all of the deployments.
-func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) FilterableDeployments(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
 
 	filter := filterMap(request.URL.Query())
 
-	deployments, err := e.getFilteredDeployments(filter)
+	deployments, err := i.getFilteredDeployments(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -298,8 +298,8 @@ func (e *ExposerApp) FilterableDeployments(writer http.ResponseWriter, request *
 	fmt.Fprintf(writer, string(buf))
 }
 
-func (e *ExposerApp) getFilteredConfigMaps(filter map[string]string) ([]ConfigMapInfo, error) {
-	cmList, err := e.configmapsList(e.viceNamespace, filter)
+func (i *Internal) getFilteredConfigMaps(filter map[string]string) ([]ConfigMapInfo, error) {
+	cmList, err := i.configmapsList(i.ViceNamespace, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -315,12 +315,12 @@ func (e *ExposerApp) getFilteredConfigMaps(filter map[string]string) ([]ConfigMa
 }
 
 // FilterableConfigMaps lists configmaps in use by VICE apps.
-func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) FilterableConfigMaps(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
 
 	filter := filterMap(request.URL.Query())
 
-	cms, err := e.getFilteredConfigMaps(filter)
+	cms, err := i.getFilteredConfigMaps(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -338,8 +338,8 @@ func (e *ExposerApp) FilterableConfigMaps(writer http.ResponseWriter, request *h
 	fmt.Fprintf(writer, string(buf))
 }
 
-func (e *ExposerApp) getFilteredServices(filter map[string]string) ([]ServiceInfo, error) {
-	svcList, err := e.serviceList(e.viceNamespace, filter)
+func (i *Internal) getFilteredServices(filter map[string]string) ([]ServiceInfo, error) {
+	svcList, err := i.serviceList(i.ViceNamespace, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -355,12 +355,12 @@ func (e *ExposerApp) getFilteredServices(filter map[string]string) ([]ServiceInf
 }
 
 // FilterableServices lists services in use by VICE apps.
-func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) FilterableServices(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
 
 	filter := filterMap(request.URL.Query())
 
-	svcs, err := e.getFilteredServices(filter)
+	svcs, err := i.getFilteredServices(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -378,8 +378,8 @@ func (e *ExposerApp) FilterableServices(writer http.ResponseWriter, request *htt
 	fmt.Fprintf(writer, string(buf))
 }
 
-func (e *ExposerApp) getFilteredIngresses(filter map[string]string) ([]IngressInfo, error) {
-	ingList, err := e.ingressList(e.viceNamespace, filter)
+func (i *Internal) getFilteredIngresses(filter map[string]string) ([]IngressInfo, error) {
+	ingList, err := i.ingressList(i.ViceNamespace, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -395,12 +395,12 @@ func (e *ExposerApp) getFilteredIngresses(filter map[string]string) ([]IngressIn
 }
 
 //FilterableIngresses lists ingresses in use by VICE apps.
-func (e *ExposerApp) FilterableIngresses(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) FilterableIngresses(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
 
 	filter := filterMap(request.URL.Query())
 
-	ingresses, err := e.getFilteredIngresses(filter)
+	ingresses, err := i.getFilteredIngresses(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -428,30 +428,30 @@ type ResourceInfo struct {
 }
 
 // FilterableResources returns all of the k8s resources associated with a VICE analysis.
-func (e *ExposerApp) FilterableResources(writer http.ResponseWriter, request *http.Request) {
+func (i *Internal) FilterableResources(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
 
 	filter := filterMap(request.URL.Query())
 
-	deployments, err := e.getFilteredDeployments(filter)
+	deployments, err := i.getFilteredDeployments(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	cms, err := e.getFilteredConfigMaps(filter)
+	cms, err := i.getFilteredConfigMaps(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	svcs, err := e.getFilteredServices(filter)
+	svcs, err := i.getFilteredServices(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	ingresses, err := e.getFilteredIngresses(filter)
+	ingresses, err := i.getFilteredIngresses(filter)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -514,13 +514,13 @@ func populateLoginIP(a *apps.Apps, existingLabels map[string]string) (map[string
 	return existingLabels, nil
 }
 
-func (e *ExposerApp) relabelDeployments() []error {
+func (i *Internal) relabelDeployments() []error {
 	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
 	errors := []error{}
 
-	a := apps.NewApps(e.db)
+	a := apps.NewApps(i.db)
 
-	deployments, err := e.deploymentList(e.viceNamespace, filter)
+	deployments, err := i.deploymentList(i.ViceNamespace, filter)
 	if err != nil {
 		errors = append(errors, err)
 		return errors
@@ -542,7 +542,7 @@ func (e *ExposerApp) relabelDeployments() []error {
 		}
 
 		deployment.SetLabels(existingLabels)
-		_, err = e.clientset.AppsV1().Deployments(e.viceNamespace).Update(&deployment)
+		_, err = i.clientset.AppsV1().Deployments(i.ViceNamespace).Update(&deployment)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -551,13 +551,13 @@ func (e *ExposerApp) relabelDeployments() []error {
 	return errors
 }
 
-func (e *ExposerApp) relabelConfigMaps() []error {
+func (i *Internal) relabelConfigMaps() []error {
 	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
 	errors := []error{}
 
-	a := apps.NewApps(e.db)
+	a := apps.NewApps(i.db)
 
-	cms, err := e.configmapsList(e.viceNamespace, filter)
+	cms, err := i.configmapsList(i.ViceNamespace, filter)
 	if err != nil {
 		errors = append(errors, err)
 		return errors
@@ -579,7 +579,7 @@ func (e *ExposerApp) relabelConfigMaps() []error {
 		}
 
 		configmap.SetLabels(existingLabels)
-		_, err = e.clientset.CoreV1().ConfigMaps(e.viceNamespace).Update(&configmap)
+		_, err = i.clientset.CoreV1().ConfigMaps(i.ViceNamespace).Update(&configmap)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -588,13 +588,13 @@ func (e *ExposerApp) relabelConfigMaps() []error {
 	return errors
 }
 
-func (e *ExposerApp) relabelServices() []error {
+func (i *Internal) relabelServices() []error {
 	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
 	errors := []error{}
 
-	a := apps.NewApps(e.db)
+	a := apps.NewApps(i.db)
 
-	svcs, err := e.serviceList(e.viceNamespace, filter)
+	svcs, err := i.serviceList(i.ViceNamespace, filter)
 	if err != nil {
 		errors = append(errors, err)
 		return errors
@@ -616,7 +616,7 @@ func (e *ExposerApp) relabelServices() []error {
 		}
 
 		service.SetLabels(existingLabels)
-		_, err = e.clientset.CoreV1().Services(e.viceNamespace).Update(&service)
+		_, err = i.clientset.CoreV1().Services(i.ViceNamespace).Update(&service)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -625,13 +625,13 @@ func (e *ExposerApp) relabelServices() []error {
 	return errors
 }
 
-func (e *ExposerApp) relabelIngresses() []error {
+func (i *Internal) relabelIngresses() []error {
 	filter := map[string]string{} // Empty on purpose. Only filter based on interactive label.
 	errors := []error{}
 
-	a := apps.NewApps(e.db)
+	a := apps.NewApps(i.db)
 
-	ingresses, err := e.ingressList(e.viceNamespace, filter)
+	ingresses, err := i.ingressList(i.ViceNamespace, filter)
 	if err != nil {
 		errors = append(errors, err)
 		return errors
@@ -653,7 +653,7 @@ func (e *ExposerApp) relabelIngresses() []error {
 		}
 
 		ingress.SetLabels(existingLabels)
-		_, err = e.clientset.ExtensionsV1beta1().Ingresses(e.viceNamespace).Update(&ingress)
+		_, err = i.clientset.ExtensionsV1beta1().Ingresses(i.ViceNamespace).Update(&ingress)
 		if err != nil {
 			errors = append(errors, err)
 		}
@@ -665,31 +665,31 @@ func (e *ExposerApp) relabelIngresses() []error {
 // ApplyAsyncLabels ensures that the required labels are applied to all running VICE analyses.
 // This is useful to avoid race conditions between the DE database and the k8s cluster,
 // and also for adding new labels to "old" analyses during an update.
-func (e *ExposerApp) ApplyAsyncLabels() []error {
+func (i *Internal) ApplyAsyncLabels() []error {
 	errors := []error{}
 
-	labelDepsErrors := e.relabelDeployments()
+	labelDepsErrors := i.relabelDeployments()
 	if len(labelDepsErrors) > 0 {
 		for _, e := range labelDepsErrors {
 			errors = append(errors, e)
 		}
 	}
 
-	labelCMErrors := e.relabelConfigMaps()
+	labelCMErrors := i.relabelConfigMaps()
 	if len(labelCMErrors) > 0 {
 		for _, e := range labelCMErrors {
 			errors = append(errors, e)
 		}
 	}
 
-	labelSVCErrors := e.relabelServices()
+	labelSVCErrors := i.relabelServices()
 	if len(labelSVCErrors) > 0 {
 		for _, e := range labelSVCErrors {
 			errors = append(errors, e)
 		}
 	}
 
-	labelIngressesErrors := e.relabelIngresses()
+	labelIngressesErrors := i.relabelIngresses()
 	if len(labelIngressesErrors) > 0 {
 		for _, e := range labelIngressesErrors {
 			errors = append(errors, e)
@@ -701,8 +701,8 @@ func (e *ExposerApp) ApplyAsyncLabels() []error {
 
 // ApplyAsyncLabelsHandler is the http handler for triggering the application
 // of labels on running VICE analyses.
-func (e *ExposerApp) ApplyAsyncLabelsHandler(writer http.ResponseWriter, request *http.Request) {
-	errs := e.ApplyAsyncLabels()
+func (i *Internal) ApplyAsyncLabelsHandler(writer http.ResponseWriter, request *http.Request) {
+	errs := i.ApplyAsyncLabels()
 
 	if len(errs) > 0 {
 		var errMsg strings.Builder

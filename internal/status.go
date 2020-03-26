@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bytes"
@@ -118,7 +118,7 @@ func (j *JSLPublisher) Running(jobID, msg string) error {
 
 // MonitorVICEEvents fires up a goroutine that forwards events from the cluster
 // to the status receiving service (probably job-status-listener).
-func (e *ExposerApp) MonitorVICEEvents() {
+func (i *Internal) MonitorVICEEvents() {
 	go func(clientset kubernetes.Interface) {
 		for {
 			log.Debug("beginning to monitor k8s events")
@@ -128,7 +128,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 			factory := informers.NewSharedInformerFactoryWithOptions(
 				clientset,
 				0,
-				informers.WithNamespace(e.viceNamespace),
+				informers.WithNamespace(i.ViceNamespace),
 				informers.WithTweakListOptions(func(listoptions *v1.ListOptions) {
 					listoptions.LabelSelector = set.AsSelector().String()
 				}),
@@ -165,7 +165,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 						return
 					}
 
-					if err = e.statusPublisher.Running(
+					if err = i.statusPublisher.Running(
 						jobID,
 						fmt.Sprintf("deployment %s has started for analysis %s", depObj.GetName(), analysisName),
 					); err != nil {
@@ -199,7 +199,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 						return
 					}
 
-					if err = e.statusPublisher.Success(
+					if err = i.statusPublisher.Success(
 						jobID,
 						fmt.Sprintf("deployment %s has been deleted for analysis %s", depObj.GetName(), analysisName),
 					); err != nil {
@@ -225,7 +225,7 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 					log.Infof("processing deployment change for job %s", jobID)
 
-					if err = e.eventDeploymentModified(depObj, jobID); err != nil {
+					if err = i.eventDeploymentModified(depObj, jobID); err != nil {
 						log.Error(err)
 					}
 				},
@@ -233,12 +233,12 @@ func (e *ExposerApp) MonitorVICEEvents() {
 
 			deploymentInformer.Run(deploymentInformerStop)
 		}
-	}(e.clientset)
+	}(i.clientset)
 }
 
 // eventDeploymentModified handles emitting job status updates when the pod for the
 // VICE analysis generates a modified event from k8s.
-func (e *ExposerApp) eventDeploymentModified(deployment *appsv1.Deployment, jobID string) error {
+func (i *Internal) eventDeploymentModified(deployment *appsv1.Deployment, jobID string) error {
 	var err error
 
 	analysisName := deployment.Labels["analysis-name"]
@@ -248,7 +248,7 @@ func (e *ExposerApp) eventDeploymentModified(deployment *appsv1.Deployment, jobI
 		return nil
 	}
 
-	err = e.statusPublisher.Running(
+	err = i.statusPublisher.Running(
 		jobID,
 		fmt.Sprintf(
 			"deployment %s for analysis %s summary: \n replicas: %d ready replicas: %d \n available replicas: %d \n unavailable replicas: %d",
