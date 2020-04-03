@@ -67,3 +67,19 @@ func (a *Apps) GetUserIP(userID string) (string, error) {
 	}
 	return ipAddr, nil
 }
+
+const getAnalysisStatusQuery = `
+	SELECT j.status
+	  FROM jobs j
+	 WHERE j.id = $1
+`
+
+// GetAnalysisStatus gets the current status of the overall Analysis/Job in the database.
+func (a *Apps) GetAnalysisStatus(analysisID string) (string, error) {
+	var status string
+	err := a.DB.QueryRow(getAnalysisStatusQuery, analysisID).Scan(&status)
+	if err != nil {
+		return "", err
+	}
+	return status, nil
+}
