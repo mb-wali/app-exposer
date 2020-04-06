@@ -1,0 +1,341 @@
+openapi: '3.0.2'
+
+info:
+  title: app-exposer
+  version: '1.0'
+
+servers:
+  - url: http://localhost:60000
+    description: Locally running API.
+  - url: http://localhost:8083
+    description: Port-forwarded access to the API.
+
+components:
+  parameters:
+    analysisName:
+      name: analysis-id
+      in: query
+      required: false
+      description: The name of the analysis. Provided by the user who launched the analysis.
+      schema:
+        type: string
+
+    appID:
+      name: app-id
+      in: query
+      required: false
+      description: The UUID assigned to the app used to launch the analysis.
+      schema:
+        type: string
+
+    appName:
+      name: app-name
+      in: query
+      required: false
+      description: The name of the app used to launch the analysis. Provided by the app integrator.
+      schema:
+        type: string
+    
+    externalID:
+      name: external-id
+      in: query
+      required: false
+      description: The value of the external_id field in the job_steps table.
+      schema:
+        type: string
+    
+    userID:
+      name: user-id
+      in: query
+      required: false
+      description: The UUID assigned to the user that launched the analysis.
+      schema:
+        type: string
+    
+    username:
+      name: username
+      in: query
+      required: false
+      description: The username of the user that launched the analysis.
+      schema:
+        type: string
+  
+  schemas:
+    ContainerState:
+      properties:
+        waiting:
+          $ref: '#/components/schemas/ContainerStateWaiting'
+        running:
+          $ref: '#/components/schemas/ContainerStateRunning'
+        terminated:
+          $ref: '#/components/schemas/ContainerStateTerminated'
+    
+    ContainerStateWaiting:
+      properties:
+        reason:
+          type: string
+        message:
+          type: string
+
+    ContainerStateRunning:
+      properties:
+        startedAt:
+          type: string
+
+    ContainerStateTerminated:
+      properties:
+        exitCode:
+          type: integer
+          format: int32
+        signal:
+          type: integer
+          format: in32
+        reason:
+          type: string
+        message:
+          type: string
+        startedAt:
+          type: string
+        finishedAt:
+          type: string
+        containerID:
+          type: string
+
+    ContainerStatus:
+      properties:
+        name:
+          type: string
+        ready:
+          type: boolean
+        restartCount:
+          type: integer
+          format: int32
+        state:
+          $ref: '#/components/schemas/ContainerState'
+        lastState:
+          $ref: '#/components/schemas/ContainerState'
+        image:
+          type: string
+        imageID:
+          type: string
+        containerID:
+          type: string
+        started:
+          type: boolean
+
+    Deployment:
+      properties:
+        name: 
+          type: string
+        namespace:
+          type: string
+        analysisName:
+          type: string
+        appName:
+          type: string
+        appID:
+          type: string
+        externalID:
+          type: string
+        userID:
+          type: string
+        username:
+          type: string
+        creationTimestamp:
+          type: string
+        image:
+          type: string
+        port:
+          type: integer
+          format: int32
+        user:
+          type: integer
+          format: int64
+        group:
+          type: integer
+          format: int64
+        command:
+          type: array
+          items:
+            type: string
+
+    Pod:
+      properties:
+        name: 
+          type: string
+        namespace:
+          type: string
+        analysisName:
+          type: string
+        appName:
+          type: string
+        appID:
+          type: string
+        externalID:
+          type: string
+        userID:
+          type: string
+        username:
+          type: string
+        creationTimestamp:
+          type: string
+        phase:
+          type: string
+        message:
+          type: string
+        reason:
+          type: string
+        containerStatuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainerStatus'
+        initContainerStatuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainerStatus'
+
+    ConfigMap:
+      properties:
+        name: 
+          type: string
+        namespace:
+          type: string
+        analysisName:
+          type: string
+        appName:
+          type: string
+        appID:
+          type: string
+        externalID:
+          type: string
+        userID:
+          type: string
+        username:
+          type: string
+        creationTimestamp:
+          type: string
+        data:
+          type: object
+    
+    Ingress:
+      properties:
+        name: 
+          type: string
+        namespace:
+          type: string
+        analysisName:
+          type: string
+        appName:
+          type: string
+        appID:
+          type: string
+        externalID:
+          type: string
+        userID:
+          type: string
+        username:
+          type: string
+        creationTimestamp:
+          type: string
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/IngressRule'
+
+    IngressRule:
+      properties:
+        host:
+          type: string
+        http:
+          type: array
+          items:
+            type: object
+
+    Service:
+      properties:
+        name: 
+          type: string
+        namespace:
+          type: string
+        analysisName:
+          type: string
+        appName:
+          type: string
+        appID:
+          type: string
+        externalID:
+          type: string
+        userID:
+          type: string
+        username:
+          type: string
+        creationTimestamp:
+          type: string
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServicePort'
+    
+    ServicePort:
+      properties:
+        name:
+          type: string
+        nodePort:
+          type: integer
+          format: int32
+        targetPort:
+          type: integer
+          format: int32
+        targetPortName:
+          type: string
+        port:
+          type: integer
+          format: int32
+        protocol:
+          type: string
+  
+    Resources:
+      properties:
+        deployments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deployment'
+        pods:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pod'
+        configMaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConfigMap'
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/Service'
+        ingresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ingress'
+
+paths:
+  /vice/listing:
+    get:
+      description: List resources for in-cluster VICE analyses.
+      summary: Lists resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
+      parameters:
+        - $ref: '#/components/parameters/analysisName'
+        - $ref: '#/components/parameters/appID'
+        - $ref: '#/components/parameters/appName'
+        - $ref: '#/components/parameters/externalID'
+        - $ref: '#/components/parameters/userID'
+        - $ref: '#/components/parameters/username'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resources'
+                  
+
+            
