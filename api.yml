@@ -320,7 +320,7 @@ components:
 paths:
   /vice/listing:
     get:
-      description: List resources for in-cluster VICE analyses.
+      description: Lists resources for in-cluster VICE analyses.
       summary: Lists resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
@@ -336,6 +336,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Resources'
+
+  /vice/listing/deployments:
+    get:
+      description: Lists deployments for in-cluster VICE analyses.
+      summary: Lists deployment resources for in-cluster VICE analyses., optionally filtered by labels provided in the query.
+      parameters:
+        - $ref: '#/components/parameters/analysisName'
+        - $ref: '#/components/parameters/appID'
+        - $ref: '#/components/parameters/appName'
+        - $ref: '#/components/parameters/externalID'
+        - $ref: '#/components/parameters/userID'
+        - $ref: '#/components/parameters/username'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deployment'
+                
+              
                   
 
             
