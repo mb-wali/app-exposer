@@ -5,16 +5,14 @@ This is a service that runs inside of a Kubernetes cluster namespace and impleme
 
 # Development
 
-You'll need to install ```go dep```.
+Uses Go modules, so make sure you have a generally up-to-date version of Go installed locally.
 
-``` go get -u github.com/golang/dep/cmd/dep ```
+The API documentation is written using the OpenAPI 3 specification and is located in `api.yml`. You can use redoc to view the documentation locally:
 
-Then, in the top-level of the cloned repository:
+Install:
+```npm install -g redoc-cli```
 
-```dep ensure```
+Run:
+```redoc-cli serve -w api.yml```
 
-Finally, run the following in the same directory:
-
-``` go install ./... ```
-
-After that, the difficult stuff should be done.
+For configuration, use `example-config.yml` as a reference. You'll need to either port-forward to or run `job-status-listener` locally and reference the correct port in the config.
