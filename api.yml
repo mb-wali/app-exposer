@@ -563,8 +563,148 @@ paths:
                     items:
                       type: object
                       description: The Pod objects straight from k8s.
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
 
+  /vice/{analysis-id}/logs:
+    get:
+      summary: Access the analysis logs
+      description: >
+        Returns the logs for a container in the VICE analysis pod. Does
+        not tail the logs.
+      parameters:
+        - $ref: '#/components/parameters/analysisIDInPath' 
+        - name: previous
+          in: query
+          required: false
+          description: Should return logs of terminated containers.
+          schema:
+            type: boolean
+        - name: since
+          in: query
+          required: false
+          description: >
+            Start displaying the logs after this point in time, expressed in
+            seconds since the epoch.
+          schema:
+            type: integer
+            format: int64
+        - name: since-time
+          in: query
+          required: false
+          description: >
+            Basically the same thing as "since", except it gets converted into
+            a Unix time type provided by k8s. Not sure why I bothered to 
+            include this. Use the other one.
+          schema:
+            type: integer
+            format: int64
+        - name: tail-lines
+          in: query
+          required: false
+          description: The number of lines at the end of the log to show.
+          schema:
+            type: integer
+            format: int64
+        - name: container
+          in: query
+          required: false
+          description: >
+            The name of the container from which to grab the logs.
+          schema:
+            type: string
+            default: analysis
+            enum:
+              - input-files
+              - vice-proxy
+              - analysis
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  since_time:
+                    description: The start time for the logs.
+                    type: string
+                  lines:
+                    description: The lines in the log.
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
 
-
-
-
+  /vice/{analysis-id}/time-limit:
+    post:
+      summary: Extend the time-limit
+      description: >
+        Extends the time-limit on a running VICE analysis by 3 days.
+      parameters:
+        - $ref: '#/components/parameters/analysisIDInPath'
+        - name: user
+          in: query
+          required: true
+          description: >
+            The username of the person requesting the time limit extension. If
+            the '@iplantcollaborative.org' part is missing, it will be added
+            behind the scenes, so it's optional.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time_limit:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '403':
+          description: Forbidden
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+                
