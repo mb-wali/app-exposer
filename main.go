@@ -174,7 +174,6 @@ func main() {
 		ViceProxyImage:                proxyImage,
 		CASBaseURL:                    cfg.GetString("cas.base"),
 		FrontendBaseURL:               cfg.GetString("k8s.frontend.base"),
-		IngressBaseURL:                cfg.GetString("k8s.app-exposer.base"),
 		ViceDefaultBackendService:     *viceDefaultBackendService,
 		ViceDefaultBackendServicePort: *viceDefaultBackendServicePort,
 		GetAnalysisIDService:          *getAnalysisIDService,
