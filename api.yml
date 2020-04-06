@@ -339,7 +339,7 @@ paths:
 
   /vice/listing/deployments:
     get:
-      summary: List deployments
+      summary: List Deployments
       description:  Lists deployment resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
@@ -363,7 +363,7 @@ paths:
 
   /vice/listing/pods:
     get:
-      summary: List pods
+      summary: List Pods
       description: Lists pod resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
@@ -384,3 +384,27 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Pod'
+
+  /vice/listing/configmaps:
+    get:
+      summary: List ConfigMaps
+      description: Lists ConfigMaps for in-cluster VICE analyses, optionally filtering them by the labels provided in the query.
+      parameters:
+        - $ref: '#/components/parameters/analysisName'
+        - $ref: '#/components/parameters/appID'
+        - $ref: '#/components/parameters/appName'
+        - $ref: '#/components/parameters/externalID'
+        - $ref: '#/components/parameters/userID'
+        - $ref: '#/components/parameters/username'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configmaps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConfigMap'
