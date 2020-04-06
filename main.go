@@ -175,8 +175,6 @@ func main() {
 		CASBaseURL:                    cfg.GetString("cas.base"),
 		FrontendBaseURL:               cfg.GetString("k8s.frontend.base"),
 		IngressBaseURL:                cfg.GetString("k8s.app-exposer.base"),
-		AnalysisHeader:                cfg.GetString("k8s.get-analysis-id.header"),
-		AccessHeader:                  cfg.GetString("k8s.check-resource-access.header"),
 		ViceDefaultBackendService:     *viceDefaultBackendService,
 		ViceDefaultBackendServicePort: *viceDefaultBackendServicePort,
 		GetAnalysisIDService:          *getAnalysisIDService,

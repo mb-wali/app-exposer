@@ -36,8 +36,6 @@ type ExposerAppInit struct {
 	CASBaseURL                    string
 	FrontendBaseURL               string
 	IngressBaseURL                string
-	AnalysisHeader                string
-	AccessHeader                  string
 	ViceDefaultBackendService     string
 	ViceDefaultBackendServicePort int
 	GetAnalysisIDService          string
@@ -59,8 +57,6 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		ViceProxyImage:                init.ViceProxyImage,
 		CASBaseURL:                    init.CASBaseURL,
 		FrontendBaseURL:               init.FrontendBaseURL,
-		AnalysisHeader:                init.AnalysisHeader,
-		AccessHeader:                  init.AccessHeader,
 		ViceDefaultBackendService:     init.ViceDefaultBackendService,
 		ViceDefaultBackendServicePort: init.ViceDefaultBackendServicePort,
 		GetAnalysisIDService:          init.GetAnalysisIDService,
