@@ -432,3 +432,27 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Service'
+
+  /vice/listing/ingresses:
+    get:
+      summary: List Ingresses
+      description: Lists Ingress resources for in-cluster VICE analyses, optionally filtering them by the labels provided in the query.
+      parameters:
+        - $ref: '#/components/parameters/analysisName'
+        - $ref: '#/components/parameters/appID'
+        - $ref: '#/components/parameters/appName'
+        - $ref: '#/components/parameters/externalID'
+        - $ref: '#/components/parameters/userID'
+        - $ref: '#/components/parameters/username'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingresses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ingress'
