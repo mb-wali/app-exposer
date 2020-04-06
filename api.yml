@@ -320,8 +320,8 @@ components:
 paths:
   /vice/listing:
     get:
-      description: Lists resources for in-cluster VICE analyses.
-      summary: Lists resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
+      summary: List all resources
+      description: Lists resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
         - $ref: '#/components/parameters/appID'
@@ -339,8 +339,8 @@ paths:
 
   /vice/listing/deployments:
     get:
-      description: Lists deployments for in-cluster VICE analyses.
-      summary: Lists deployment resources for in-cluster VICE analyses., optionally filtered by labels provided in the query.
+      summary: List deployments
+      description:  Lists deployment resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
         - $ref: '#/components/parameters/appID'
@@ -363,8 +363,8 @@ paths:
 
   /vice/listing/pods:
     get:
-      description: Lists pod resources for in-cluster VICE analyses.
-      summary: Lists pod resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
+      summary: List pods
+      description: Lists pod resources for in-cluster VICE analyses, optionally filtered by labels provided in the query.
       parameters:
         - $ref: '#/components/parameters/analysisName'
         - $ref: '#/components/parameters/appID'
