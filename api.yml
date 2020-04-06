@@ -456,3 +456,66 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Ingress'
+
+  /vice/apply-labels:
+    post:
+      summary: Apply extra labels
+      description: Tells app-exposer to apply the analysis-id and login-ip labels if on resources, but only if they're missing.
+      responses:
+        '200':
+          description: OK
+
+  /vice/{id}/download-input-files:
+    post:
+      summary: Activate input file downloads
+      description: >
+        Tell the analysis to download input files with vice-file-transfers. 
+        Blocks until all of the downloads are complete. Called automatically,
+        should need to be manually called.
+      parameters:
+        - name: id
+          in: path
+          description: >
+            The external_id value from the job_steps table that is used to
+            track this job.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: An internal error occurred.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /vice/{id}/save-output-files:
+    post:
+      summary: Activate output file uploads.
+      description: >
+        Tell the analysis to upload output files with vice-file-transfers.
+        Blocks until all of the uploads are complete. Called automatically,
+        shouldn't need to be manually called.
+      parameters:
+        - name: id
+          in: path
+          description: >
+            The external_id value from the job_steps table that is used to
+            track this job.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: An internal error occurred.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+
+
