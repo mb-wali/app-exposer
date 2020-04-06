@@ -12,8 +12,18 @@ servers:
 
 components:
   parameters:
-    analysisName:
+    analysisIDInPath:
       name: analysis-id
+      in: path
+      required: true
+      description: >
+        The UUID assigned to the analysis. Corresponds to the id column in the
+        jobs table in the database.
+      schema:
+        type: string
+
+    analysisName:
+      name: analysis-name
       in: query
       required: false
       description: The name of the analysis. Provided by the user who launched the analysis.
@@ -41,6 +51,16 @@ components:
       in: query
       required: false
       description: The value of the external_id field in the job_steps table.
+      schema:
+        type: string
+
+    externalIDInPath:
+      name: id
+      in: path
+      description: >
+        The external_id value from the job_steps table that is used to
+        track this job.
+      required: true
       schema:
         type: string
     
@@ -473,14 +493,7 @@ paths:
         Blocks until all of the downloads are complete. Called automatically,
         should need to be manually called.
       parameters:
-        - name: id
-          in: path
-          description: >
-            The external_id value from the job_steps table that is used to
-            track this job.
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/externalIDInPath'
       responses:
         '200':
           description: OK
@@ -499,14 +512,7 @@ paths:
         Blocks until all of the uploads are complete. Called automatically,
         shouldn't need to be manually called.
       parameters:
-        - name: id
-          in: path
-          description: >
-            The external_id value from the job_steps table that is used to
-            track this job.
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/externalIDInPath'
       responses:
         '200':
           description: OK
@@ -516,6 +522,49 @@ paths:
             text/plain:
               schema:
                 type: string
+
+  /vice/{id}/exit:
+    post:
+      summary: Terminate the analysis without saving.
+      description: >
+        Tells app-exposer to terminate the running analysis without bothering
+        to upload output files first. Should only be used as an absolute last
+        resort. Output files cannot be retrieved after this call is made.
+      parameters:
+        - $ref: '#/components/parameters/externalIDInPath'
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: An internal error occurred.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /vice/{analysis-id}/pods:
+    get:
+      summary: List Pods by analysis UUID
+      description: >
+        Returns a listing of the pods associated with the analysis UUID. Old,
+        use the /vice/listing/pods endpoint instead, it's more flexible.
+      parameters:
+        - $ref: '#/components/parameters/analysisIDInPath'
+      responses:
+        '200':
+          description: Pod listing. Objects come straight from the k8s API.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pods:
+                    type: array
+                    items:
+                      type: object
+                      description: The Pod objects straight from k8s.
+
+
 
 
 
