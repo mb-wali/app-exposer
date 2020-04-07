@@ -744,3 +744,32 @@ paths:
                     type: boolean
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /vice/launch:
+    post:
+      summary: Launch a new VICE analysis
+      description: >
+        Accepts a DE analysis description in JSON form and turns it into a set
+        of K8s resources that run a web application and enforce access
+        restrictions. We're not going to document the JSON body here because
+        madness would be the result, both for me and for the reader. If you 
+        need to call this endpoint outside of the 'apps' service in the DE,
+        I highly recommend just writing a new version of the endpoint with a 
+        simplified JSON payload and filing a merge/pull request. Believe it 
+        not, your life will be easier.
+      requestBody:
+        description: >
+          A JSON analysis description as submitted by the apps service.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        
