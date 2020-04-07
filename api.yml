@@ -707,4 +707,42 @@ paths:
             text/plain:
               schema:
                 type: string
-                
+    get:
+      summary: Get time limit
+      description: >
+        Returns the current time limit for the analysis with the UUID 
+        provided in the path.
+      parameters:
+        - $ref: '#/components/parameters/analysisIDInPath'
+        - name: user
+          in: query
+          required: true
+          description: >
+            The username of the person requesting the time limit extension. If
+            the '@iplantcollaborative.org' part is missing, it will be added
+            behind the scenes, so it's optional.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  time_limit:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            text/plain:
+              schema:
+                type: string
+        '500':
+          description: Internal server error
+          content:
+            text/plain:
+              schema:
+                type: string
+      
