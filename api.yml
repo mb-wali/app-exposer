@@ -80,6 +80,28 @@ components:
       schema:
         type: string
   
+  responses:
+    InternalError:
+      description: An internal error occurred.
+      content:
+        text/plain:
+          schema:
+            type: string
+
+    BadRequestError:
+      description: Bad request
+      content:
+        text/plain:
+          schema:
+            type: string
+  
+    ForbiddenError:
+      description: Forbidden
+      content:
+        text/plain:
+          schema:
+            type: string
+
   schemas:
     ContainerState:
       properties:
@@ -498,11 +520,7 @@ paths:
         '200':
           description: OK
         '500':
-          description: An internal error occurred.
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
 
   /vice/{id}/save-output-files:
     post:
@@ -517,11 +535,7 @@ paths:
         '200':
           description: OK
         '500':
-          description: An internal error occurred.
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
 
   /vice/{id}/exit:
     post:
@@ -536,11 +550,7 @@ paths:
         '200':
           description: OK
         '500':
-          description: An internal error occurred.
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
 
   /vice/{analysis-id}/pods:
     get:
@@ -564,23 +574,11 @@ paths:
                       type: object
                       description: The Pod objects straight from k8s.
         '400':
-          description: Bad request
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/BadRequestError'
         '403':
-          description: Forbidden
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/ForbiddenError'
         '500':
-          description: Internal server error
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
 
   /vice/{analysis-id}/logs:
     get:
@@ -651,17 +649,9 @@ paths:
                     items:
                       type: string
         '400':
-          description: Bad request
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/BadRequestError'
         '500':
-          description: Internal server error
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
 
   /vice/{analysis-id}/time-limit:
     post:
@@ -690,23 +680,12 @@ paths:
                   time_limit:
                     type: string
         '400':
-          description: Bad request
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/BadRequestError'
         '403':
-          description: Forbidden
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/ForbiddenError'
         '500':
-          description: Internal server error
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/InternalError'
+
     get:
       summary: Get time limit
       description: >
@@ -734,15 +713,34 @@ paths:
                   time_limit:
                     type: string
         '400':
-          description: Bad request
-          content:
-            text/plain:
-              schema:
-                type: string
+          $ref: '#/components/responses/BadRequestError'
         '500':
-          description: Internal server error
+          $ref: '#/components/responses/InternalError'
+
+  /vice/{host}/url-ready:
+    get:
+      summary: Check for analysis readiness
+      description: >
+        Performs a series of checks to ensure that the analysis is fully up and
+        ready to respond to users. Used by the loading screen to determine
+        whether to redirect the user to the analysis UI.
+      parameters:
+        - name: host
+          in: path
+          required: true
+          description: >
+            The subdomain assigned to the VICE analysis.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
-      
+                type: object
+                properties:
+                  ready:
+                    type: boolean
+        '500':
+          $ref: '#/components/responses/InternalError'
