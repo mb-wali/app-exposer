@@ -515,7 +515,6 @@ paths:
         The call is not asynchronous.
       parameters:
         - $ref: '#/components/parameters/externalID'
-        - $ref: '#/components/parameters/username'
       responses:
         '200':
           description: OK
