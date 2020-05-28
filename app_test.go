@@ -50,19 +50,19 @@ func TestNewExposerApp(t *testing.T) {
 	}
 
 	reqs := [][]string{
-		[]string{"GET", "/", ""},
-		[]string{"POST", "/service/test", "test"},
-		[]string{"PUT", "/service/test", "test"},
-		[]string{"GET", "/service/test", "test"},
-		[]string{"DELETE", "/service/test", "test"},
-		[]string{"POST", "/endpoint/test", "test"},
-		[]string{"PUT", "/endpoint/test", "test"},
-		[]string{"GET", "/endpoint/test", "test"},
-		[]string{"DELETE", "/endpoint/test", "test"},
-		[]string{"POST", "/ingress/test", "test"},
-		[]string{"PUT", "/ingress/test", "test"},
-		[]string{"GET", "/ingress/test", "test"},
-		[]string{"DELETE", "/ingress/test", "test"},
+		{"GET", "/", ""},
+		{"POST", "/service/test", "test"},
+		{"PUT", "/service/test", "test"},
+		{"GET", "/service/test", "test"},
+		{"DELETE", "/service/test", "test"},
+		{"POST", "/endpoint/test", "test"},
+		{"PUT", "/endpoint/test", "test"},
+		{"GET", "/endpoint/test", "test"},
+		{"DELETE", "/endpoint/test", "test"},
+		{"POST", "/ingress/test", "test"},
+		{"PUT", "/ingress/test", "test"},
+		{"GET", "/ingress/test", "test"},
+		{"DELETE", "/ingress/test", "test"},
 	}
 
 	for _, fields := range reqs {
@@ -99,7 +99,7 @@ func TestWriteService(t *testing.T) {
 		},
 		Spec: v1.ServiceSpec{
 			Ports: []v1.ServicePort{
-				v1.ServicePort{
+				{
 					Port:       60000,
 					TargetPort: intstr.FromInt(60001),
 				},

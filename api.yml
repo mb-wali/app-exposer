@@ -507,6 +507,32 @@ paths:
         '200':
           description: OK
 
+  /vice/async-data:
+    get:
+      summary: Get asynchronously applied data about an analysis.
+      description: >
+        Retrieves data about an analysis that is developed asynchronously. 
+        The call is not asynchronous.
+      parameters:
+        - $ref: '#/components/parameters/externalID'
+        - $ref: '#/components/parameters/username'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysisID:
+                    type: string
+                  subdomain:
+                    type: string
+                  ipAddr:
+                    type: string
+        '500':
+          $ref: "#/components/responses/InternalError"
+
   /vice/{id}/download-input-files:
     post:
       summary: Activate input file downloads
