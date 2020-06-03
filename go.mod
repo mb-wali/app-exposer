@@ -19,6 +19,7 @@ require (
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
+	golang.org/x/tools v0.0.0-20200603170713-0310561d584d // indirect
 	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0

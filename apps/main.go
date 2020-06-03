@@ -83,3 +83,21 @@ func (a *Apps) GetAnalysisStatus(analysisID string) (string, error) {
 	}
 	return status, nil
 }
+
+const userByAnalysisIDQuery = `
+	SELECT u.username,
+	       u.id
+		FROM users u
+		JOIN jobs j on j.user_id = u.id
+	 WHERE j.id = $1
+`
+
+// GetUserByAnalysisID returns the username and id of the user that launched the analysis.
+func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
+	var username, id string
+	err := a.DB.QueryRow(userByAnalysisIDQuery, analysisID).Scan(&username, &id)
+	if err != nil {
+		return "", "", err
+	}
+	return username, id, nil
+}
