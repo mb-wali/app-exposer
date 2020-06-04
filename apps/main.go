@@ -1,6 +1,9 @@
 package apps
 
-import "database/sql"
+import (
+	"database/sql"
+	"strings"
+)
 
 // Apps provides an API for accessing information about apps.
 type Apps struct {
@@ -92,12 +95,17 @@ const userByAnalysisIDQuery = `
 	 WHERE j.id = $1
 `
 
+const userSuffix = "@iplantcollaborative.org"
+
 // GetUserByAnalysisID returns the username and id of the user that launched the analysis.
 func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
 	var username, id string
 	err := a.DB.QueryRow(userByAnalysisIDQuery, analysisID).Scan(&username, &id)
 	if err != nil {
 		return "", "", err
+	}
+	if strings.HasSuffix(username, userSuffix) {
+		username = strings.TrimSuffix(username, userSuffix)
 	}
 	return username, id, nil
 }
