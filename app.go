@@ -97,7 +97,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/exit", app.internal.VICEAdminExit).Methods("POST")
 	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/save-and-exit", app.internal.VICEAdminSaveAndExit).Methods("POST")
 	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/time-limit", app.internal.VICEAdminGetTimeLimit).Methods("GET")
-	// app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/time-limit", app.internal.VICEAdminTimeLimitUpdate).Methods("POST")
+	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/time-limit", app.internal.VICEAdminTimeLimitUpdate).Methods("POST")
 	// app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/external-id", app.internal.VICEAdminGetExternalID).Methods("GET")
 
 	app.router.HandleFunc("/service/{name}", app.external.CreateService).Methods("POST")
