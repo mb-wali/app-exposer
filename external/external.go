@@ -49,7 +49,7 @@ func WriteService(svc *v1.Service, writer http.ResponseWriter) {
 
 	outbuf, err := json.Marshal(returnOpts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if service, ok = v["name"]; !ok {
-		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -92,18 +92,18 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 
 	err = json.Unmarshal(buf, opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
+		common.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if opts.TargetPort == 0 {
-		http.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateService: target port for service %s will be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		http.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateService: listen port for service %s will be %d", service, opts.ListenPort)
@@ -115,7 +115,7 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 
 	svc, err := e.ServiceController.Create(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -146,7 +146,7 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if service, ok = v["name"]; !ok {
-		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -162,18 +162,18 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 
 	err = json.Unmarshal(buf, opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
+		common.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if opts.TargetPort == 0 {
-		http.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateService: target port for %s should be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		http.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateService: listen port for %s should be %d", service, opts.ListenPort)
@@ -185,7 +185,7 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 
 	svc, err := e.ServiceController.Update(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -217,7 +217,7 @@ func (e *External) GetService(writer http.ResponseWriter, request *http.Request)
 	)
 
 	if service, ok = v["name"]; !ok {
-		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (e *External) GetService(writer http.ResponseWriter, request *http.Request)
 
 	svc, err := e.ServiceController.Get(service)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusBadRequest)
+		common.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -248,14 +248,14 @@ func (e *External) DeleteService(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if service, ok = v["name"]; !ok {
-		http.Error(writer, "missing service name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
 		return
 	}
 
 	log.Printf("DeleteService: deleting service %s", service)
 
 	if err := e.ServiceController.Delete(service); err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -274,7 +274,7 @@ func WriteEndpoint(ept *v1.Endpoints, writer http.ResponseWriter) {
 
 	outbuf, err := json.Marshal(returnOpts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -301,7 +301,7 @@ func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Requ
 	)
 
 	if endpoint, ok = v["name"]; !ok {
-		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -309,25 +309,25 @@ func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	opts := &EndpointOptions{}
 
 	if err = json.Unmarshal(buf, opts); err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if opts.IP == "" {
-		http.Error(writer, "IP field is blank", http.StatusBadRequest)
+		common.Error(writer, "IP field is blank", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateEndpoint: ip for endpoint %s will be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		http.Error(writer, "Port field is blank", http.StatusBadRequest)
+		common.Error(writer, "Port field is blank", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateEndpoint: port for endpoint %s will be %d", endpoint, opts.Port)
@@ -339,7 +339,7 @@ func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	ept, err := e.EndpointController.Create(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -370,7 +370,7 @@ func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Requ
 	)
 
 	if endpoint, ok = v["name"]; !ok {
-		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -378,25 +378,25 @@ func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	opts := &EndpointOptions{}
 
 	if err = json.Unmarshal(buf, opts); err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if opts.IP == "" {
-		http.Error(writer, "IP field is blank", http.StatusBadRequest)
+		common.Error(writer, "IP field is blank", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateEndpoint: ip for endpoint %s should be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		http.Error(writer, "Port field is blank", http.StatusBadRequest)
+		common.Error(writer, "Port field is blank", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateEndpoint: port for endpoint %s should be %d", endpoint, opts.Port)
@@ -408,7 +408,7 @@ func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	ept, err := e.EndpointController.Update(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -440,7 +440,7 @@ func (e *External) GetEndpoint(writer http.ResponseWriter, request *http.Request
 	)
 
 	if endpoint, ok = v["name"]; !ok {
-		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -448,7 +448,7 @@ func (e *External) GetEndpoint(writer http.ResponseWriter, request *http.Request
 
 	ept, err := e.EndpointController.Get(endpoint)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -471,7 +471,7 @@ func (e *External) DeleteEndpoint(writer http.ResponseWriter, request *http.Requ
 	)
 
 	if endpoint, ok = v["name"]; !ok {
-		http.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -479,7 +479,7 @@ func (e *External) DeleteEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	err := e.EndpointController.Delete(endpoint)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -498,7 +498,7 @@ func WriteIngress(ing *extv1beta1.Ingress, writer http.ResponseWriter) {
 
 	outbuf, err := json.Marshal(returnOpts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -525,7 +525,7 @@ func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if ingress, ok = v["name"]; !ok {
-		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -533,25 +533,25 @@ func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Reque
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	opts := &IngressOptions{}
 
 	if err = json.Unmarshal(buf, opts); err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if opts.Service == "" {
-		http.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
+		common.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateIngress: service name for ingress %s will be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		http.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("CreateIngress: port for ingress %s will be %d", ingress, opts.Port)
@@ -563,7 +563,7 @@ func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Reque
 
 	ing, err := e.IngressController.Create(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -594,7 +594,7 @@ func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if ingress, ok = v["name"]; !ok {
-		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -602,25 +602,25 @@ func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Reque
 
 	buf, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	opts := &IngressOptions{}
 
 	if err = json.Unmarshal(buf, opts); err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if opts.Service == "" {
-		http.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
+		common.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateIngress: service for ingress %s should be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		http.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
+		common.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
 		return
 	}
 	log.Printf("UpdateIngress: port for ingress %s should be %d", ingress, opts.Port)
@@ -632,7 +632,7 @@ func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Reque
 
 	ing, err := e.IngressController.Update(opts)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -661,7 +661,7 @@ func (e *External) GetIngress(writer http.ResponseWriter, request *http.Request)
 	)
 
 	if ingress, ok = v["name"]; !ok {
-		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -669,7 +669,7 @@ func (e *External) GetIngress(writer http.ResponseWriter, request *http.Request)
 
 	ing, err := e.IngressController.Get(ingress)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -692,7 +692,7 @@ func (e *External) DeleteIngress(writer http.ResponseWriter, request *http.Reque
 	)
 
 	if ingress, ok = v["name"]; !ok {
-		http.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
+		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
 		return
 	}
 
@@ -700,7 +700,7 @@ func (e *External) DeleteIngress(writer http.ResponseWriter, request *http.Reque
 
 	err := e.IngressController.Delete(ingress)
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		common.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
