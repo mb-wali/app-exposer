@@ -8,18 +8,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/cyverse-de/app-exposer/common"
 	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 )
 
-var log = logrus.WithFields(logrus.Fields{
-	"service": "app-exposer",
-	"art-id":  "app-exposer",
-	"group":   "org.cyverse",
-})
+var log = common.Log
 
 // External contains the support for running VICE apps outside of k8s.
 type External struct {

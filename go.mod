@@ -13,6 +13,7 @@ require (
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.1
 	github.com/gosimple/slug v1.5.0
+	github.com/labstack/gommon v0.3.0
 	github.com/lib/pq v1.2.0
 	github.com/pkg/errors v0.8.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect

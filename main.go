@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"github.com/cyverse-de/app-exposer/common"
 	"github.com/cyverse-de/configurate"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -22,11 +23,7 @@ import (
 	"k8s.io/klog" // pull in to set klog output to stderr
 )
 
-var log = logrus.WithFields(logrus.Fields{
-	"service": "app-exposer",
-	"art-id":  "app-exposer",
-	"group":   "org.cyverse",
-})
+var log = common.Log
 
 func init() {
 	// Set klog, used by the k8s client, to use its "log to stderr"
