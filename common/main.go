@@ -19,7 +19,7 @@ var Log = logrus.WithFields(logrus.Fields{
 // the error interface so that it can be returned as an error from from existing functions.
 type ErrorResponse struct {
 	Message string                  `json:"message"`
-	Details *map[string]interface{} `json:"details"`
+	Details *map[string]interface{} `json:"details,omitempty"`
 }
 
 // ErrorBytes returns a byte-array representation of an ErrorResponse.
