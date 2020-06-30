@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/labstack/gommon/log"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,7 +25,7 @@ type ErrorResponse struct {
 func (e ErrorResponse) ErrorBytes() []byte {
 	bytes, err := json.Marshal(e)
 	if err != nil {
-		log.Errorf("unable to marshal %+v as JSON", e)
+		Log.Errorf("unable to marshal %+v as JSON", e)
 		return make([]byte, 0)
 	}
 	return bytes
@@ -55,7 +54,7 @@ func DetailedError(writer http.ResponseWriter, cause error, code int) {
 	writer.WriteHeader(code)
 	_, err := writer.Write(errorResponse.ErrorBytes())
 	if err != nil {
-		log.Errorf("unable to write response body for error: %+v", cause)
+		Log.Errorf("unable to write response body for error: %+v", cause)
 		return
 	}
 }
