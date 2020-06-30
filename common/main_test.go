@@ -99,3 +99,22 @@ func TestDetailedError(t *testing.T) {
 	w.VerifyHeader(t, "Content-Type", "application/json")
 	w.VerifyBody(t, e.Error())
 }
+
+func TestDetailedErrorWithCode(t *testing.T) {
+	w := NewMockResponseWriter()
+	e := ErrorResponse{
+		Message:   "something bogus this way comes",
+		ErrorCode: "ERR_BOGOSITY_OVERLOAD",
+		Details: &map[string]interface{}{
+			"bogosity_factor":             42,
+			"max_bogosity_factor":         nil,
+			"default_max_bogosity_factor": 2,
+		},
+	}
+	DetailedError(w, e, http.StatusBadRequest)
+
+	// Validate the response.
+	w.VerifyStatusCode(t, http.StatusBadRequest)
+	w.VerifyHeader(t, "Content-Type", "application/json")
+	w.VerifyBody(t, e.Error())
+}
