@@ -63,12 +63,23 @@ const getUserIPQuery = `
 
 // GetUserIP returns the latest login ip address for the given user ID.
 func (a *Apps) GetUserIP(userID string) (string, error) {
-	var ipAddr string
+	var (
+		ipAddr sql.NullString
+		retval string
+	)
+
 	err := a.DB.QueryRow(getUserIPQuery, userID).Scan(&ipAddr)
 	if err != nil {
 		return "", err
 	}
-	return ipAddr, nil
+
+	if ipAddr.Valid {
+		retval = ipAddr.String
+	} else {
+		retval = ""
+	}
+
+	return retval, nil
 }
 
 const getAnalysisStatusQuery = `
