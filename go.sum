@@ -64,10 +64,14 @@ github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9 h1:GXDamvpo
 github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9/go.mod h1:QMZ4G8bX5f0vKiH9+/2JqV687mN1byJ18tjZwIJIagI=
 github.com/cyverse-de/job-templates v5.4.0+incompatible h1:jmUbvh9kaMKJPvrTfdbyaW/6aQLZAkZxjz7OABmfEfo=
 github.com/cyverse-de/job-templates v5.4.0+incompatible/go.mod h1:H0f7nV67/X6VgWsj4Tzy9YOQ96N8xbmrYV3Xazgfd6Y=
+github.com/cyverse-de/job-templates v6.1.0+incompatible h1:Xy5+SgxT5yPcWgpextEJaNyOs+CvEVZt+YtPheXVIfA=
+github.com/cyverse-de/job-templates v6.1.0+incompatible/go.mod h1:H0f7nV67/X6VgWsj4Tzy9YOQ96N8xbmrYV3Xazgfd6Y=
 github.com/cyverse-de/messaging v6.0.0+incompatible h1:qt06ANdPHtxtuXW+1Km1u2uvhBrEZjuGMoy9STqfHE4=
 github.com/cyverse-de/messaging v6.0.0+incompatible/go.mod h1:P8+11w9KLDLVt4zlLI0iIvqj4Byj3098+S3xxFuXxwY=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 h1:zA3yEPSTCa27WQjKicm+YnFyOkfhe+SL+XbMEJOWYqc=
 github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151/go.mod h1:baDVP9GnFuZ3A/u/vW5CJgaGcs+1C6lKeC0PIE4i8y0=
+github.com/cyverse-de/model v0.0.0-20201119234350-9073d4e20499 h1:wRYkFBKBrxq4iODRsNCIy72jpdwfg0IV9XPjYTORoQQ=
+github.com/cyverse-de/model v0.0.0-20201119234350-9073d4e20499/go.mod h1:baDVP9GnFuZ3A/u/vW5CJgaGcs+1C6lKeC0PIE4i8y0=
 github.com/davecgh/go-spew v0.0.0-20151105211317-5215b55f46b2/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -722,8 +726,10 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151 h1:R3eWVmNC+b2S+PwEhkQOkrY/jXwMlizmiWyPlTG43lU=
-gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151/go.mod h1:HqIXwDCGrNLg/xyLDsJbg+DkDosGk9pddB/XHw9bcRU=
+gopkg.in/cyverse-de/model.v4 v4.0.0-20191010001558-736b5a572acd h1:CdzbYUyHPqE7TElo/t+hIKImkPufEpv4fA/KltYpFIg=
+gopkg.in/cyverse-de/model.v4 v4.0.0-20191010001558-736b5a572acd/go.mod h1:HqIXwDCGrNLg/xyLDsJbg+DkDosGk9pddB/XHw9bcRU=
+gopkg.in/cyverse-de/model.v5 v5.0.0-20201119234350-9073d4e20499 h1:wMZOpxsYFKJVWp3CSvqcqP2P4r6eOlLXrlrXNAYUb80=
+gopkg.in/cyverse-de/model.v5 v5.0.0-20201119234350-9073d4e20499/go.mod h1:MuxbCfJWFH4N9KsKcJzZ2Avp+SXY99Rx7EsoAu+bneo=
 gopkg.in/errgo.v2 v2.1.0/go.mod h1:hNsd1EY+bozCKY1Ytp96fpM3vjJbqLJn88ws8XvfDNI=
 gopkg.in/fsnotify.v1 v1.4.7 h1:xOHLXZwVvI9hhs+cLKq5+I5onOuwQLhQwiu63xxlHs4=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
@@ -762,6 +768,8 @@ k8s.io/apimachinery v0.17.0/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZ
 k8s.io/apimachinery v0.19.3 h1:bpIQXlKjB4cB/oNpnNnV+BybGPR7iP5oYpsOTEJ4hgc=
 k8s.io/client-go v0.17.0 h1:8QOGvUGdqDMFrm9sD6IUFl256BcffynGoe80sxgTEDg=
 k8s.io/client-go v0.17.0/go.mod h1:TYgR6EUHs6k45hb6KWjVD6jFZvJV4gHDikv/It0xz+k=
+k8s.io/client-go v1.5.1 h1:XaX/lo2/u3/pmFau8HN+sB5C/b4dc4Dmm2eXjBH4p1E=
+k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
 k8s.io/gengo v0.0.0-20190128074634-0689ccc1d7d6/go.mod h1:ezvh/TsK7cY6rbqRK0oQQ8IAqLxYwwyPxAX1Pzy0ii0=
 k8s.io/klog v0.0.0-20181102134211-b9b56d5dfc92/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=
 k8s.io/klog v0.3.0/go.mod h1:Gq+BEi5rUBO/HRz0bTSXDUcqjScdoY3a9IHpCEIOOfk=

@@ -158,6 +158,7 @@ func main() {
 		ViceNamespace:                 *viceNamespace,
 		PorklockImage:                 cfg.GetString("vice.file-transfers.image"),
 		PorklockTag:                   cfg.GetString("vice.file-transfers.tag"),
+		UseCSIDriver:                  cfg.GetBool("vice.use_csi_driver"),
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
 		JobStatusURL:                  jobStatusURL,

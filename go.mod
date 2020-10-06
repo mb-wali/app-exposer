@@ -7,9 +7,9 @@ require (
 	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/coreos/go-etcd v2.0.0+incompatible // indirect
 	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
-	github.com/cyverse-de/job-templates v5.4.0+incompatible
+	github.com/cyverse-de/job-templates v6.1.0+incompatible
 	github.com/cyverse-de/messaging v6.0.0+incompatible
-	github.com/cyverse-de/model v0.0.0-20190314231011-f13a2e5cf151 // indirect
+	github.com/cyverse-de/model v0.0.0-20201119234350-9073d4e20499 // indirect
 	github.com/go-swagger/go-swagger v0.25.0 // indirect
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
 	github.com/googleapis/gnostic v0.1.0 // indirect
@@ -33,7 +33,8 @@ require (
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/sys v0.0.0-20201109165425-215b40eba54c // indirect
 	golang.org/x/text v0.3.4 // indirect
-	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
+	gopkg.in/cyverse-de/model.v4 v4.0.0-20191010001558-736b5a572acd // indirect
+	gopkg.in/cyverse-de/model.v5 v5.0.0-20201119234350-9073d4e20499
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
