@@ -64,3 +64,16 @@ func DetailedError(writer http.ResponseWriter, cause error, code int) {
 func Error(writer http.ResponseWriter, message string, code int) {
 	DetailedError(writer, ErrorResponse{Message: message}, code)
 }
+
+// NewErrorResponse constructs an ErrorResponse based on the message passed in, but does not send
+// it over the wire. This is to aid in converting to labstack/echo.
+func NewErrorResponse(err error) ErrorResponse {
+	var errorResponse ErrorResponse
+	switch val := err.(type) {
+	case ErrorResponse:
+		errorResponse = val
+	case error:
+		errorResponse = ErrorResponse{Message: val.Error()}
+	}
+	return errorResponse
+}

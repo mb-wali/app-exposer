@@ -5,12 +5,11 @@ package external
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"errors"
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/common"
-	"github.com/gorilla/mux"
-	v1 "k8s.io/api/core/v1"
+	"github.com/labstack/echo/v4"
 	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -37,25 +36,6 @@ func New(cs kubernetes.Interface, namespace, ingressClass string) *External {
 	}
 }
 
-// WriteService uses the provided writer to write a version of the provided
-// *v1.Services object out as JSON in the response body.
-func WriteService(svc *v1.Service, writer http.ResponseWriter) {
-	returnOpts := &ServiceOptions{
-		Name:       svc.Name,
-		Namespace:  svc.Namespace,
-		ListenPort: svc.Spec.Ports[0].Port,
-		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
-}
-
 // CreateService is an http handler for creating a Service object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
@@ -66,45 +46,40 @@ func WriteService(svc *v1.Service, writer http.ResponseWriter) {
 //
 // The name of the Service comes from the URL the request is sent to and the
 // namespace is a daemon-wide configuration setting.
-func (e *External) CreateService(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
+func (e *External) CreateService(c echo.Context) error {
 	var (
 		service string
-		ok      bool
-		v       = mux.Vars(request)
+		err     error
 	)
 
-	if service, ok = v["name"]; !ok {
-		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
-		return
+	service = c.Param("name")
+	if service == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service name in the URL"),
+		}
 	}
 
 	log.Printf("CreateService: creating a service named %s", service)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &ServiceOptions{}
-
-	err = json.Unmarshal(buf, opts)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+	if err = c.Bind(opts); err != nil {
+		return err
 	}
 
 	if opts.TargetPort == 0 {
-		common.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("TargetPort was either not set or set to 0"),
+		}
 	}
 	log.Printf("CreateService: target port for service %s will be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		common.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("ListenPort was either not set or set to 0"),
+		}
 	}
 	log.Printf("CreateService: listen port for service %s will be %d", service, opts.ListenPort)
 
@@ -115,15 +90,19 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 
 	svc, err := e.ServiceController.Create(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("CreateService: finished creating service %s", service)
 
-	WriteService(svc, writer)
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
 
-	log.Printf("CreateService: done writing response for creating service %s", service)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // UpdateService is an http handler for updating a Service object in a k8s cluster.
@@ -136,45 +115,41 @@ func (e *External) CreateService(writer http.ResponseWriter, request *http.Reque
 //
 // The name of the Service comes from the URL the request is sent to and the
 // namespace is a daemon-wide configuration setting.
-func (e *External) UpdateService(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
+func (e *External) UpdateService(c echo.Context) error {
 
 	var (
 		service string
-		ok      bool
-		v       = mux.Vars(request)
+		err     error
 	)
 
-	if service, ok = v["name"]; !ok {
-		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
-		return
+	service = c.Param("name")
+	if service == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service name in the URL"),
+		}
 	}
 
 	log.Printf("UpdateService: updating service %s", service)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &ServiceOptions{}
-
-	err = json.Unmarshal(buf, opts)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+	if err = c.Bind(opts); err != nil {
+		return err
 	}
 
 	if opts.TargetPort == 0 {
-		common.Error(writer, "TargetPort was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("TargetPort was either not set or set to 0"),
+		}
 	}
 	log.Printf("UpdateService: target port for %s should be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		common.Error(writer, "ListenPort was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("ListenPort was either not set or set to 0"),
+		}
 	}
 	log.Printf("UpdateService: listen port for %s should be %d", service, opts.ListenPort)
 
@@ -185,15 +160,19 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 
 	svc, err := e.ServiceController.Update(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("UpdateService: finished updating service %s", service)
 
-	WriteService(svc, writer)
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
 
-	log.Printf("UpdateService: done writing response for updating service %s", service)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // GetService is an http handler for getting information about a Service object from
@@ -209,76 +188,59 @@ func (e *External) UpdateService(writer http.ResponseWriter, request *http.Reque
 // 	}
 //
 // The namespace of the Service comes from the daemon configuration setting.
-func (e *External) GetService(writer http.ResponseWriter, request *http.Request) {
+func (e *External) GetService(c echo.Context) error {
 	var (
 		service string
-		ok      bool
-		v       = mux.Vars(request)
 	)
 
-	if service, ok = v["name"]; !ok {
-		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
-		return
+	service = c.Param("name")
+	if service == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service name in the URL"),
+		}
 	}
 
 	log.Printf("GetService: getting info for service %s", service)
 
 	svc, err := e.ServiceController.Get(service)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: err,
+		}
 	}
 
 	log.Printf("GetService: finished getting info for service %s", service)
 
-	WriteService(svc, writer)
+	returnOpts := &ServiceOptions{
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		ListenPort: svc.Spec.Ports[0].Port,
+		TargetPort: svc.Spec.Ports[0].TargetPort.IntValue(),
+	}
 
-	log.Printf("GetService: done writing response for getting service %s", service)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // DeleteService is an http handler for deleting a Service object in a k8s cluster.
 //
 // Expects no body in the request and returns no body in the response. Returns
 // a 200 status if you try to delete a Service that doesn't exist.
-func (e *External) DeleteService(writer http.ResponseWriter, request *http.Request) {
-	var (
-		service string
-		ok      bool
-		v       = mux.Vars(request)
-	)
+func (e *External) DeleteService(c echo.Context) error {
+	var service string
 
-	if service, ok = v["name"]; !ok {
-		common.Error(writer, "missing service name in the URL", http.StatusBadRequest)
-		return
+	service = c.Param("name")
+	if service == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service name in the URL"),
+		}
 	}
 
 	log.Printf("DeleteService: deleting service %s", service)
 
-	if err := e.ServiceController.Delete(service); err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("DeleteService: finished deleting service %s", service)
-}
-
-// WriteEndpoint uses the provided writer to write a version of the provided
-// *v1.Endpoints object out as JSON in the response body.
-func WriteEndpoint(ept *v1.Endpoints, writer http.ResponseWriter) {
-	returnOpts := &EndpointOptions{
-		Name:      ept.Name,
-		Namespace: ept.Namespace,
-		IP:        ept.Subsets[0].Addresses[0].IP,
-		Port:      ept.Subsets[0].Ports[0].Port,
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	writer.Write(outbuf)
+	return e.ServiceController.Delete(service)
 }
 
 // CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
@@ -291,44 +253,40 @@ func WriteEndpoint(ept *v1.Endpoints, writer http.ResponseWriter) {
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
+func (e *External) CreateEndpoint(c echo.Context) error {
 	var (
 		endpoint string
-		ok       bool
-		v        = mux.Vars(request)
+		err      error
 	)
 
-	if endpoint, ok = v["name"]; !ok {
-		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
-		return
+	endpoint = c.Param("name")
+	if endpoint == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing endpoint name in the URL"),
+		}
 	}
 
 	log.Printf("CreateEndpoint: creating an endpoint named %s", endpoint)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &EndpointOptions{}
-
-	if err = json.Unmarshal(buf, opts); err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+	if err = c.Bind(opts); err != nil {
+		return err
 	}
 
 	if opts.IP == "" {
-		common.Error(writer, "IP field is blank", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("IP field is blank"),
+		}
 	}
 	log.Printf("CreateEndpoint: ip for endpoint %s will be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		common.Error(writer, "Port field is blank", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("Port field is blank"),
+		}
 	}
 	log.Printf("CreateEndpoint: port for endpoint %s will be %d", endpoint, opts.Port)
 
@@ -339,15 +297,19 @@ func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	ept, err := e.EndpointController.Create(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("CreateEndpoint: finished creating endpoint %s", endpoint)
 
-	WriteEndpoint(ept, writer)
+	returnOpts := &EndpointOptions{
+		Name:      ept.Name,
+		Namespace: ept.Namespace,
+		IP:        ept.Subsets[0].Addresses[0].IP,
+		Port:      ept.Subsets[0].Ports[0].Port,
+	}
 
-	log.Printf("CreateEndpoint: done writing response for creating endpoint %s", endpoint)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
@@ -360,44 +322,38 @@ func (e *External) CreateEndpoint(writer http.ResponseWriter, request *http.Requ
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
+func (e *External) UpdateEndpoint(c echo.Context) error {
+	var err error
 
-	var (
-		endpoint string
-		ok       bool
-		v        = mux.Vars(request)
-	)
+	endpoint := c.Param("name")
 
-	if endpoint, ok = v["name"]; !ok {
-		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
-		return
+	if endpoint == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing endpoint name in the URL"),
+		}
 	}
 
 	log.Printf("UpdateEndpoint: updating endpoint %s", endpoint)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &EndpointOptions{}
-
-	if err = json.Unmarshal(buf, opts); err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+	if err = c.Bind(opts); err != nil {
+		return err
 	}
 
 	if opts.IP == "" {
-		common.Error(writer, "IP field is blank", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("IP field is blank"),
+		}
 	}
 	log.Printf("UpdateEndpoint: ip for endpoint %s should be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		common.Error(writer, "Port field is blank", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("Port field is blank"),
+		}
 	}
 	log.Printf("UpdateEndpoint: port for endpoint %s should be %d", endpoint, opts.Port)
 
@@ -408,15 +364,19 @@ func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Requ
 
 	ept, err := e.EndpointController.Update(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("UpdateEndpoint: finished updating endpoint %s", endpoint)
 
-	WriteEndpoint(ept, writer)
+	returnOpts := &EndpointOptions{
+		Name:      ept.Name,
+		Namespace: ept.Namespace,
+		IP:        ept.Subsets[0].Addresses[0].IP,
+		Port:      ept.Subsets[0].Ports[0].Port,
+	}
 
-	log.Printf("UpdateEndpoint: done writing response for updating endpoint %s", endpoint)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
@@ -432,58 +392,57 @@ func (e *External) UpdateEndpoint(writer http.ResponseWriter, request *http.Requ
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) GetEndpoint(writer http.ResponseWriter, request *http.Request) {
+func (e *External) GetEndpoint(c echo.Context) error {
 	var (
 		endpoint string
-		ok       bool
-		v        = mux.Vars(request)
+		err      error
 	)
 
-	if endpoint, ok = v["name"]; !ok {
-		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
-		return
+	endpoint = c.Param("name")
+	if endpoint == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing endpoint name in the URL"),
+		}
 	}
 
 	log.Printf("GetEndpoint: getting info on endpoint %s", endpoint)
 
 	ept, err := e.EndpointController.Get(endpoint)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("GetEndpoint: done getting info on endpoint %s", endpoint)
 
-	WriteEndpoint(ept, writer)
+	returnOpts := &EndpointOptions{
+		Name:      ept.Name,
+		Namespace: ept.Namespace,
+		IP:        ept.Subsets[0].Addresses[0].IP,
+		Port:      ept.Subsets[0].Ports[0].Port,
+	}
 
-	log.Printf("GetEndpoint: done writing response for getting endpoint %s", endpoint)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // DeleteEndpoint is an http handler for deleting an Endpoints object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *External) DeleteEndpoint(writer http.ResponseWriter, request *http.Request) {
-	var (
-		endpoint string
-		ok       bool
-		v        = mux.Vars(request)
-	)
+func (e *External) DeleteEndpoint(c echo.Context) error {
+	var endpoint string
 
-	if endpoint, ok = v["name"]; !ok {
-		common.Error(writer, "missing endpoint name in the URL", http.StatusBadRequest)
-		return
+	endpoint = c.Param("name")
+	if endpoint == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing endpoint name in the URL"),
+		}
 	}
 
 	log.Printf("DeleteEndpoint: deleting endpoint %s", endpoint)
 
-	err := e.EndpointController.Delete(endpoint)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("DeleteEndpoint: done deleting endpoint %s", endpoint)
+	return e.EndpointController.Delete(endpoint)
 }
 
 // WriteIngress uses the provided writer to write a version of the provided
@@ -515,44 +474,38 @@ func WriteIngress(ing *extv1beta1.Ingress, writer http.ResponseWriter) {
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
+func (e *External) CreateIngress(c echo.Context) error {
+	var ingress string
+	var err error
 
-	var (
-		ingress string
-		ok      bool
-		v       = mux.Vars(request)
-	)
-
-	if ingress, ok = v["name"]; !ok {
-		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
-		return
+	ingress = c.Param("name")
+	if ingress == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing ingress name in the URL"),
+		}
 	}
 
 	log.Printf("CreateIngress: create an ingress named %s", ingress)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &IngressOptions{}
-
-	if err = json.Unmarshal(buf, opts); err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+	if err = c.Bind(opts); err != nil {
+		return err
 	}
 
 	if opts.Service == "" {
-		common.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service from the ingress JSON"),
+		}
 	}
 	log.Printf("CreateIngress: service name for ingress %s will be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		common.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("Port was either not set or set to 0"),
+		}
 	}
 	log.Printf("CreateIngress: port for ingress %s will be %d", ingress, opts.Port)
 
@@ -563,15 +516,19 @@ func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Reque
 
 	ing, err := e.IngressController.Create(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("CreateIngress: done creating ingress %s", ingress)
 
-	WriteIngress(ing, writer)
+	returnOpts := &IngressOptions{
+		Name:      ing.Name,
+		Namespace: ing.Namespace,
+		Service:   ing.Spec.Backend.ServiceName,
+		Port:      ing.Spec.Backend.ServicePort.IntValue(),
+	}
 
-	log.Printf("CreateIngress: done writing response for creating ingress %s", ingress)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // UpdateIngress is an http handler for updating an Ingress object in a k8s cluster.
@@ -584,44 +541,40 @@ func (e *External) CreateIngress(writer http.ResponseWriter, request *http.Reque
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Request) {
-	defer request.Body.Close()
-
+func (e *External) UpdateIngress(c echo.Context) error {
 	var (
 		ingress string
-		ok      bool
-		v       = mux.Vars(request)
+		err     error
 	)
 
-	if ingress, ok = v["name"]; !ok {
-		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
-		return
+	ingress = c.Param("name")
+	if ingress == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing ingress name in the URL"),
+		}
 	}
 
 	log.Printf("UpdateIngress: updating ingress %s", ingress)
 
-	buf, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	opts := &IngressOptions{}
-
-	if err = json.Unmarshal(buf, opts); err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+	if err = c.Bind(opts); err != nil {
+		return nil
 	}
 
 	if opts.Service == "" {
-		common.Error(writer, "missing service from the ingress JSON", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing service from the ingress JSON"),
+		}
 	}
 	log.Printf("UpdateIngress: service for ingress %s should be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		common.Error(writer, "Port was either not set or set to 0", http.StatusBadRequest)
-		return
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("Port was either not set or set to 0"),
+		}
 	}
 	log.Printf("UpdateIngress: port for ingress %s should be %d", ingress, opts.Port)
 
@@ -632,15 +585,19 @@ func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Reque
 
 	ing, err := e.IngressController.Update(opts)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("UpdateIngress: finished updating ingress %s", ingress)
 
-	WriteIngress(ing, writer)
+	returnOpts := &IngressOptions{
+		Name:      ing.Name,
+		Namespace: ing.Namespace,
+		Service:   ing.Spec.Backend.ServiceName,
+		Port:      ing.Spec.Backend.ServicePort.IntValue(),
+	}
 
-	log.Printf("UpdateIngress: done writing response for updating ingress %s", ingress)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // GetIngress is an http handler for getting an Ingress object from a k8s cluster.
@@ -653,56 +610,55 @@ func (e *External) UpdateIngress(writer http.ResponseWriter, request *http.Reque
 // 		"service" : "The name of the Service that the Ingress is configured for, as a string.",
 // 		"port" : The port of the Service that the Ingress is configured for, as an integer
 // 	}
-func (e *External) GetIngress(writer http.ResponseWriter, request *http.Request) {
+func (e *External) GetIngress(c echo.Context) error {
 	var (
 		ingress string
-		ok      bool
-		v       = mux.Vars(request)
+		err     error
 	)
 
-	if ingress, ok = v["name"]; !ok {
-		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
-		return
+	ingress = c.Param("name")
+	if ingress == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing ingress name in the URL"),
+		}
 	}
 
 	log.Printf("GetIngress: getting ingress %s", ingress)
 
 	ing, err := e.IngressController.Get(ingress)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	log.Printf("GetIngress: done getting ingress %s", ingress)
 
-	WriteIngress(ing, writer)
+	returnOpts := &IngressOptions{
+		Name:      ing.Name,
+		Namespace: ing.Namespace,
+		Service:   ing.Spec.Backend.ServiceName,
+		Port:      ing.Spec.Backend.ServicePort.IntValue(),
+	}
 
-	log.Printf("GetIngress: done writing response for getting ingress %s", ingress)
+	return c.JSON(http.StatusOK, returnOpts)
 }
 
 // DeleteIngress is an http handler for deleting an Ingress object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *External) DeleteIngress(writer http.ResponseWriter, request *http.Request) {
-	var (
-		ingress string
-		ok      bool
-		v       = mux.Vars(request)
-	)
+func (e *External) DeleteIngress(c echo.Context) error {
+	var ingress string
 
-	if ingress, ok = v["name"]; !ok {
-		common.Error(writer, "missing ingress name in the URL", http.StatusBadRequest)
-		return
+	ingress = c.Param("name")
+	if ingress == "" {
+		return &echo.HTTPError{
+			Code:     http.StatusBadRequest,
+			Internal: errors.New("missing ingress name in the URL"),
+		}
 	}
 
 	log.Printf("DeleteIngress: deleting ingress %s", ingress)
 
-	err := e.IngressController.Delete(ingress)
-	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("DeleteIngress: done deleting ingress %s", ingress)
+	return e.IngressController.Delete(ingress)
 }

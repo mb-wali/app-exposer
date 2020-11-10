@@ -2,13 +2,14 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 
+	"github.com/cyverse-de/app-exposer/common"
 	"github.com/cyverse-de/app-exposer/external"
 	"github.com/cyverse-de/app-exposer/internal"
-	"github.com/gorilla/mux"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/labstack/echo/v4"
 )
 
 // ExposerApp encapsulates the overall application-logic, tying together the
@@ -19,7 +20,7 @@ type ExposerApp struct {
 	internal  *internal.Internal
 	namespace string
 	clientset kubernetes.Interface
-	router    *mux.Router
+	router    *echo.Echo
 	db        *sql.DB
 }
 
@@ -69,54 +70,77 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		internal:  internal.New(internalInit, init.db, cs),
 		namespace: init.Namespace,
 		clientset: cs,
-		router:    mux.NewRouter(),
+		router:    echo.New(),
 		db:        init.db,
 	}
-	app.router.HandleFunc("/", app.Greeting).Methods("GET")
-	app.router.HandleFunc("/vice/launch", app.internal.VICELaunchApp).Methods("POST")
-	app.router.HandleFunc("/vice/apply-labels", app.internal.ApplyAsyncLabelsHandler).Methods("POST")
-	app.router.HandleFunc("/vice/async-data", app.internal.GetAsyncData).Methods("GET")
-	app.router.HandleFunc("/vice/listing", app.internal.FilterableResources).Methods("GET")
-	app.router.HandleFunc("/vice/listing/deployments", app.internal.FilterableDeployments).Methods("GET")
-	app.router.HandleFunc("/vice/listing/pods", app.internal.FilterablePods).Methods("GET")
-	app.router.HandleFunc("/vice/listing/configmaps", app.internal.FilterableConfigMaps).Methods("GET")
-	app.router.HandleFunc("/vice/listing/services", app.internal.FilterableServices).Methods("GET")
-	app.router.HandleFunc("/vice/listing/ingresses", app.internal.FilterableIngresses).Methods("GET")
-	app.router.HandleFunc("/vice/{id}/download-input-files", app.internal.VICETriggerDownloads).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/save-output-files", app.internal.VICETriggerUploads).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/exit", app.internal.VICEExit).Methods("POST")
-	app.router.HandleFunc("/vice/{id}/save-and-exit", app.internal.VICESaveAndExit).Methods("POST")
-	app.router.HandleFunc("/vice/{analysis-id}/pods", app.internal.VICEPods).Methods("GET")
-	app.router.HandleFunc("/vice/{analysis-id}/logs", app.internal.VICELogs).Methods("GET")
-	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.internal.VICETimeLimitUpdate).Methods("POST")
-	app.router.HandleFunc("/vice/{analysis-id}/time-limit", app.internal.VICEGetTimeLimit).Methods("GET")
-	app.router.HandleFunc("/vice/{host}/url-ready", app.internal.VICEStatus).Methods("GET")
 
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/download-input-files", app.internal.VICEAdminTriggerDownloads).Methods("POST")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/save-output-files", app.internal.VICEAdminTriggerUploads).Methods("POST")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/exit", app.internal.VICEAdminExit).Methods("POST")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/save-and-exit", app.internal.VICEAdminSaveAndExit).Methods("POST")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/time-limit", app.internal.VICEAdminGetTimeLimit).Methods("GET")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/time-limit", app.internal.VICEAdminTimeLimitUpdate).Methods("POST")
-	app.router.HandleFunc("/vice/admin/analyses/{analysis-id}/external-id", app.internal.VICEAdminGetExternalID).Methods("GET")
+	app.router.HTTPErrorHandler = func(err error, c echo.Context) {
+		code := http.StatusInternalServerError
 
-	app.router.HandleFunc("/service/{name}", app.external.CreateService).Methods("POST")
-	app.router.HandleFunc("/service/{name}", app.external.UpdateService).Methods("PUT")
-	app.router.HandleFunc("/service/{name}", app.external.GetService).Methods("GET")
-	app.router.HandleFunc("/service/{name}", app.external.DeleteService).Methods("DELETE")
-	app.router.HandleFunc("/endpoint/{name}", app.external.CreateEndpoint).Methods("POST")
-	app.router.HandleFunc("/endpoint/{name}", app.external.UpdateEndpoint).Methods("PUT")
-	app.router.HandleFunc("/endpoint/{name}", app.external.GetEndpoint).Methods("GET")
-	app.router.HandleFunc("/endpoint/{name}", app.external.DeleteEndpoint).Methods("DELETE")
-	app.router.HandleFunc("/ingress/{name}", app.external.CreateIngress).Methods("POST")
-	app.router.HandleFunc("/ingress/{name}", app.external.UpdateIngress).Methods("PUT")
-	app.router.HandleFunc("/ingress/{name}", app.external.GetIngress).Methods("GET")
-	app.router.HandleFunc("/ingress/{name}", app.external.DeleteIngress).Methods("DELETE")
+		if echoErr, ok := err.(*echo.HTTPError); ok {
+			code = echoErr.Code
+		}
+
+		c.JSON(code, common.NewErrorResponse(err))
+	}
+
+	app.router.GET("/", app.Greeting).Name = "greeting"
+
+	vice := app.router.Group("/vice")
+	vice.POST("/launch", app.internal.VICELaunchApp)
+	vice.POST("/apply-labels", app.internal.ApplyAsyncLabelsHandler)
+	vice.GET("/async-data", app.internal.GetAsyncData)
+	vice.POST("/:id/download-input-files", app.internal.VICETriggerDownloads)
+	vice.POST("/:id/save-output-files", app.internal.VICETriggerUploads)
+	vice.POST("/:id/exit", app.internal.VICEExit)
+	vice.POST("/:id/save-and-exit", app.internal.VICESaveAndExit)
+	vice.GET("/:analysis-id/pods", app.internal.VICEPods)
+	vice.GET("/:analysis-id/logs", app.internal.VICELogs)
+	vice.POST("/:analysis-id/time-limit", app.internal.VICETimeLimitUpdate)
+	vice.GET("/:analysis-id/time-limit", app.internal.VICEGetTimeLimit)
+	vice.GET("/:host/url-ready", app.internal.VICEStatus)
+
+	vicelisting := vice.Group("/listing")
+	vicelisting.GET("/", app.internal.FilterableResources)
+	vicelisting.GET("/deployments", app.internal.FilterableDeployments)
+	vicelisting.GET("/pods", app.internal.FilterablePods)
+	vicelisting.GET("/configmaps", app.internal.FilterableConfigMaps)
+	vicelisting.GET("/services", app.internal.FilterableServices)
+	vicelisting.GET("/ingresses", app.internal.FilterableIngresses)
+
+	viceadmin := vice.Group("/admin/analyses")
+	viceadmin.POST("/:analysis-id/download-input-files", app.internal.VICEAdminTriggerDownloads)
+	viceadmin.POST("/:analysis-id/save-output-files", app.internal.VICEAdminTriggerUploads)
+	viceadmin.POST("/:analysis-id/exit", app.internal.VICEAdminExit)
+	viceadmin.POST("/:analysis-id/save-and-exit", app.internal.VICEAdminSaveAndExit)
+	viceadmin.GET("/:analysis-id/time-limit", app.internal.VICEAdminGetTimeLimit)
+	viceadmin.POST("/:analysis-id/time-limit", app.internal.VICEAdminTimeLimitUpdate)
+	viceadmin.GET("/:analysis-id/external-id", app.internal.VICEAdminGetExternalID)
+
+	svc := app.router.Group("/service")
+	svc.POST("/:name", app.external.CreateService)
+	svc.PUT("/:name", app.external.UpdateService)
+	svc.GET("/:name", app.external.GetService)
+	svc.DELETE("/:name", app.external.DeleteService)
+
+	endpoint := app.router.Group("/endpoint")
+	endpoint.POST("/:name", app.external.CreateEndpoint)
+	endpoint.PUT("/:name", app.external.UpdateEndpoint)
+	endpoint.GET("/:name", app.external.GetEndpoint)
+	endpoint.DELETE("/:name", app.external.DeleteEndpoint)
+
+	ingress := app.router.Group("/ingress")
+	ingress.POST("/:name", app.external.CreateIngress)
+	ingress.PUT("/:name", app.external.UpdateIngress)
+	ingress.GET("/:name", app.external.GetIngress)
+	ingress.DELETE("/:name", app.external.DeleteIngress)
+
 	return app
 }
 
 // Greeting lets the caller know that the service is up and should be receiving
 // requests.
-func (e *ExposerApp) Greeting(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(writer, "Hello from app-exposer.")
+func (e *ExposerApp) Greeting(context echo.Context) error {
+	context.String(http.StatusOK, "Hello from app-exposer.")
+	return nil
 }
