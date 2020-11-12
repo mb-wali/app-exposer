@@ -4,13 +4,11 @@
 package external
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/common"
 	"github.com/labstack/echo/v4"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -240,7 +238,12 @@ func (e *External) DeleteService(c echo.Context) error {
 
 	log.Printf("DeleteService: deleting service %s", service)
 
-	return e.ServiceController.Delete(service)
+	err := e.ServiceController.Delete(service)
+	if err != nil {
+		log.Error(err) // Repeated deletions shouldn't return errors.
+	}
+
+	return nil
 }
 
 // CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
@@ -442,26 +445,12 @@ func (e *External) DeleteEndpoint(c echo.Context) error {
 
 	log.Printf("DeleteEndpoint: deleting endpoint %s", endpoint)
 
-	return e.EndpointController.Delete(endpoint)
-}
-
-// WriteIngress uses the provided writer to write a version of the provided
-// *typed_extv1beta1.Ingress object out as JSON in the response body.
-func WriteIngress(ing *extv1beta1.Ingress, writer http.ResponseWriter) {
-	returnOpts := &IngressOptions{
-		Name:      ing.Name,
-		Namespace: ing.Namespace,
-		Service:   ing.Spec.Backend.ServiceName,
-		Port:      ing.Spec.Backend.ServicePort.IntValue(),
-	}
-
-	outbuf, err := json.Marshal(returnOpts)
+	err := e.EndpointController.Delete(endpoint)
 	if err != nil {
-		common.Error(writer, err.Error(), http.StatusInternalServerError)
-		return
+		log.Error(err) // Repeated Deletion requests shouldn't return errors.
 	}
 
-	writer.Write(outbuf)
+	return nil
 }
 
 // CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
@@ -660,5 +649,10 @@ func (e *External) DeleteIngress(c echo.Context) error {
 
 	log.Printf("DeleteIngress: deleting ingress %s", ingress)
 
-	return e.IngressController.Delete(ingress)
+	err := e.IngressController.Delete(ingress)
+	if err != nil {
+		log.Error(err) // Do this so that repeated deletion requests don't return an error.
+	}
+
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/cyverse-de/app-exposer/external"
+	"github.com/labstack/echo/v4"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -68,6 +69,7 @@ func TestCreateService(t *testing.T) {
 
 	expectedName := "test-name"
 	req := httptest.NewRequest("POST", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -125,6 +127,7 @@ func createAppLoadService(ns, name string) (*ExposerApp, error) {
 	}
 
 	addreq, err := http.NewRequest("POST", fmt.Sprintf("/service/%s", name), bytes.NewReader(createJSON))
+	addreq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +159,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		t.Error(err)
 	}
@@ -301,6 +305,7 @@ func TestCreateEndpoint(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("/endpoint/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -353,6 +358,7 @@ func createAppLoadEndpoint(ns, name string) (*ExposerApp, error) {
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("/endpoint/%s", name), bytes.NewReader(createJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -386,6 +392,7 @@ func TestUpdateEndpoint(t *testing.T) {
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("/endpoint/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		t.Error(err)
 	}
@@ -522,6 +529,7 @@ func TestCreateIngress(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -573,14 +581,16 @@ func createAppLoadIngress(ns, name string) (*ExposerApp, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("/ingress/%s", name), bytes.NewReader(createJSON))
-	if err != nil {
+	req := httptest.NewRequest("POST", fmt.Sprintf("/ingress/%s", name), bytes.NewReader(createJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	cw := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, cw)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(name)
+	if err = testapp.external.CreateIngress(c); err != nil {
 		return nil, err
 	}
-
-	cw := httptest.NewRecorder()
-
-	testapp.router.ServeHTTP(cw, req)
 
 	return testapp, nil
 }
@@ -606,14 +616,18 @@ func TestUpdateIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
-	if err != nil {
-		t.Error(err)
-	}
+	req := httptest.NewRequest("PUT", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 	w := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, w)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(expectedName)
 
-	testapp.router.ServeHTTP(w, req)
+	if err = testapp.external.UpdateIngress(c); err != nil {
+		t.Error(err)
+	}
 
 	resp := w.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
@@ -655,14 +669,18 @@ func TestGetIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("/ingress/%s", expectedName), nil)
+	req := httptest.NewRequest("GET", fmt.Sprintf("/ingress/%s", expectedName), nil)
+
+	w := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, w)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(expectedName)
+
+	err = testapp.external.GetIngress(c)
 	if err != nil {
 		t.Error(err)
 	}
-
-	w := httptest.NewRecorder()
-
-	testapp.router.ServeHTTP(w, req)
 
 	resp := w.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
