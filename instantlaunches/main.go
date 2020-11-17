@@ -146,3 +146,91 @@ func (a *App) GetListDefaults(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, m)
 }
+
+const userMappingQuery = `
+    SELECT u.id,
+           u.version,
+           u.instant_launches as mapping
+      FROM user_instant_launches u
+      JOIN users ON u.user_id = users.id
+     WHERE users.username = ?
+  ORDER BY u.version DESC
+     LIMIT 1
+`
+
+// UserMapping returns the user's instant launch mappings.
+func (a *App) UserMapping(user string) (UserInstantLaunchMapping, error) {
+	m := UserInstantLaunchMapping{}
+	err := a.DB.Get(&m, userMappingQuery, user)
+	return m, err
+}
+
+// GetUserMapping is the echo handler for the http API that returns the user's
+// instant launch mappings.
+func (a *App) GetUserMapping(c echo.Context) error {
+	user := c.Param("user")
+	m, err := a.UserMapping(user)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, m)
+}
+
+const allUserMappingQuery = `
+  SELECT u.id,
+         u.version,
+         u.instant_launches as mapping
+    FROM user_instant_launches u
+    JOIN users ON u.user_id = users.id
+   WHERE user.username = ?
+`
+
+// AllUserMapping returns all of the user's instant launch mappings regardless of version.
+func (a *App) AllUserMapping(user string) ([]UserInstantLaunchMapping, error) {
+	m := []UserInstantLaunchMapping{}
+	err := a.DB.Select(&m, userMappingQuery, user)
+	return m, err
+}
+
+// GetAllUserMappings is the echo handler for the http API that returns the user's
+// instant launch mappings.
+func (a *App) GetAllUserMappings(c echo.Context) error {
+	user := c.Param("user")
+	m, err := a.AllUserMapping(user)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, m)
+}
+
+const userMappingsByVersionQuery = `
+    SELECT u.id,
+           u.version,
+           u.instant_launches as mapping
+      FROM user_instant_launches u
+      JOIN users ON u.user_id = users.id
+     WHERE users.username = ?
+       AND u.version = ?
+`
+
+// UserMappingsByVersion returns a specific version of the user's instant launch mappings.
+func (a *App) UserMappingsByVersion(user string, version int) (UserInstantLaunchMapping, error) {
+	m := UserInstantLaunchMapping{}
+	err := a.DB.Get(&m, userMappingsByVersionQuery, user, version)
+	return m, err
+}
+
+// GetUserMappingsByVersion is the echo handler for the http API that returns a specific
+// version of the user's instant launch mappings.
+func (a *App) GetUserMappingsByVersion(c echo.Context) error {
+	user := c.Param("user")
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+	m, err := a.UserMappingsByVersion(user, int(version))
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, m)
+}
