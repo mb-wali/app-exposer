@@ -1,7 +1,11 @@
 package instantlaunches
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/jmoiron/sqlx"
+	"github.com/labstack/echo"
 )
 
 // InstantLaunch contains the information needed to instantly launch an app.
@@ -44,17 +48,24 @@ type UserInstantLaunchMapping struct {
 
 // App provides an API for managing instant launches.
 type App struct {
-	DB *sqlx.DB
+	DB    *sqlx.DB
+	Group *echo.Group
 }
 
 // New returns a newly created *App.
-func New(db *sqlx.DB) *App {
-	return &App{
-		DB: db,
+func New(db *sqlx.DB, group *echo.Group) *App {
+	instance := &App{
+		DB:    db,
+		Group: group,
 	}
+
+	instance.Group.GET("/default", instance.GetListDefaults)
+	instance.Group.GET("/default/latest", instance.GetLatestDefaults)
+	instance.Group.GET("/default/:version", instance.GetDefaultsByVersion)
+	return instance
 }
 
-const getLatestDefaultQuery = `
+const latestDefaultsQuery = `
     SELECT def.id,
            def.version,
            def.instant_launches AS mapping
@@ -63,14 +74,24 @@ const getLatestDefaultQuery = `
      LIMIT 1;
 `
 
-// GetLatestDefault returns the latest version of the default instant launches.
-func (a *App) GetLatestDefault() (DefaultInstantLaunchMapping, error) {
+// LatestDefaults returns the latest version of the default instant launches.
+func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
-	err := a.DB.Get(&m, getLatestDefaultQuery)
+	err := a.DB.Get(&m, latestDefaultsQuery)
 	return m, err
 }
 
-const getDefaultByVersionQuery = `
+// GetLatestDefaults is the echo handler for the http API that returns the
+// default mapping of instant launches to file patterns.
+func (a *App) GetLatestDefaults(c echo.Context) error {
+	defaults, err := a.LatestDefaults()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, defaults)
+}
+
+const defaultsByVersionQuery = `
     SELECT def.id,
            def.version,
            def.instant_launches as mapping
@@ -78,23 +99,50 @@ const getDefaultByVersionQuery = `
      WHERE def.version = ?
 `
 
-// GetDefaultByVersion returns a specific version of the default instant launches.
-func (a *App) GetDefaultByVersion(version int) (DefaultInstantLaunchMapping, error) {
+// DefaultsByVersion returns a specific version of the default instant launches.
+func (a *App) DefaultsByVersion(version int) (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
-	err := a.DB.Get(&m, getDefaultByVersionQuery, version)
+	err := a.DB.Get(&m, defaultsByVersionQuery, version)
 	return m, err
 }
 
-const listDefaultsQuery = `
+// GetDefaultsByVersion is the echo handler for the http API that returns the defaults
+// stored for the provided format version.
+func (a *App) GetDefaultsByVersion(c echo.Context) error {
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+
+	m, err := a.DefaultsByVersion(int(version))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, m)
+
+}
+
+const listAllDefaultsQuery = `
     SELECT def.id,
            def.version,
            def.instant_launches as mapping
       FROM default_instant_launches def
 `
 
-// ListDefaults returns a list of all of the default instant launches, including their version.
-func (a *App) ListDefaults() ([]DefaultInstantLaunchMapping, error) {
+// ListAllDefaults returns a list of all of the default instant launches, including their version.
+func (a *App) ListAllDefaults() ([]DefaultInstantLaunchMapping, error) {
 	m := []DefaultInstantLaunchMapping{}
-	err := a.DB.Select(&m, listDefaultsQuery)
+	err := a.DB.Select(&m, listAllDefaultsQuery)
 	return m, err
+}
+
+// GetListDefaults is the echo handler for the http API that returns a list of
+// all defaults listed in the database, regardless of version.
+func (a *App) GetListDefaults(c echo.Context) error {
+	m, err := a.ListAllDefaults()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, m)
 }
