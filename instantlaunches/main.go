@@ -1,7 +1,7 @@
 package instantlaunches
 
 import (
-	"database/sql"
+	"github.com/jmoiron/sqlx"
 )
 
 // InstantLaunch contains the information needed to instantly launch an app.
@@ -10,7 +10,7 @@ type InstantLaunch struct {
 	QuickLaunchID string `json:"quick_launch_id"`
 	AddedBy       string `json:"added_by"` // short username
 	AddedOn       string `json:"added_on"` // formatted timestamp including timezone
-	db            *sql.DB
+	db            *sqlx.DB
 }
 
 // InstantLaunchSelector defines the default and compatible instant launches
@@ -44,11 +44,11 @@ type UserInstantLaunchMapping struct {
 
 // App provides an API for managing instant launches.
 type App struct {
-	DB *sql.DB
+	DB *sqlx.DB
 }
 
 // New returns a newly created *App.
-func New(db *sql.DB) *App {
+func New(db *sqlx.DB) *App {
 	return &App{
 		DB: db,
 	}
@@ -64,6 +64,13 @@ const getLatestDefaultQuery = `
 `
 
 // GetLatestDefault returns the latest version of the default instant launches.
+func (a *App) GetLatestDefault() (*DefaultInstantLaunchMapping, error) {
+	m := DefaultInstantLaunchMapping{
+		Mapping: InstantLaunchMapping{},
+	}
+	err := a.DB.Get(&m, getLatestDefaultQuery)
+	return &m, err
+}
 
 // GetDefaultByVersion returns a specific version of the default instant launches.
 
