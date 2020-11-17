@@ -54,6 +54,15 @@ func New(db *sql.DB) *App {
 	}
 }
 
+const getLatestDefaultQuery = `
+    SELECT def.id,
+           def.version,
+           def.instant_launches AS mapping
+      FROM default_instant_launches def
+  ORDER BY def.version DESC
+     LIMIT 1;
+`
+
 // GetLatestDefault returns the latest version of the default instant launches.
 
 // GetDefaultByVersion returns a specific version of the default instant launches.
