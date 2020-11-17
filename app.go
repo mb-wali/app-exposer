@@ -5,6 +5,7 @@ import (
 
 	"github.com/cyverse-de/app-exposer/common"
 	"github.com/cyverse-de/app-exposer/external"
+	"github.com/cyverse-de/app-exposer/instantlaunches"
 	"github.com/cyverse-de/app-exposer/internal"
 	"github.com/jmoiron/sqlx"
 	"k8s.io/client-go/kubernetes"
@@ -16,12 +17,13 @@ import (
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
-	external  *external.External
-	internal  *internal.Internal
-	namespace string
-	clientset kubernetes.Interface
-	router    *echo.Echo
-	db        *sqlx.DB
+	external        *external.External
+	internal        *internal.Internal
+	namespace       string
+	clientset       kubernetes.Interface
+	router          *echo.Echo
+	db              *sqlx.DB
+	instantlaunches *instantlaunches.App
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -137,6 +139,9 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	ingress.PUT("/:name", app.external.UpdateIngress)
 	ingress.GET("/:name", app.external.GetIngress)
 	ingress.DELETE("/:name", app.external.DeleteIngress)
+
+	ilgroup := app.router.Group("/instantlaunches")
+	app.instantlaunches = instantlaunches.New(app.db, ilgroup)
 
 	return app
 }

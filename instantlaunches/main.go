@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 )
 
 // InstantLaunch contains the information needed to instantly launch an app.
