@@ -1,12 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/common"
 	"github.com/cyverse-de/app-exposer/external"
 	"github.com/cyverse-de/app-exposer/internal"
+	"github.com/jmoiron/sqlx"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/labstack/echo/v4"
@@ -21,7 +21,7 @@ type ExposerApp struct {
 	namespace string
 	clientset kubernetes.Interface
 	router    *echo.Echo
-	db        *sql.DB
+	db        *sqlx.DB
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -42,7 +42,7 @@ type ExposerAppInit struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
-	db                            *sql.DB
+	db                            *sqlx.DB
 	UserSuffix                    string
 }
 
