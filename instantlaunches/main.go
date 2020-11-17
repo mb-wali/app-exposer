@@ -64,14 +64,37 @@ const getLatestDefaultQuery = `
 `
 
 // GetLatestDefault returns the latest version of the default instant launches.
-func (a *App) GetLatestDefault() (*DefaultInstantLaunchMapping, error) {
-	m := DefaultInstantLaunchMapping{
-		Mapping: InstantLaunchMapping{},
-	}
+func (a *App) GetLatestDefault() (DefaultInstantLaunchMapping, error) {
+	m := DefaultInstantLaunchMapping{}
 	err := a.DB.Get(&m, getLatestDefaultQuery)
-	return &m, err
+	return m, err
 }
 
+const getDefaultByVersionQuery = `
+    SELECT def.id,
+           def.version,
+           def.instant_launches as mapping
+      FROM default_instant_launches def
+     WHERE def.version = ?
+`
+
 // GetDefaultByVersion returns a specific version of the default instant launches.
+func (a *App) GetDefaultByVersion(version int) (DefaultInstantLaunchMapping, error) {
+	m := DefaultInstantLaunchMapping{}
+	err := a.DB.Get(&m, getDefaultByVersionQuery, version)
+	return m, err
+}
+
+const listDefaultsQuery = `
+    SELECT def.id,
+           def.version,
+           def.instant_launches as mapping
+      FROM default_instant_launches def
+`
 
 // ListDefaults returns a list of all of the default instant launches, including their version.
+func (a *App) ListDefaults() ([]DefaultInstantLaunchMapping, error) {
+	m := []DefaultInstantLaunchMapping{}
+	err := a.DB.Select(&m, listDefaultsQuery)
+	return m, err
+}
