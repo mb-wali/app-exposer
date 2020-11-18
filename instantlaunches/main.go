@@ -126,7 +126,6 @@ func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, updated)
-
 }
 
 const defaultsByVersionQuery = `
@@ -158,7 +157,43 @@ func (a *App) GetDefaultsByVersion(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, m)
+}
 
+const updateDefaultsByVersionQuery = `
+	UPDATE ONLY default_instant_launches AS def
+			SET def.instant_launches = jsonb_object(?)
+		  WHERE def.version = ?
+	  RETURNING def.instant_launches
+`
+
+// UpdateDefaultsByVersion updates the default mapping for a specific version.
+func (a *App) UpdateDefaultsByVersion(newjson echo.Map, version int) (echo.Map, error) {
+	marshalled, err := json.Marshal(newjson)
+	if err != nil {
+		return nil, err
+	}
+	updated := echo.Map{}
+	err = a.DB.QueryRowx(updateDefaultsByVersionQuery, marshalled, version).Scan(updated)
+	return updated, err
+}
+
+// UpdateDefaultsByVersionHandler is the echo handler for the HTTP API that
+// updates the default mapping for a specific version.
+func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+	newvalue := echo.Map{}
+	if err = c.Bind(&newvalue); err != nil {
+		return err
+	}
+	updated, err := a.UpdateDefaultsByVersion(newvalue, int(version))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, updated)
 }
 
 const listAllDefaultsQuery = `
