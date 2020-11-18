@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -89,6 +90,43 @@ func (a *App) GetLatestDefaults(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, defaults)
+}
+
+const updateLatestDefaultsQuery = `
+	UPDATE ONLY default_instant_launches AS def
+			SET def.instant_launchs = jsonb_object(?)
+		  WHERE def.version = (
+			  SELECT max(version)
+				FROM default_instant_launches
+		  )
+		  RETURNING def.instant_launches;
+`
+
+// UpdateLatestDefaults sets a new value for the latest version of the defaults.
+func (a *App) UpdateLatestDefaults(newjson echo.Map) (echo.Map, error) {
+	marshalled, err := json.Marshal(newjson)
+	if err != nil {
+		return nil, err
+	}
+	retval := echo.Map{}
+	err = a.DB.QueryRowx(updateLatestDefaultsQuery, marshalled).Scan(&retval)
+	return retval, err
+}
+
+// UpdateLatestDefaultsHandler is the echo handler for the HTTP API that updates
+// the latest defaults mapping.
+func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
+	newdefaults := echo.Map{}
+	err := c.Bind(&newdefaults)
+	if err != nil {
+		return err
+	}
+	updated, err := a.UpdateLatestDefaults(newdefaults)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, updated)
+
 }
 
 const defaultsByVersionQuery = `
