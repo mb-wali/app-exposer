@@ -25,6 +25,16 @@ const latestDefaultsQuery = `
      LIMIT 1;
 `
 
+const updateLatestDefaultsQuery = `
+    UPDATE ONLY default_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+          WHERE def.version = (
+              SELECT max(version)
+                FROM default_instant_launches
+          )
+          RETURNING def.instant_launches;
+`
+
 // LatestDefaults returns the latest version of the default instant launches.
 func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
@@ -41,16 +51,6 @@ func (a *App) GetLatestDefaults(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, defaults)
 }
-
-const updateLatestDefaultsQuery = `
-    UPDATE ONLY default_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-          WHERE def.version = (
-              SELECT max(version)
-                FROM default_instant_launches
-          )
-          RETURNING def.instant_launches;
-`
 
 // UpdateLatestDefaults sets a new value for the latest version of the defaults.
 func (a *App) UpdateLatestDefaults(newjson echo.Map) (echo.Map, error) {
@@ -86,6 +86,13 @@ const defaultsByVersionQuery = `
      WHERE def.version = ?
 `
 
+const updateDefaultsByVersionQuery = `
+    UPDATE ONLY default_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+          WHERE def.version = ?
+      RETURNING def.instant_launches
+`
+
 // DefaultsByVersion returns a specific version of the default instant launches.
 func (a *App) DefaultsByVersion(version int) (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
@@ -108,13 +115,6 @@ func (a *App) GetDefaultsByVersion(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, m)
 }
-
-const updateDefaultsByVersionQuery = `
-    UPDATE ONLY default_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-          WHERE def.version = ?
-      RETURNING def.instant_launches
-`
 
 // UpdateDefaultsByVersion updates the default mapping for a specific version.
 func (a *App) UpdateDefaultsByVersion(newjson echo.Map, version int) (echo.Map, error) {
