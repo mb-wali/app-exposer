@@ -35,6 +35,14 @@ const updateLatestDefaultsQuery = `
           RETURNING def.instant_launches;
 `
 
+const deleteLatestDefaultsQuery = `
+	DELETE FROM ONLY default_instant_launches AS def
+	WHERE def.version = (
+		SELECT max(version)
+		FROm default_instant_launches
+	)
+`
+
 // LatestDefaults returns the latest version of the default instant launches.
 func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
@@ -76,6 +84,18 @@ func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, updated)
+}
+
+// DeleteLatestDefaults removes the latest default mappings from the database.
+func (a *App) DeleteLatestDefaults() error {
+	_, err := a.DB.Exec(deleteLatestDefaultsQuery)
+	return err
+}
+
+// DeleteLatestDefaultsHandler is the echo handler for the HTTP API that allows
+// the caller to delete the latest default mappings from the database.
+func (a *App) DeleteLatestDefaultsHandler(c echo.Context) error {
+	return a.DeleteLatestDefaults()
 }
 
 const defaultsByVersionQuery = `
