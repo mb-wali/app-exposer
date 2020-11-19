@@ -93,6 +93,11 @@ const updateDefaultsByVersionQuery = `
       RETURNING def.instant_launches
 `
 
+const deleteDefaultsByVersionQuery = `
+	DELETE FROM ONLY default_instant_launches as def
+	WHERE def.version = ?
+`
+
 // DefaultsByVersion returns a specific version of the default instant launches.
 func (a *App) DefaultsByVersion(version int) (DefaultInstantLaunchMapping, error) {
 	m := DefaultInstantLaunchMapping{}
@@ -144,6 +149,24 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, updated)
+}
+
+// DeleteDefaultsByVersion removes a default instant launch mapping from the database
+// based on its version.
+func (a *App) DeleteDefaultsByVersion(version int) error {
+	_, err := a.DB.Exec(deleteDefaultsByVersionQuery, version)
+	return err
+}
+
+// DeleteDefaultsByVersionHandler is an echo handler for the HTTP API that allows the
+// caller to delete a default instant launch mapping from the database based on its
+// version.
+func (a *App) DeleteDefaultsByVersionHandler(c echo.Context) error {
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+	return a.DeleteDefaultsByVersion(int(version))
 }
 
 const listAllDefaultsQuery = `
