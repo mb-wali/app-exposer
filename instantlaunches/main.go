@@ -93,13 +93,13 @@ func (a *App) GetLatestDefaults(c echo.Context) error {
 }
 
 const updateLatestDefaultsQuery = `
-	UPDATE ONLY default_instant_launches AS def
-			SET def.instant_launchs = jsonb_object(?)
-		  WHERE def.version = (
-			  SELECT max(version)
-				FROM default_instant_launches
-		  )
-		  RETURNING def.instant_launches;
+    UPDATE ONLY default_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+          WHERE def.version = (
+              SELECT max(version)
+                FROM default_instant_launches
+          )
+          RETURNING def.instant_launches;
 `
 
 // UpdateLatestDefaults sets a new value for the latest version of the defaults.
@@ -160,10 +160,10 @@ func (a *App) GetDefaultsByVersion(c echo.Context) error {
 }
 
 const updateDefaultsByVersionQuery = `
-	UPDATE ONLY default_instant_launches AS def
-			SET def.instant_launches = jsonb_object(?)
-		  WHERE def.version = ?
-	  RETURNING def.instant_launches
+    UPDATE ONLY default_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+          WHERE def.version = ?
+      RETURNING def.instant_launches
 `
 
 // UpdateDefaultsByVersion updates the default mapping for a specific version.
@@ -249,6 +249,47 @@ func (a *App) GetUserMapping(c echo.Context) error {
 	return c.JSON(http.StatusOK, m)
 }
 
+const updateUserMappingQuery = `
+    UPDATE ONLY user_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+           FROM users
+          WHERE def.version = (
+              SELECT max(version)
+                FROM user_instant_launches
+          )
+            AND def.user_id = users.id
+            AND users.username = ?
+          RETURNING def.instant_launches;
+`
+
+// UpdateUserMapping updates the the latest version of the user's custom
+// instant launch mappings.
+func (a *App) UpdateUserMapping(user string, update echo.Map) (echo.Map, error) {
+	marshalled, err := json.Marshal(update)
+	if err != nil {
+		return nil, err
+	}
+	updated := echo.Map{}
+	err = a.DB.QueryRowx(updateUserMappingQuery, marshalled, user).Scan(updated)
+	return updated, err
+}
+
+// UpdateUserMappingHandler is the echo handler for the HTTP API that updates the user's
+// instant launch mapping.
+func (a *App) UpdateUserMappingHandler(c echo.Context) error {
+	user := c.Param("user")
+	newdefaults := echo.Map{}
+	err := c.Bind(&newdefaults)
+	if err != nil {
+		return err
+	}
+	updated, err := a.UpdateUserMapping(user, newdefaults)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, updated)
+}
+
 const allUserMappingQuery = `
   SELECT u.id,
          u.version,
@@ -306,4 +347,46 @@ func (a *App) GetUserMappingsByVersion(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, m)
+}
+
+const updateUserMappingsByVersionQuery = `
+    UPDATE ONLY user_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+           FROM users
+          WHERE def.version = ?
+            AND def.user_id = users.id
+            AND users.username = ?
+        RETURNING def.instant_launches;
+`
+
+// UpdateUserMappingsByVersion updates the user's instant launches for a specific version.
+func (a *App) UpdateUserMappingsByVersion(user string, version int, update echo.Map) (echo.Map, error) {
+	marshalled, err := json.Marshal(update)
+	if err != nil {
+		return nil, err
+	}
+	retval := echo.Map{}
+	if err = a.DB.QueryRowx(updateUserMappingsByVersionQuery, marshalled, version, user).Scan(&retval); err != nil {
+		return nil, err
+	}
+	return retval, nil
+}
+
+// UpdateUserMappingsByVersionHandler is the echo handler for the HTTP API that allows callers
+// to update a user's instant launches for a specific version.
+func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
+	user := c.Param("user")
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+	update := echo.Map{}
+	if err = c.Bind(&update); err != nil {
+		return err
+	}
+	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, newversion)
 }
