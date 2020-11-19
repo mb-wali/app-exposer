@@ -2,6 +2,7 @@ package instantlaunches
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -17,6 +18,36 @@ const userMappingQuery = `
      WHERE users.username = ?
   ORDER BY u.version DESC
      LIMIT 1
+`
+
+const updateUserMappingQuery = `
+    UPDATE ONLY user_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+           FROM users
+          WHERE def.version = (
+              SELECT max(version)
+                FROM user_instant_launches
+          )
+            AND def.user_id = users.id
+            AND users.username = ?
+          RETURNING def.instant_launches;
+`
+
+const deleteUserMappingQuery = `
+	DELETE FROM ONLY user_instant_launches AS def
+	USING users
+	WHERE def.user_id = users.id
+	  AND users.username = ?
+	  AND def.version = (
+		  SELECT max(version)
+		    FROM user_instant_launches
+	  )
+`
+
+const createUserMappingQuery = `
+	  INSERT INTO user_instant_launches (instant_launches, user_id)
+	  VALUES ( ?, (SELECT id FROM users WHERE username = ?) )
+	  RETURNING instant_launches;
 `
 
 // UserMapping returns the user's instant launch mappings.
@@ -36,19 +67,6 @@ func (a *App) GetUserMapping(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, m)
 }
-
-const updateUserMappingQuery = `
-    UPDATE ONLY user_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-           FROM users
-          WHERE def.version = (
-              SELECT max(version)
-                FROM user_instant_launches
-          )
-            AND def.user_id = users.id
-            AND users.username = ?
-          RETURNING def.instant_launches;
-`
 
 // UpdateUserMapping updates the the latest version of the user's custom
 // instant launch mappings.
@@ -76,6 +94,51 @@ func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, updated)
+}
+
+// DeleteUserMapping is intended as an admin only operation that completely removes
+// the latest mapping for the user.
+func (a *App) DeleteUserMapping(user string) error {
+	_, err := a.DB.Exec(deleteUserMappingQuery, user)
+	return err
+}
+
+// DeleteUserMappingHandler is the handler for the admin-only operation that removes
+// the latest mapping for the user.
+func (a *App) DeleteUserMappingHandler(c echo.Context) error {
+	user := c.Param("user")
+	if user == "" {
+		return errors.New("user was not set")
+	}
+	return a.DeleteUserMapping(user)
+}
+
+// AddUserMapping adds a new record to the database for the user's instant launches.
+func (a *App) AddUserMapping(user string, mapping echo.Map) (echo.Map, error) {
+	marshalled, err := json.Marshal(mapping)
+	if err != nil {
+		return nil, err
+	}
+	newvalue := echo.Map{}
+	if err = a.DB.QueryRowx(createUserMappingQuery, marshalled, user).Scan(&newvalue); err != nil {
+		return nil, err
+	}
+	return newvalue, nil
+}
+
+// AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
+func (a *App) AddUserMappingHandler(c echo.Context) error {
+	user := c.Param("user")
+	newvalue := echo.Map{}
+	err := c.Bind(&newvalue)
+	if err != nil {
+		return err
+	}
+	retval, err := a.AddUserMapping(user, newvalue)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, retval)
 }
 
 const allUserMappingQuery = `
@@ -115,6 +178,16 @@ const userMappingsByVersionQuery = `
        AND u.version = ?
 `
 
+const updateUserMappingsByVersionQuery = `
+    UPDATE ONLY user_instant_launches AS def
+            SET def.instant_launches = jsonb_object(?)
+           FROM users
+          WHERE def.version = ?
+            AND def.user_id = users.id
+            AND users.username = ?
+        RETURNING def.instant_launches;
+`
+
 // UserMappingsByVersion returns a specific version of the user's instant launch mappings.
 func (a *App) UserMappingsByVersion(user string, version int) (UserInstantLaunchMapping, error) {
 	m := UserInstantLaunchMapping{}
@@ -136,16 +209,6 @@ func (a *App) GetUserMappingsByVersion(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, m)
 }
-
-const updateUserMappingsByVersionQuery = `
-    UPDATE ONLY user_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-           FROM users
-          WHERE def.version = ?
-            AND def.user_id = users.id
-            AND users.username = ?
-        RETURNING def.instant_launches;
-`
 
 // UpdateUserMappingsByVersion updates the user's instant launches for a specific version.
 func (a *App) UpdateUserMappingsByVersion(user string, version int, update echo.Map) (echo.Map, error) {
