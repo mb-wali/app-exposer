@@ -188,6 +188,14 @@ const updateUserMappingsByVersionQuery = `
         RETURNING def.instant_launches;
 `
 
+const deleteUserMappingsByVersionQuery = `
+	DELETE FROM ONLY user_instant_launches AS def
+	USING users
+	WHERE def.user_id = users.id
+	  AND users.username = ?
+	  AND def.version = ?;
+`
+
 // UserMappingsByVersion returns a specific version of the user's instant launch mappings.
 func (a *App) UserMappingsByVersion(user string, version int) (UserInstantLaunchMapping, error) {
 	m := UserInstantLaunchMapping{}
@@ -240,4 +248,21 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, newversion)
+}
+
+// DeleteUserMappingsByVersion deletes a user's instant launch mappings at a specific version.
+func (a *App) DeleteUserMappingsByVersion(user string, version int) error {
+	_, err := a.DB.Exec(deleteUserMappingsByVersionQuery, user, version)
+	return err
+}
+
+// DeleteUserMappingsByVersionHandler is the echo handler for the HTTP API that allows callers
+// delete a user's instant launch mappings at a specific version.
+func (a *App) DeleteUserMappingsByVersionHandler(c echo.Context) error {
+	user := c.Param("user")
+	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
+	if err != nil {
+		return err
+	}
+	return a.DeleteUserMappingsByVersion(user, int(version))
 }
