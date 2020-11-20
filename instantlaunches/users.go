@@ -17,7 +17,7 @@ const userMappingQuery = `
       JOIN users ON u.user_id = users.id
      WHERE users.username = ?
   ORDER BY u.version DESC
-     LIMIT 1
+     LIMIT 1;
 `
 
 const updateUserMappingQuery = `
@@ -147,7 +147,7 @@ const allUserMappingQuery = `
          u.instant_launches as mapping
     FROM user_instant_launches u
     JOIN users ON u.user_id = users.id
-   WHERE user.username = ?
+   WHERE users.username = ?;
 `
 
 // AllUserMapping returns all of the user's instant launch mappings regardless of version.

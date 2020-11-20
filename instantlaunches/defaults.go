@@ -40,13 +40,13 @@ const deleteLatestDefaultsQuery = `
 	WHERE def.version = (
 		SELECT max(version)
 		FROm default_instant_launches
-	)
+	);
 `
 
 const createLastestDefaultsQuery = `
-	  INSERT INTO default_instant_launches (instant_launches)
-	  VALUES ( ? )
-	  RETURNING instant_launches;
+	INSERT INTO default_instant_launches (instant_launches)
+	VALUES ( ? )
+	RETURNING instant_launches;
 `
 
 // LatestDefaults returns the latest version of the default instant launches.
@@ -135,19 +135,19 @@ const defaultsByVersionQuery = `
            def.version,
            def.instant_launches as mapping
       FROM default_instant_launches def
-     WHERE def.version = ?
+     WHERE def.version = ?;
 `
 
 const updateDefaultsByVersionQuery = `
     UPDATE ONLY default_instant_launches AS def
             SET def.instant_launches = jsonb_object(?)
           WHERE def.version = ?
-      RETURNING def.instant_launches
+      RETURNING def.instant_launches;
 `
 
 const deleteDefaultsByVersionQuery = `
 	DELETE FROM ONLY default_instant_launches as def
-	WHERE def.version = ?
+	WHERE def.version = ?;
 `
 
 // DefaultsByVersion returns a specific version of the default instant launches.
@@ -225,7 +225,7 @@ const listAllDefaultsQuery = `
     SELECT def.id,
            def.version,
            def.instant_launches as mapping
-      FROM default_instant_launches def
+      FROM default_instant_launches def;
 `
 
 // ListAllDefaults returns a list of all of the default instant launches, including their version.
