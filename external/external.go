@@ -4,7 +4,6 @@
 package external
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/common"
@@ -52,10 +51,7 @@ func (e *External) CreateService(c echo.Context) error {
 
 	service = c.Param("name")
 	if service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service name in the URL")
 	}
 
 	log.Printf("CreateService: creating a service named %s", service)
@@ -66,18 +62,12 @@ func (e *External) CreateService(c echo.Context) error {
 	}
 
 	if opts.TargetPort == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("TargetPort was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "TargetPort was either not set or set to 0")
 	}
 	log.Printf("CreateService: target port for service %s will be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("ListenPort was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "ListenPort was either not set or set to 0")
 	}
 	log.Printf("CreateService: listen port for service %s will be %d", service, opts.ListenPort)
 
@@ -122,10 +112,7 @@ func (e *External) UpdateService(c echo.Context) error {
 
 	service = c.Param("name")
 	if service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service name in the URL")
 	}
 
 	log.Printf("UpdateService: updating service %s", service)
@@ -136,18 +123,12 @@ func (e *External) UpdateService(c echo.Context) error {
 	}
 
 	if opts.TargetPort == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("TargetPort was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "TargetPort was either not set or set to 0")
 	}
 	log.Printf("UpdateService: target port for %s should be %d", service, opts.TargetPort)
 
 	if opts.ListenPort == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("ListenPort was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "ListenPort was either not set or set to 0")
 	}
 	log.Printf("UpdateService: listen port for %s should be %d", service, opts.ListenPort)
 
@@ -193,20 +174,14 @@ func (e *External) GetService(c echo.Context) error {
 
 	service = c.Param("name")
 	if service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service name in the URL")
 	}
 
 	log.Printf("GetService: getting info for service %s", service)
 
 	svc, err := e.ServiceController.Get(service)
 	if err != nil {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: err,
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, err.Message)
 	}
 
 	log.Printf("GetService: finished getting info for service %s", service)
@@ -230,10 +205,7 @@ func (e *External) DeleteService(c echo.Context) error {
 
 	service = c.Param("name")
 	if service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service name in the URL")
 	}
 
 	log.Printf("DeleteService: deleting service %s", service)
@@ -264,10 +236,7 @@ func (e *External) CreateEndpoint(c echo.Context) error {
 
 	endpoint = c.Param("name")
 	if endpoint == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing endpoint name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing endpoint name in the URL")
 	}
 
 	log.Printf("CreateEndpoint: creating an endpoint named %s", endpoint)
@@ -278,18 +247,12 @@ func (e *External) CreateEndpoint(c echo.Context) error {
 	}
 
 	if opts.IP == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("IP field is blank"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "IP field is blank")
 	}
 	log.Printf("CreateEndpoint: ip for endpoint %s will be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("Port field is blank"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "Port field is blank")
 	}
 	log.Printf("CreateEndpoint: port for endpoint %s will be %d", endpoint, opts.Port)
 
@@ -331,10 +294,7 @@ func (e *External) UpdateEndpoint(c echo.Context) error {
 	endpoint := c.Param("name")
 
 	if endpoint == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing endpoint name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing endpoint name in the URL")
 	}
 
 	log.Printf("UpdateEndpoint: updating endpoint %s", endpoint)
@@ -345,18 +305,12 @@ func (e *External) UpdateEndpoint(c echo.Context) error {
 	}
 
 	if opts.IP == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("IP field is blank"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "IP field is blank")
 	}
 	log.Printf("UpdateEndpoint: ip for endpoint %s should be %s", endpoint, opts.IP)
 
 	if opts.Port == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("Port field is blank"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "Port field is blank")
 	}
 	log.Printf("UpdateEndpoint: port for endpoint %s should be %d", endpoint, opts.Port)
 
@@ -403,10 +357,7 @@ func (e *External) GetEndpoint(c echo.Context) error {
 
 	endpoint = c.Param("name")
 	if endpoint == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing endpoint name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing endpoint name in the URL")
 	}
 
 	log.Printf("GetEndpoint: getting info on endpoint %s", endpoint)
@@ -437,10 +388,7 @@ func (e *External) DeleteEndpoint(c echo.Context) error {
 
 	endpoint = c.Param("name")
 	if endpoint == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing endpoint name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing endpoint name in the URL")
 	}
 
 	log.Printf("DeleteEndpoint: deleting endpoint %s", endpoint)
@@ -469,10 +417,7 @@ func (e *External) CreateIngress(c echo.Context) error {
 
 	ingress = c.Param("name")
 	if ingress == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing ingress name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing ingress name in the URL")
 	}
 
 	log.Printf("CreateIngress: create an ingress named %s", ingress)
@@ -483,18 +428,12 @@ func (e *External) CreateIngress(c echo.Context) error {
 	}
 
 	if opts.Service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service from the ingress JSON"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service from the ingress JSON")
 	}
 	log.Printf("CreateIngress: service name for ingress %s will be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("Port was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "Port was either not set or set to 0")
 	}
 	log.Printf("CreateIngress: port for ingress %s will be %d", ingress, opts.Port)
 
@@ -538,10 +477,7 @@ func (e *External) UpdateIngress(c echo.Context) error {
 
 	ingress = c.Param("name")
 	if ingress == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing ingress name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing ingress name in the URL")
 	}
 
 	log.Printf("UpdateIngress: updating ingress %s", ingress)
@@ -552,18 +488,12 @@ func (e *External) UpdateIngress(c echo.Context) error {
 	}
 
 	if opts.Service == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing service from the ingress JSON"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing service from the ingress JSON")
 	}
 	log.Printf("UpdateIngress: service for ingress %s should be %s", ingress, opts.Service)
 
 	if opts.Port == 0 {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("Port was either not set or set to 0"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "Port was either not set or set to 0")
 	}
 	log.Printf("UpdateIngress: port for ingress %s should be %d", ingress, opts.Port)
 
@@ -607,10 +537,7 @@ func (e *External) GetIngress(c echo.Context) error {
 
 	ingress = c.Param("name")
 	if ingress == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing ingress name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing ingress name in the URL")
 	}
 
 	log.Printf("GetIngress: getting ingress %s", ingress)
@@ -641,10 +568,7 @@ func (e *External) DeleteIngress(c echo.Context) error {
 
 	ingress = c.Param("name")
 	if ingress == "" {
-		return &echo.HTTPError{
-			Code:     http.StatusBadRequest,
-			Internal: errors.New("missing ingress name in the URL"),
-		}
+		return echo.NewHTTPError(http.StatusBadRequest, "missing ingress name in the URL")
 	}
 
 	log.Printf("DeleteIngress: deleting ingress %s", ingress)
