@@ -55,6 +55,7 @@ func main() {
 		viceDefaultBackendServicePort = flag.Int("vice-default-backend-port", 80, "The port for the default backend for VICE ingresses")
 		getAnalysisIDService          = flag.String("--get-analysis-id-service", "get-analysis-id", "The service name for the service that provides analysis ID lookups")
 		checkResourceAccessService    = flag.String("--check-resource-access-service", "check-resource-access", "The name of the service that validates whether a user can access a resource")
+		userSuffix                    = flag.String("user-suffix", "@iplantcollaborative.org", "The user suffix for all users in the DE installation")
 	)
 
 	// if cluster is set, then
@@ -178,6 +179,7 @@ func main() {
 		VICEBackendNamespace:          cfg.GetString("vice.backend-namespace"),
 		AppsServiceBaseURL:            appsServiceBaseURL,
 		db:                            db,
+		UserSuffix:                    *userSuffix,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)

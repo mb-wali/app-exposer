@@ -10,11 +10,7 @@ import (
 	"testing"
 
 	"github.com/cyverse-de/app-exposer/external"
-	"github.com/gorilla/mux"
-	v1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"github.com/labstack/echo/v4"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -48,189 +44,6 @@ func TestNewExposerApp(t *testing.T) {
 	if testapp.router == nil {
 		t.Error("router is nil")
 	}
-
-	reqs := [][]string{
-		{"GET", "/", ""},
-		{"POST", "/service/test", "test"},
-		{"PUT", "/service/test", "test"},
-		{"GET", "/service/test", "test"},
-		{"DELETE", "/service/test", "test"},
-		{"POST", "/endpoint/test", "test"},
-		{"PUT", "/endpoint/test", "test"},
-		{"GET", "/endpoint/test", "test"},
-		{"DELETE", "/endpoint/test", "test"},
-		{"POST", "/ingress/test", "test"},
-		{"PUT", "/ingress/test", "test"},
-		{"GET", "/ingress/test", "test"},
-		{"DELETE", "/ingress/test", "test"},
-	}
-
-	for _, fields := range reqs {
-		method := fields[0]
-		path := fields[1]
-		name := fields[2]
-		req, err := http.NewRequest(method, path, nil)
-		if err != nil {
-			t.Error(err)
-		}
-
-		rm := &mux.RouteMatch{}
-		if !testapp.router.Match(req, rm) {
-			t.Errorf("%s %s does not match", method, path)
-		}
-
-		if name != "" {
-			actual, ok := rm.Vars["name"]
-			if !ok {
-				t.Errorf("vars did not have %s as a key", name)
-			}
-			if actual != name {
-				t.Errorf("name was %s, not %s", actual, name)
-			}
-		}
-	}
-}
-
-func TestWriteService(t *testing.T) {
-	expected := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-name",
-			Namespace: "test-namespace",
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port:       60000,
-					TargetPort: intstr.FromInt(60001),
-				},
-			},
-		},
-	}
-	writer := httptest.NewRecorder()
-
-	external.WriteService(expected, writer)
-
-	resp := writer.Result()
-	rbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
-	actual := &external.ServiceOptions{}
-	err = json.Unmarshal(rbody, actual)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if actual.Name != expected.Name {
-		t.Errorf("service name was %s, not %s", actual.Name, expected.Name)
-	}
-
-	if actual.Namespace != expected.Namespace {
-		t.Errorf("service namespace was %s, not %s", actual.Namespace, expected.Namespace)
-	}
-
-	if actual.ListenPort != expected.Spec.Ports[0].Port {
-		t.Errorf("service listen port was %d, not %d", actual.ListenPort, expected.Spec.Ports[0].Port)
-	}
-
-	if actual.TargetPort != expected.Spec.Ports[0].TargetPort.IntValue() {
-		t.Errorf("service target port was %d, not %d", actual.TargetPort, expected.Spec.Ports[0].TargetPort.IntValue())
-	}
-}
-
-func TestWriteEndpoints(t *testing.T) {
-	expected := &v1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-name",
-			Namespace: "test-namespace",
-		},
-		Subsets: []v1.EndpointSubset{
-			{
-				Addresses: []v1.EndpointAddress{{IP: "1.1.1.1"}},
-				Ports:     []v1.EndpointPort{{Port: 60000}},
-			},
-		},
-	}
-
-	writer := httptest.NewRecorder()
-
-	external.WriteEndpoint(expected, writer)
-
-	resp := writer.Result()
-	rbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
-	actual := &external.EndpointOptions{}
-	err = json.Unmarshal(rbody, actual)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if actual.Name != expected.Name {
-		t.Errorf("endpoint name was %s, not %s", actual.Name, expected.Name)
-	}
-
-	if actual.Namespace != expected.Namespace {
-		t.Errorf("endpoint namespace was %s, not %s", actual.Namespace, expected.Namespace)
-	}
-
-	if actual.IP != expected.Subsets[0].Addresses[0].IP {
-		t.Errorf("endpoint IP was %s, not %s", actual.IP, expected.Subsets[0].Addresses[0].IP)
-	}
-
-	if actual.Port != expected.Subsets[0].Ports[0].Port {
-		t.Errorf("endpoint port was %d, not %d", actual.Port, expected.Subsets[0].Ports[0].Port)
-	}
-}
-
-func TestWriteIngress(t *testing.T) {
-	expected := &extv1beta1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-name",
-			Namespace: "test-namespace",
-		},
-		Spec: extv1beta1.IngressSpec{
-			Backend: &extv1beta1.IngressBackend{
-				ServiceName: "test-service",
-				ServicePort: intstr.FromInt(60000),
-			},
-		},
-	}
-
-	writer := httptest.NewRecorder()
-
-	external.WriteIngress(expected, writer)
-
-	resp := writer.Result()
-	rbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error(err)
-	}
-
-	actual := &external.IngressOptions{}
-	err = json.Unmarshal(rbody, actual)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if actual.Name != expected.Name {
-		t.Errorf("ingress name was %s, not %s", actual.Name, expected.Name)
-	}
-
-	if actual.Namespace != expected.Namespace {
-		t.Errorf("ingress namespace was %s, not %s", actual.Namespace, expected.Namespace)
-	}
-
-	if actual.Service != expected.Spec.Backend.ServiceName {
-		t.Errorf("ingress service name was %s, not %s", actual.Service, expected.Spec.Backend.ServiceName)
-	}
-
-	if actual.Port != expected.Spec.Backend.ServicePort.IntValue() {
-		t.Errorf("ingress service port was %d, not %d", actual.Port, expected.Spec.Backend.ServicePort.IntValue())
-	}
 }
 
 func TestCreateService(t *testing.T) {
@@ -256,6 +69,7 @@ func TestCreateService(t *testing.T) {
 
 	expectedName := "test-name"
 	req := httptest.NewRequest("POST", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -313,6 +127,7 @@ func createAppLoadService(ns, name string) (*ExposerApp, error) {
 	}
 
 	addreq, err := http.NewRequest("POST", fmt.Sprintf("/service/%s", name), bytes.NewReader(createJSON))
+	addreq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +159,7 @@ func TestUpdateService(t *testing.T) {
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("/service/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		t.Error(err)
 	}
@@ -489,6 +305,7 @@ func TestCreateEndpoint(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("/endpoint/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -541,6 +358,7 @@ func createAppLoadEndpoint(ns, name string) (*ExposerApp, error) {
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("/endpoint/%s", name), bytes.NewReader(createJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -574,6 +392,7 @@ func TestUpdateEndpoint(t *testing.T) {
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("/endpoint/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	if err != nil {
 		t.Error(err)
 	}
@@ -710,6 +529,7 @@ func TestCreateIngress(t *testing.T) {
 	}
 
 	req := httptest.NewRequest("POST", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	w := httptest.NewRecorder()
 
 	testapp.router.ServeHTTP(w, req)
@@ -761,14 +581,16 @@ func createAppLoadIngress(ns, name string) (*ExposerApp, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("/ingress/%s", name), bytes.NewReader(createJSON))
-	if err != nil {
+	req := httptest.NewRequest("POST", fmt.Sprintf("/ingress/%s", name), bytes.NewReader(createJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	cw := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, cw)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(name)
+	if err = testapp.external.CreateIngress(c); err != nil {
 		return nil, err
 	}
-
-	cw := httptest.NewRecorder()
-
-	testapp.router.ServeHTTP(cw, req)
 
 	return testapp, nil
 }
@@ -794,14 +616,18 @@ func TestUpdateIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
-	if err != nil {
-		t.Error(err)
-	}
+	req := httptest.NewRequest("PUT", fmt.Sprintf("/ingress/%s", expectedName), bytes.NewReader(expectedJSON))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
 	w := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, w)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(expectedName)
 
-	testapp.router.ServeHTTP(w, req)
+	if err = testapp.external.UpdateIngress(c); err != nil {
+		t.Error(err)
+	}
 
 	resp := w.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)
@@ -843,14 +669,18 @@ func TestGetIngress(t *testing.T) {
 		t.Error(err)
 	}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("/ingress/%s", expectedName), nil)
+	req := httptest.NewRequest("GET", fmt.Sprintf("/ingress/%s", expectedName), nil)
+
+	w := httptest.NewRecorder()
+	c := testapp.router.NewContext(req, w)
+	c.SetPath("/ingress/:name")
+	c.SetParamNames("name")
+	c.SetParamValues(expectedName)
+
+	err = testapp.external.GetIngress(c)
 	if err != nil {
 		t.Error(err)
 	}
-
-	w := httptest.NewRecorder()
-
-	testapp.router.ServeHTTP(w, req)
 
 	resp := w.Result()
 	rbody, err := ioutil.ReadAll(resp.Body)

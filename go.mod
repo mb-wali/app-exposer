@@ -12,14 +12,19 @@ require (
 	github.com/gorilla/context v0.0.0-20160226214623-1ea25387ff6f // indirect
 	github.com/gorilla/mux v1.6.1
 	github.com/gosimple/slug v1.5.0
+	github.com/labstack/echo v3.3.10+incompatible
+	github.com/labstack/echo/v4 v4.1.17
 	github.com/lib/pq v1.2.0
+	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/pkg/errors v0.8.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/sirupsen/logrus v1.4.1
 	github.com/spf13/viper v1.3.2
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
+	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
+	golang.org/x/sys v0.0.0-20201109165425-215b40eba54c // indirect
+	golang.org/x/text v0.3.4 // indirect
 	gopkg.in/cyverse-de/model.v4 v4.0.0-20190314231011-f13a2e5cf151
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
