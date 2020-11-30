@@ -7,13 +7,15 @@ import (
 
 // Apps provides an API for accessing information about apps.
 type Apps struct {
-	DB *sql.DB
+	DB         *sql.DB
+	UserSuffix string
 }
 
 // NewApps allocates a new *Apps instance.
-func NewApps(db *sql.DB) *Apps {
+func NewApps(db *sql.DB, userSuffix string) *Apps {
 	return &Apps{
-		DB: db,
+		DB:         db,
+		UserSuffix: userSuffix,
 	}
 }
 
@@ -106,8 +108,6 @@ const userByAnalysisIDQuery = `
 	 WHERE j.id = $1
 `
 
-const userSuffix = "@iplantcollaborative.org"
-
 // GetUserByAnalysisID returns the username and id of the user that launched the analysis.
 func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
 	var username, id string
@@ -115,8 +115,8 @@ func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if strings.HasSuffix(username, userSuffix) {
-		username = strings.TrimSuffix(username, userSuffix)
+	if strings.HasSuffix(username, a.UserSuffix) {
+		username = strings.TrimSuffix(username, a.UserSuffix)
 	}
 	return username, id, nil
 }

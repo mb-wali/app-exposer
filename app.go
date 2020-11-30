@@ -43,6 +43,7 @@ type ExposerAppInit struct {
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
 	db                            *sql.DB
+	UserSuffix                    string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -63,6 +64,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		VICEBackendNamespace:          init.VICEBackendNamespace,
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
 		JobStatusURL:                  init.JobStatusURL,
+		UserSuffix:                    init.UserSuffix,
 	}
 
 	app := &ExposerApp{
