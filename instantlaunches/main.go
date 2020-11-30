@@ -1,3 +1,20 @@
+// Package classification instantlaunches
+//
+// Documentation for the instant launches API.
+//
+//		Schemes: http
+//		BasePath: /instantlaunches
+//		Version: 1.0.0
+//		Host: app-exposer
+//
+//		Consumes:
+//		- application/json
+//
+//		Produces:
+//		- application/json
+//
+// swagger:meta
+
 package instantlaunches
 
 import (
@@ -48,8 +65,21 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 		Group: group,
 	}
 
+	// swagger:route get /default instantlaunches defaults listDefaults
 	instance.Group.GET("/default", instance.GetListDefaults)
+
+	// swagger:route get /default/latest instantlaunches defaults latestDefaults
 	instance.Group.GET("/default/latest", instance.GetLatestDefaults)
+
+	// swagger:route get /default/{version} instantlaunches defaults defaultsByVersion
 	instance.Group.GET("/default/:version", instance.GetDefaultsByVersion)
 	return instance
+}
+
+// swagger:parameters defaultsByVersion
+type defaultsByVersionParams struct {
+	// in: path
+	// required: true
+	// minimum: 0
+	Version int
 }
