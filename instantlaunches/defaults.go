@@ -8,13 +8,25 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// DefaultInstantLaunchMapping contains the system level set of default pattern
-// to instant launch mappings.
+// A DefaultInstantLaunchMapping is a global default mapping of files to instant launches.
 //
 // swagger:response defaultMapping
+//
+//		In: body
 type DefaultInstantLaunchMapping struct {
-	ID      string
+	// Unique identifier.
+	//
+	// Required: true
+	ID string
+
+	// The version of the mapping format.
+	//
+	// Required: true
 	Version string // determines the format.
+
+	// The mapping from files to instant launches.
+	//
+	// Required: true
 	Mapping InstantLaunchMapping
 }
 
@@ -230,12 +242,13 @@ const listAllDefaultsQuery = `
       FROM default_instant_launches def;
 `
 
-// ListAllDefaultsResponse godoc
-//
-// Response body format for listing all of the default mappings.
+// A ListAllDefaultsResponse is the response body for listing all of the default mappings.
 //
 // swagger:response listAllDefaults
+//
+//		In: Body
 type ListAllDefaultsResponse struct {
+	// The defaults being listed.
 	Defaults []DefaultInstantLaunchMapping `json:"defaults"`
 }
 

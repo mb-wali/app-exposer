@@ -11,8 +11,7 @@
           "http"
         ],
         "tags": [
-          "instantlaunches",
-          "defaults"
+          "instantlaunches"
         ],
         "summary": "Lists the global defaults for mapping files to instant launches.",
         "operationId": "listDefaults",
@@ -35,8 +34,7 @@
           "http"
         ],
         "tags": [
-          "instantlaunches",
-          "defaults"
+          "instantlaunches"
         ],
         "summary": "Gets the latest default instant launch mapping.",
         "operationId": "latestDefaults",
@@ -59,8 +57,7 @@
           "http"
         ],
         "tags": [
-          "instantlaunches",
-          "defaults"
+          "instantlaunches"
         ],
         "summary": "Gets the default instant launch mapping at the specified version.",
         "operationId": "defaultsByVersion",
@@ -87,16 +84,23 @@
   },
   "definitions": {
     "DefaultInstantLaunchMapping": {
-      "description": "DefaultInstantLaunchMapping contains the system level set of default pattern\nto instant launch mappings.",
       "type": "object",
+      "title": "A DefaultInstantLaunchMapping is a global default mapping of files to instant launches.",
+      "required": [
+        "ID",
+        "Version",
+        "Mapping"
+      ],
       "properties": {
         "ID": {
+          "description": "Unique identifier.",
           "type": "string"
         },
         "Mapping": {
           "$ref": "#/definitions/InstantLaunchMapping"
         },
         "Version": {
+          "description": "The version of the mapping format.",
           "type": "string"
         }
       },
@@ -158,17 +162,21 @@
   },
   "responses": {
     "defaultMapping": {
-      "description": "DefaultInstantLaunchMapping contains the system level set of default pattern\nto instant launch mappings.",
+      "description": "A DefaultInstantLaunchMapping is a global default mapping of files to instant launches.",
       "schema": {
         "$ref": "#/definitions/InstantLaunchMapping"
       },
       "headers": {
         "ID": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique identifier.\n\nRequired: true"
         },
-        "Mapping": {},
+        "Mapping": {
+          "description": "The mapping from files to instant launches.\n\nRequired: true"
+        },
         "Version": {
-          "type": "string"
+          "type": "string",
+          "description": "The version of the mapping format.\n\nRequired: true"
         }
       }
     },
@@ -191,13 +199,14 @@
       }
     },
     "listAllDefaults": {
-      "description": "ListAllDefaultsResponse godoc\n\nResponse body format for listing all of the default mappings.",
+      "description": "A ListAllDefaultsResponse is the response body for listing all of the default mappings.",
       "headers": {
         "defaults": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/DefaultInstantLaunchMapping"
-          }
+          },
+          "description": "The defaults being listed."
         }
       }
     }
