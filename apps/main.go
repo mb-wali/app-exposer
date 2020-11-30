@@ -14,7 +14,7 @@ type Apps struct {
 }
 
 // NewApps allocates a new *Apps instance.
-func NewApps(db *sqlx.DB) *Apps {
+func NewApps(db *sqlx.DB, userSuffix string) *Apps {
 	return &Apps{
 		DB:         db,
 		UserSuffix: userSuffix,
