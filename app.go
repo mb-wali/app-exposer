@@ -89,6 +89,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	}
 
 	app.router.GET("/", app.Greeting).Name = "greeting"
+	app.router.Static("/docs", "./docs")
 
 	vice := app.router.Group("/vice")
 	vice.POST("/launch", app.internal.VICELaunchApp)

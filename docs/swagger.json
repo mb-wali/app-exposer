@@ -1,0 +1,205 @@
+{
+  "swagger": "2.0",
+  "info": {},
+  "paths": {
+    "/instantlaunches/default": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "instantlaunches",
+          "defaults"
+        ],
+        "summary": "Lists the global defaults for mapping files to instant launches.",
+        "operationId": "listDefaults",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/listAllDefaults"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/instantlaunches/default/latest": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "instantlaunches",
+          "defaults"
+        ],
+        "summary": "Gets the latest default instant launch mapping.",
+        "operationId": "latestDefaults",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/defaultMapping"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    },
+    "/instantlaunches/default/{version}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "instantlaunches",
+          "defaults"
+        ],
+        "summary": "Gets the default instant launch mapping at the specified version.",
+        "operationId": "defaultsByVersion",
+        "parameters": [
+          {
+            "minimum": 0,
+            "type": "integer",
+            "format": "int64",
+            "name": "Version",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/defaultMapping"
+          },
+          "default": {
+            "$ref": "#/responses/errorResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "DefaultInstantLaunchMapping": {
+      "description": "DefaultInstantLaunchMapping contains the system level set of default pattern\nto instant launch mappings.",
+      "type": "object",
+      "properties": {
+        "ID": {
+          "type": "string"
+        },
+        "Mapping": {
+          "$ref": "#/definitions/InstantLaunchMapping"
+        },
+        "Version": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/cyverse-de/app-exposer/instantlaunches"
+    },
+    "InstantLaunch": {
+      "type": "object",
+      "title": "InstantLaunch contains the information needed to instantly launch an app.",
+      "properties": {
+        "added_by": {
+          "type": "string",
+          "x-go-name": "AddedBy"
+        },
+        "added_on": {
+          "type": "string",
+          "x-go-name": "AddedOn"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "quick_launch_id": {
+          "type": "string",
+          "x-go-name": "QuickLaunchID"
+        }
+      },
+      "x-go-package": "github.com/cyverse-de/app-exposer/instantlaunches"
+    },
+    "InstantLaunchMapping": {
+      "type": "object",
+      "title": "InstantLaunchMapping maps a pattern string to an InstantLaunchSelector.",
+      "additionalProperties": {
+        "$ref": "#/definitions/InstantLaunchSelector"
+      },
+      "x-go-package": "github.com/cyverse-de/app-exposer/instantlaunches"
+    },
+    "InstantLaunchSelector": {
+      "description": "InstantLaunchSelector defines the default and compatible instant launches\nfor a file pattern.",
+      "type": "object",
+      "properties": {
+        "Compatible": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/InstantLaunch"
+          }
+        },
+        "Default": {
+          "$ref": "#/definitions/InstantLaunch"
+        },
+        "Kind": {
+          "type": "string"
+        },
+        "Pattern": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.com/cyverse-de/app-exposer/instantlaunches"
+    }
+  },
+  "responses": {
+    "defaultMapping": {
+      "description": "DefaultInstantLaunchMapping contains the system level set of default pattern\nto instant launch mappings.",
+      "schema": {
+        "$ref": "#/definitions/InstantLaunchMapping"
+      },
+      "headers": {
+        "ID": {
+          "type": "string"
+        },
+        "Mapping": {},
+        "Version": {
+          "type": "string"
+        }
+      }
+    },
+    "errorResponse": {
+      "description": "ErrorResponse represents an HTTP response body containing error information. This type implements\nthe error interface so that it can be returned as an error from from existing functions.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        }
+      },
+      "headers": {
+        "details": {},
+        "error_code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "listAllDefaults": {
+      "description": "ListAllDefaultsResponse godoc\n\nResponse body format for listing all of the default mappings.",
+      "headers": {
+        "defaults": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DefaultInstantLaunchMapping"
+          }
+        }
+      }
+    }
+  }
+}
