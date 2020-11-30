@@ -5,7 +5,6 @@
 //		Schemes: http
 //		BasePath: /instantlaunches
 //		Version: 1.0.0
-//		Host: 127.0.0.1
 //
 //		Consumes:
 //		- application/json
@@ -65,7 +64,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 		Group: group,
 	}
 
-	// swagger:route get /instantlaunches/default instantlaunches defaults listDefaults
+	// swagger:route get /instantlaunches/default instantlaunches listDefaults
 	//
 	// Lists the global defaults for mapping files to instant launches.
 	//
@@ -81,7 +80,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//			200: listAllDefaults
 	instance.Group.GET("/default", instance.GetListDefaults)
 
-	// swagger:route get /instantlaunches/default/latest instantlaunches defaults latestDefaults
+	// swagger:route get /instantlaunches/default/latest instantlaunches latestDefaults
 	//
 	// Gets the latest default instant launch mapping.
 	//
@@ -97,7 +96,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//			200: defaultMapping
 	instance.Group.GET("/default/latest", instance.GetLatestDefaults)
 
-	// swagger:route get /instantlaunches/default/{version} instantlaunches defaults defaultsByVersion
+	// swagger:route get /instantlaunches/default/{version} instantlaunches defaultsByVersion
 	//
 	// Gets the default instant launch mapping at the specified version.
 	//
