@@ -181,7 +181,7 @@ func (e *External) GetService(c echo.Context) error {
 
 	svc, err := e.ServiceController.Get(service)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Message)
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	log.Printf("GetService: finished getting info for service %s", service)
