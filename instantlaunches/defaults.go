@@ -10,6 +10,8 @@ import (
 
 // DefaultInstantLaunchMapping contains the system level set of default pattern
 // to instant launch mappings.
+//
+// swagger:response defaultMapping
 type DefaultInstantLaunchMapping struct {
 	ID      string
 	Version string // determines the format.
@@ -228,10 +230,19 @@ const listAllDefaultsQuery = `
       FROM default_instant_launches def;
 `
 
+// ListAllDefaultsResponse godoc
+//
+// Response body format for listing all of the default mappings.
+//
+// swagger:response listAllDefaults
+type ListAllDefaultsResponse struct {
+	Defaults []DefaultInstantLaunchMapping `json:"defaults"`
+}
+
 // ListAllDefaults returns a list of all of the default instant launches, including their version.
-func (a *App) ListAllDefaults() ([]DefaultInstantLaunchMapping, error) {
-	m := []DefaultInstantLaunchMapping{}
-	err := a.DB.Select(&m, listAllDefaultsQuery)
+func (a *App) ListAllDefaults() (ListAllDefaultsResponse, error) {
+	m := ListAllDefaultsResponse{Defaults: []DefaultInstantLaunchMapping{}}
+	err := a.DB.Select(&m.Defaults, listAllDefaultsQuery)
 	return m, err
 }
 

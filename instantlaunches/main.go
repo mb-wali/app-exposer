@@ -66,12 +66,51 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	}
 
 	// swagger:route get /default instantlaunches defaults listDefaults
+	//
+	// Lists the global defaults for mapping files to instant launches.
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: listAllDefaults
 	instance.Group.GET("/default", instance.GetListDefaults)
 
 	// swagger:route get /default/latest instantlaunches defaults latestDefaults
+	//
+	// Gets the latest default instant launch mapping.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
 	instance.Group.GET("/default/latest", instance.GetLatestDefaults)
 
 	// swagger:route get /default/{version} instantlaunches defaults defaultsByVersion
+	//
+	// Gets the default instant launch mapping at the specified version.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
 	instance.Group.GET("/default/:version", instance.GetDefaultsByVersion)
 	return instance
 }
