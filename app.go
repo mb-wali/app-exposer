@@ -92,6 +92,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	vice.POST("/launch", app.internal.VICELaunchApp)
 	vice.POST("/apply-labels", app.internal.ApplyAsyncLabelsHandler)
 	vice.GET("/async-data", app.internal.GetAsyncData)
+	vice.GET("/listing", app.internal.FilterableResources)
 	vice.POST("/:id/download-input-files", app.internal.VICETriggerDownloads)
 	vice.POST("/:id/save-output-files", app.internal.VICETriggerUploads)
 	vice.POST("/:id/exit", app.internal.VICEExit)
