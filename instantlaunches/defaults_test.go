@@ -26,6 +26,8 @@ func SetupApp() (*App, sqlmock.Sqlmock, error) {
 }
 
 func TestLatestDefaults(t *testing.T) {
+	assert := assert.New(t)
+
 	app, mock, err := SetupApp()
 	if err != nil {
 		t.Fatalf("error setting up app: %s", err)
@@ -38,11 +40,7 @@ func TestLatestDefaults(t *testing.T) {
 	mock.ExpectQuery(latestDefaultsQuery).WillReturnRows(rows)
 
 	mapping, err := app.LatestDefaults()
-	if err != nil {
-		t.Errorf("error getting latest defaults: %s", err)
-	}
-
-	assert := assert.New(t)
+	assert.NoError(err, "error from LatestDefaults should be nil")
 	assert.Equal("0", mapping.ID, "id should be 0")
 	assert.Equal("0", mapping.Version, "version should be 0")
 	assert.Equal(0, len(mapping.Mapping), "mapping should be empty")
