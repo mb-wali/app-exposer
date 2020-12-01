@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -39,17 +41,10 @@ func TestLatestDefaults(t *testing.T) {
 	if err != nil {
 		t.Errorf("error getting latest defaults: %s", err)
 	}
-	if mapping.ID != "0" {
-		t.Errorf("id was %s not 0", mapping.ID)
-	}
-	if mapping.Version != "0" {
-		t.Errorf("version was %s not 0", mapping.Version)
-	}
-	if len(mapping.Mapping) != 0 {
-		t.Errorf("num items in map was %d, not 0", len(mapping.Mapping))
-	}
 
-	if err = mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("expectations were not met: %s", err)
-	}
+	assert := assert.New(t)
+	assert.Equal("0", mapping.ID, "id should be 0")
+	assert.Equal("0", mapping.Version, "version should be 0")
+	assert.Equal(0, len(mapping.Mapping), "mapping should be empty")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
