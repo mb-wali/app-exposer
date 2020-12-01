@@ -53,7 +53,7 @@ const deleteLatestDefaultsQuery = `
 	DELETE FROM ONLY default_instant_launches AS def
 	WHERE def.version = (
 		SELECT max(version)
-		FROm default_instant_launches
+		FROM default_instant_launches
 	);
 `
 
@@ -81,21 +81,21 @@ func (a *App) GetLatestDefaults(c echo.Context) error {
 }
 
 // UpdateLatestDefaults sets a new value for the latest version of the defaults.
-func (a *App) UpdateLatestDefaults(newjson echo.Map) (echo.Map, error) {
+func (a *App) UpdateLatestDefaults(newjson *InstantLaunchMapping) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(newjson)
 	if err != nil {
 		return nil, err
 	}
-	retval := echo.Map{}
-	err = a.DB.QueryRowx(updateLatestDefaultsQuery, marshalled).Scan(&retval)
+	retval := &InstantLaunchMapping{}
+	err = a.DB.QueryRowx(updateLatestDefaultsQuery, marshalled).Scan(retval)
 	return retval, err
 }
 
 // UpdateLatestDefaultsHandler is the echo handler for the HTTP API that updates
 // the latest defaults mapping.
 func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
-	newdefaults := echo.Map{}
-	err := c.Bind(&newdefaults)
+	newdefaults := &InstantLaunchMapping{}
+	err := c.Bind(newdefaults)
 	if err != nil {
 		return err
 	}
