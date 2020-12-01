@@ -1,7 +1,10 @@
 package instantlaunches
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,10 +14,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func SetupApp() (*App, sqlmock.Sqlmock, error) {
+func SetupApp() (*App, sqlmock.Sqlmock, *echo.Echo, error) {
 	mockdb, mock, err := sqlmock.New()
 	if err != nil {
-		return nil, mock, fmt.Errorf("error connecting to mock database %s", err)
+		return nil, mock, nil, fmt.Errorf("error connecting to mock database %s", err)
 	}
 
 	sqlxMockDB := sqlx.NewDb(mockdb, "sqlmock")
@@ -22,13 +25,13 @@ func SetupApp() (*App, sqlmock.Sqlmock, error) {
 	g := e.Group("/instantlaunches")
 
 	app := New(sqlxMockDB, g)
-	return app, mock, nil
+	return app, mock, e, nil
 }
 
 func TestLatestDefaults(t *testing.T) {
 	assert := assert.New(t)
 
-	app, mock, err := SetupApp()
+	app, mock, _, err := SetupApp()
 	if err != nil {
 		t.Fatalf("error setting up app: %s", err)
 	}
@@ -44,5 +47,60 @@ func TestLatestDefaults(t *testing.T) {
 	assert.Equal("0", mapping.ID, "id should be 0")
 	assert.Equal("0", mapping.Version, "version should be 0")
 	assert.Equal(0, len(mapping.Mapping), "mapping should be empty")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
+
+func TestGetLatestDefaults(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := map[string]*InstantLaunchSelector{
+		"one": &InstantLaunchSelector{
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+	v, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("error unmarshalling expected value: %s", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"id", "version", "mapping"}).
+		AddRow("0", "0", v)
+
+	mock.ExpectQuery(latestDefaultsQuery).WillReturnRows(rows)
+
+	req, err := http.NewRequest("GET", "http://localhost/instantlaunches/defaults", nil)
+	if err != nil {
+		t.Fatalf("error creating new http request: %s", err)
+	}
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+
+	err = app.GetLatestDefaults(c)
+	if assert.NoError(err, "error from GetLatestDefaults should be nil") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &DefaultInstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), actual)
+		if assert.NoError(err, "should be able to parse body") {
+			assert.Equal("0", actual.ID, "id should be 0")
+			assert.Equal("0", actual.Version, "version should be 0")
+			assert.Equal(expected["one"], actual.Mapping["one"], "mapping should return expected value")
+		}
+	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
