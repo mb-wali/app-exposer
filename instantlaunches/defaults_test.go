@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -143,5 +144,47 @@ func TestUpdateLatestDefaults(t *testing.T) {
 	assert.NoError(err, "error from UpdateLatestDefaults should be nil")
 	assert.True(reflect.DeepEqual(expected, mapping), "mappings should match")
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
+func TestUpdateLatestDefaultsHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("error unmarshalling expected value: %s", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).
+		AddRow(v)
+
+	mock.ExpectQuery("UPDATE ONLY default_instant_launches").WillReturnRows(rows)
+
+	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches/defaults", bytes.NewReader(v))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+
+	err = app.UpdateLatestDefaultsHandler(c)
+	assert.NoError(err)
 }
