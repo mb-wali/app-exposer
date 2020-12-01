@@ -3,6 +3,7 @@ module github.com/cyverse-de/app-exposer
 go 1.12
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/cyverse-de/configurate v0.0.0-20190318152107-8f767cb828d9
 	github.com/cyverse-de/job-templates v5.4.0+incompatible
 	github.com/cyverse-de/messaging v6.0.0+incompatible

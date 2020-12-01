@@ -17,17 +17,17 @@ type DefaultInstantLaunchMapping struct {
 	// Unique identifier.
 	//
 	// Required: true
-	ID string
+	ID string `db:"id"`
 
 	// The version of the mapping format.
 	//
 	// Required: true
-	Version string // determines the format.
+	Version string `db:"version"` // determines the format.
 
 	// The mapping from files to instant launches.
 	//
 	// Required: true
-	Mapping InstantLaunchMapping
+	Mapping InstantLaunchMapping `db:"mapping"`
 }
 
 const latestDefaultsQuery = `

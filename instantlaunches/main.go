@@ -17,6 +17,10 @@
 package instantlaunches
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
@@ -33,14 +37,33 @@ type InstantLaunch struct {
 // InstantLaunchSelector defines the default and compatible instant launches
 // for a file pattern.
 type InstantLaunchSelector struct {
-	Pattern    string
-	Kind       string
-	Default    InstantLaunch
-	Compatible []InstantLaunch
+	Pattern    string          `json:"pattern"`
+	Kind       string          `json:"kind"`
+	Default    InstantLaunch   `json:"default"`
+	Compatible []InstantLaunch `json:"compatible"`
 }
 
 // InstantLaunchMapping maps a pattern string to an InstantLaunchSelector.
 type InstantLaunchMapping map[string]*InstantLaunchSelector
+
+// Scan implements the Scan function for database values.
+func (i InstantLaunchMapping) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		json.Unmarshal(v, &i)
+		return nil
+	case string:
+		json.Unmarshal([]byte(v), &i)
+		return nil
+	default:
+		return fmt.Errorf("unsupported type: %T", v)
+	}
+}
+
+// Value implements the Value() function for database values.
+func (i InstantLaunchMapping) Value() (driver.Value, error) {
+	return json.Marshal(&i)
+}
 
 // UserInstantLaunchMapping contains the user-specific set of pattern-to-instant-launch
 // mappings that override the system-level default set of mappings.
