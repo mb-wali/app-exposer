@@ -427,3 +427,43 @@ func TestGetDefaultsByVersion(t *testing.T) {
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestUpdateDefaultsByVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Kind:    "glob",
+			Pattern: "*",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "admin",
+				AddedOn:       "today",
+			},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "should not error")
+
+	mock.ExpectQuery("UPDATE ONLY default_instant_launches AS def").
+		WithArgs(v, 0).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"instant_launches"}).
+				AddRow(v),
+		)
+
+	actual, err := app.UpdateDefaultsByVersion(expected, 0)
+	if assert.NoError(err, "should not error") {
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+
+}

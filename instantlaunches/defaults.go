@@ -188,12 +188,12 @@ func (a *App) GetDefaultsByVersion(c echo.Context) error {
 }
 
 // UpdateDefaultsByVersion updates the default mapping for a specific version.
-func (a *App) UpdateDefaultsByVersion(newjson echo.Map, version int) (echo.Map, error) {
+func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(newjson)
 	if err != nil {
 		return nil, err
 	}
-	updated := echo.Map{}
+	updated := &InstantLaunchMapping{}
 	err = a.DB.QueryRowx(updateDefaultsByVersionQuery, marshalled, version).Scan(updated)
 	return updated, err
 }
@@ -205,8 +205,8 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	newvalue := echo.Map{}
-	if err = c.Bind(&newvalue); err != nil {
+	newvalue := &InstantLaunchMapping{}
+	if err = c.Bind(newvalue); err != nil {
 		return err
 	}
 	updated, err := a.UpdateDefaultsByVersion(newvalue, int(version))
