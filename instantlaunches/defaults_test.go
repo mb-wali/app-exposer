@@ -370,5 +370,60 @@ func TestDefaultsByVersion(t *testing.T) {
 		assert.True(reflect.DeepEqual(expected, actual))
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
+func TestGetDefaultsByVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &DefaultInstantLaunchMapping{
+		ID:      "0",
+		Version: "0",
+		Mapping: map[string]*InstantLaunchSelector{
+			"one": &InstantLaunchSelector{
+				Kind:    "glob",
+				Pattern: "*",
+				Default: InstantLaunch{
+					ID:            "0",
+					QuickLaunchID: "0",
+					AddedBy:       "admin",
+					AddedOn:       "today",
+				},
+			},
+		},
+	}
+
+	v, err := json.Marshal(expected.Mapping)
+	assert.NoError(err, "should not error")
+
+	mock.ExpectQuery("SELECT def.id, def.version, def.instant_launches as mapping FROM default_instant_launches def WHERE def.version =").
+		WithArgs(0).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"id", "version", "mapping"}).
+				AddRow("0", "0", v),
+		)
+	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/defaults/0", nil)
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/defaults/:version")
+	c.SetParamNames("version")
+	c.SetParamValues("0")
+
+	err = app.GetDefaultsByVersion(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &DefaultInstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		if assert.NoError(err, "should be able to parse body") {
+			assert.Equal(1, len(actual.Mapping))
+			assert.True(reflect.DeepEqual(expected, actual), "should match")
+		}
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
