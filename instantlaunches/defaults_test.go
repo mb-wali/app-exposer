@@ -197,3 +197,18 @@ func TestUpdateLatestDefaultsHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteLatestDefaultsHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY default_instant_launches AS def").WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = app.DeleteLatestDefaults()
+	assert.NoError(err, "delete shouldn't return an error")
+}
