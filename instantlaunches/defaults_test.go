@@ -155,7 +155,7 @@ func TestUpdateLatestDefaultsHandler(t *testing.T) {
 	}
 	defer app.DB.Close()
 
-	expected := &InstantLaunchMapping{
+	expected := map[string]*InstantLaunchSelector{
 		"one": &InstantLaunchSelector{
 			Pattern: "*",
 			Kind:    "glob",
@@ -186,5 +186,14 @@ func TestUpdateLatestDefaultsHandler(t *testing.T) {
 	c := router.NewContext(req, rec)
 
 	err = app.UpdateLatestDefaultsHandler(c)
-	assert.NoError(err)
+	if assert.NoError(err, "error from UpdateLatestDefaultsHandler") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := map[string]*InstantLaunchSelector{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		if assert.NoError(err, "should be able to parse body") {
+			assert.Equal(1, len(actual))
+			assert.True(reflect.DeepEqual(expected["one"], actual["one"]))
+		}
+	}
 }
