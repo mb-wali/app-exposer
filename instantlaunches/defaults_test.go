@@ -276,3 +276,55 @@ func TestAddLatestDefaults(t *testing.T) {
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestAddLatestDefaultsHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("error unmarshalling expected value: %s", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
+
+	mock.ExpectQuery("INSERT INTO default_instant_launches").
+		WithArgs(v).
+		WillReturnRows(rows)
+
+	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/defaults", bytes.NewReader(v))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+
+	err = app.AddLatestDefaultsHandler(c)
+
+	if assert.NoError(err, "shouldn't cause an error") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &InstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), actual)
+		if assert.NoError(err, "should be able to parse the response body") {
+			assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		}
+	}
+}
