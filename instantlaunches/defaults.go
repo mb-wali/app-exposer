@@ -57,7 +57,7 @@ const deleteLatestDefaultsQuery = `
 	);
 `
 
-const createLastestDefaultsQuery = `
+const createLatestDefaultsQuery = `
 	INSERT INTO default_instant_launches (instant_launches)
 	VALUES ( ? )
 	RETURNING instant_launches;
@@ -119,21 +119,21 @@ func (a *App) DeleteLatestDefaultsHandler(c echo.Context) error {
 }
 
 // AddLatestDefaults adds a new version of the default instant launch mappings.
-func (a *App) AddLatestDefaults(update echo.Map) (echo.Map, error) {
+func (a *App) AddLatestDefaults(update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(update)
 	if err != nil {
 		return nil, err
 	}
-	newvalue := echo.Map{}
-	err = a.DB.QueryRowx(createLastestDefaultsQuery, marshalled).Scan(&newvalue)
+	newvalue := &InstantLaunchMapping{}
+	err = a.DB.QueryRowx(createLatestDefaultsQuery, marshalled).Scan(newvalue)
 	return newvalue, err
 }
 
 // AddLatestDefaultsHandler is the echo handler for the HTTP API that allows the
 // caller to add a new version of the default instant launch mapping to the db.
 func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
-	update := echo.Map{}
-	err := c.Bind(&update)
+	update := &InstantLaunchMapping{}
+	err := c.Bind(update)
 	if err != nil {
 		return err
 	}

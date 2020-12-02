@@ -235,3 +235,44 @@ func TestDeleteLatestDefaultsHandler(t *testing.T) {
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestAddLatestDefaults(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("error unmarshalling expected value: %s", err)
+	}
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
+
+	mock.ExpectQuery("INSERT INTO default_instant_launches").
+		WithArgs(v).
+		WillReturnRows(rows)
+
+	actual, err := app.AddLatestDefaults(expected)
+	if assert.NoError(err, "shouldn't be an error") {
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
