@@ -328,3 +328,47 @@ func TestAddLatestDefaultsHandler(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultsByVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &DefaultInstantLaunchMapping{
+		ID:      "0",
+		Version: "0",
+		Mapping: map[string]*InstantLaunchSelector{
+			"one": &InstantLaunchSelector{
+				Kind:    "glob",
+				Pattern: "*",
+				Default: InstantLaunch{
+					ID:            "0",
+					QuickLaunchID: "0",
+					AddedBy:       "admin",
+					AddedOn:       "today",
+				},
+			},
+		},
+	}
+
+	v, err := json.Marshal(expected.Mapping)
+	assert.NoError(err, "should not error")
+
+	mock.ExpectQuery("SELECT def.id, def.version, def.instant_launches as mapping FROM default_instant_launches def WHERE def.version =").
+		WithArgs(0).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"id", "version", "mapping"}).
+				AddRow("0", "0", v),
+		)
+
+	actual, err := app.DefaultsByVersion(0)
+	if assert.NoError(err) {
+		assert.True(reflect.DeepEqual(expected, actual))
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+
+}

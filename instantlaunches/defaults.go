@@ -165,9 +165,9 @@ const deleteDefaultsByVersionQuery = `
 `
 
 // DefaultsByVersion returns a specific version of the default instant launches.
-func (a *App) DefaultsByVersion(version int) (DefaultInstantLaunchMapping, error) {
-	m := DefaultInstantLaunchMapping{}
-	err := a.DB.Get(&m, defaultsByVersionQuery, version)
+func (a *App) DefaultsByVersion(version int) (*DefaultInstantLaunchMapping, error) {
+	m := &DefaultInstantLaunchMapping{}
+	err := a.DB.Get(m, defaultsByVersionQuery, version)
 	return m, err
 }
 
