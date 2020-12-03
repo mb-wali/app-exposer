@@ -556,3 +556,30 @@ func TestDeleteDefaultsByVersionHandler(t *testing.T) {
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestListAllDefaults(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectQuery(listAllDefaultsQuery).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"id", "version", "mapping"}).
+				AddRow("0", "0", "{}").
+				AddRow("1", "1", `{"one":"two"}`),
+		)
+
+	listing, err := app.ListAllDefaults()
+	if assert.NoError(err, "should not return an error") {
+		assert.Equal(2, len(listing.Defaults), "number of rows should be 2")
+		assert.Equal("0", listing.Defaults[0].ID, "ID should be 0")
+		assert.Equal("0", listing.Defaults[0].Version, "Version should be 0")
+		assert.Equal("1", listing.Defaults[1].ID, "ID should be 1")
+		assert.Equal("1", listing.Defaults[1].Version, "Version should be 1")
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
