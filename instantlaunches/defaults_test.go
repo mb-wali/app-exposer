@@ -530,3 +530,29 @@ func TestDeleteDefaultsByVersion(t *testing.T) {
 	assert.NoError(err, "delete shouldn't return an error")
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestDeleteDefaultsByVersionHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY default_instant_launches as def").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	req := httptest.NewRequest("DELETE", "http://localhost/instantlaunches/defaults/0", nil)
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/defaults/:version")
+	c.SetParamNames("version")
+	c.SetParamValues("0")
+
+	err = app.DeleteDefaultsByVersionHandler(c)
+	if assert.NoError(err, "shouldn't be an error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
