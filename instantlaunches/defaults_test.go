@@ -467,52 +467,52 @@ func TestUpdateDefaultsByVersion(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
-// func TestUpdateDefaultsByVersionHandler(t *testing.T) {
-// 	assert := assert.New(t)
+func TestUpdateDefaultsByVersionHandler(t *testing.T) {
+	assert := assert.New(t)
 
-// 	app, mock, router, err := SetupApp()
-// 	if err != nil {
-// 		t.Fatalf("error setting up app: %s", err)
-// 	}
-// 	defer app.DB.Close()
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
 
-// 	expected := &InstantLaunchMapping{
-// 		"one": &InstantLaunchSelector{
-// 			Pattern: "*",
-// 			Kind:    "glob",
-// 			Default: InstantLaunch{
-// 				ID:            "0",
-// 				QuickLaunchID: "0",
-// 				AddedBy:       "test",
-// 				AddedOn:       "today",
-// 			},
-// 			Compatible: []InstantLaunch{},
-// 		},
-// 	}
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
 
-// 	v, err := json.Marshal(expected)
-// 	assert.NoError(err, "should not error")
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "should not error")
 
-// 	mock.ExpectQuery("UPDATE ONLY default_instant_launches AS def").
-// 		WithArgs(v, 0).
-// 		WillReturnRows(
-// 			sqlmock.NewRows([]string{"instant_launches"}).
-// 				AddRow(v),
-// 		)
+	mock.ExpectQuery("UPDATE ONLY default_instant_launches AS def").
+		WithArgs(v, 0).
+		WillReturnRows(
+			sqlmock.NewRows([]string{"instant_launches"}).
+				AddRow(v),
+		)
 
-// 	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches/defaults/0", bytes.NewReader(v))
-// 	rec := httptest.NewRecorder()
-// 	c := router.NewContext(req, rec)
-// 	c.SetPath("/instantlaunches/defaults/:version")
-// 	c.SetParamNames("version")
-// 	c.SetParamValues("0")
+	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches/defaults/0", bytes.NewReader(v))
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/defaults/:version")
+	c.SetParamNames("version")
+	c.SetParamValues("0")
 
-// 	err = app.UpdateDefaultsByVersionHandler(c)
-// 	if assert.NoError(err, "should not error") {
-// 		assert.Equal(http.StatusOK, rec.Code)
-// 	}
-// 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
-// }
+	err = app.UpdateDefaultsByVersionHandler(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestDeleteDefaultsByVersion(t *testing.T) {
 	assert := assert.New(t)

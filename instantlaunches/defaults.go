@@ -2,6 +2,7 @@ package instantlaunches
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -201,9 +202,15 @@ func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int
 // UpdateDefaultsByVersionHandler is the echo handler for the HTTP API that
 // updates the default mapping for a specific version.
 func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
+	// I'm not sure why, but this stuff seems to break echo's c.Bind() function
+	// so we handle the unmarshalling without it here.
 	newvalue := &InstantLaunchMapping{}
-	err := c.Bind(newvalue)
+	readbytes, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(readbytes, newvalue); err != nil {
 		return err
 	}
 
