@@ -465,5 +465,68 @@ func TestUpdateDefaultsByVersion(t *testing.T) {
 		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
+// func TestUpdateDefaultsByVersionHandler(t *testing.T) {
+// 	assert := assert.New(t)
+
+// 	app, mock, router, err := SetupApp()
+// 	if err != nil {
+// 		t.Fatalf("error setting up app: %s", err)
+// 	}
+// 	defer app.DB.Close()
+
+// 	expected := &InstantLaunchMapping{
+// 		"one": &InstantLaunchSelector{
+// 			Pattern: "*",
+// 			Kind:    "glob",
+// 			Default: InstantLaunch{
+// 				ID:            "0",
+// 				QuickLaunchID: "0",
+// 				AddedBy:       "test",
+// 				AddedOn:       "today",
+// 			},
+// 			Compatible: []InstantLaunch{},
+// 		},
+// 	}
+
+// 	v, err := json.Marshal(expected)
+// 	assert.NoError(err, "should not error")
+
+// 	mock.ExpectQuery("UPDATE ONLY default_instant_launches AS def").
+// 		WithArgs(v, 0).
+// 		WillReturnRows(
+// 			sqlmock.NewRows([]string{"instant_launches"}).
+// 				AddRow(v),
+// 		)
+
+// 	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches/defaults/0", bytes.NewReader(v))
+// 	rec := httptest.NewRecorder()
+// 	c := router.NewContext(req, rec)
+// 	c.SetPath("/instantlaunches/defaults/:version")
+// 	c.SetParamNames("version")
+// 	c.SetParamValues("0")
+
+// 	err = app.UpdateDefaultsByVersionHandler(c)
+// 	if assert.NoError(err, "should not error") {
+// 		assert.Equal(http.StatusOK, rec.Code)
+// 	}
+// 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+// }
+
+func TestDeleteDefaultsByVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY default_instant_launches as def").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = app.DeleteDefaultsByVersion(0)
+	assert.NoError(err, "delete shouldn't return an error")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }

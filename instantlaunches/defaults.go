@@ -201,14 +201,17 @@ func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int
 // UpdateDefaultsByVersionHandler is the echo handler for the HTTP API that
 // updates the default mapping for a specific version.
 func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
+	newvalue := &InstantLaunchMapping{}
+	err := c.Bind(newvalue)
+	if err != nil {
+		return err
+	}
+
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return err
 	}
-	newvalue := &InstantLaunchMapping{}
-	if err = c.Bind(newvalue); err != nil {
-		return err
-	}
+
 	updated, err := a.UpdateDefaultsByVersion(newvalue, int(version))
 	if err != nil {
 		return err
