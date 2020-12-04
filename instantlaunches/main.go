@@ -87,7 +87,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 		Group: group,
 	}
 
-	// swagger:route get /instantlaunches/default instantlaunches listDefaults
+	// swagger:route get /instantlaunches/defaults instantlaunches listDefaults
 	//
 	// Lists the global defaults for mapping files to instant launches.
 	//
@@ -101,9 +101,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: listAllDefaults
-	instance.Group.GET("/default", instance.GetListDefaults)
+	instance.Group.GET("/defaults", instance.GetListDefaults)
 
-	// swagger:route get /instantlaunches/default/latest instantlaunches latestDefaults
+	// swagger:route get /instantlaunches/defaults/latest instantlaunches latestDefaults
 	//
 	// Gets the latest default instant launch mapping.
 	//
@@ -117,9 +117,62 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/default/latest", instance.GetLatestDefaults)
+	instance.Group.GET("/defaults/latest", instance.GetLatestDefaults)
 
-	// swagger:route get /instantlaunches/default/{version} instantlaunches defaultsByVersion
+	// swagger:route put /instantlaunches/defaults/latest instantlaunches addLatestDefaults
+	//
+	// Adds a new latest defaults mapping.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
+	instance.Group.PUT("/defaults/latest", instance.AddLatestDefaultsHandler)
+
+	// swagger:route post /instantlaunches/defaults/latest instantlaunches updateLatestDefaults
+	//
+	// Updates the latest defaults mapping.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
+	instance.Group.POST("/defaults/latest", instance.UpdateLatestDefaultsHandler)
+
+	// swagger:route delete /instantlaunches/defaults/latest instantlaunches deleteLatestDefaults
+	//
+	// Deletes the latest defaults mapping.
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	instance.Group.DELETE("/defaults/latest", instance.DeleteLatestDefaultsHandler)
+
+	// swagger:route get /instantlaunches/defaults/{version} instantlaunches defaultsByVersion
 	//
 	// Gets the default instant launch mapping at the specified version.
 	//
@@ -133,7 +186,42 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/default/:version", instance.GetDefaultsByVersion)
+	instance.Group.GET("/defaults/:version", instance.DefaultsByVersionHandler)
+
+	// swagger:route post /instantlaunches/defaults/{version} instantlaunches updateDefaultsByVersion
+	//
+	// Updates the default instant launch mapping at the specified version.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
+	instance.Group.POST("/defaults/:version", instance.UpdateDefaultsByVersionHandler)
+
+	// swagger:route delete /instantlaunches/defaults/{version} instantlaunches deleteDefaultsByVersion
+	//
+	// Deletes the default instant launch mapping at the specified version.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	instance.Group.DELETE("/defaults/:version", instance.DeleteDefaultsByVersionHandler)
+
 	return instance
 }
 

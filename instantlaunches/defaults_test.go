@@ -372,7 +372,7 @@ func TestDefaultsByVersion(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
-func TestGetDefaultsByVersion(t *testing.T) {
+func TestDefaultsByVersionHandler(t *testing.T) {
 	assert := assert.New(t)
 
 	app, mock, router, err := SetupApp()
@@ -414,7 +414,7 @@ func TestGetDefaultsByVersion(t *testing.T) {
 	c.SetParamNames("version")
 	c.SetParamValues("0")
 
-	err = app.GetDefaultsByVersion(c)
+	err = app.DefaultsByVersionHandler(c)
 	if assert.NoError(err, "should not error") {
 		assert.Equal(http.StatusOK, rec.Code)
 

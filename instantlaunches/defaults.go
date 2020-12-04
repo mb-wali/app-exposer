@@ -172,9 +172,9 @@ func (a *App) DefaultsByVersion(version int) (*DefaultInstantLaunchMapping, erro
 	return m, err
 }
 
-// GetDefaultsByVersion is the echo handler for the http API that returns the defaults
+// DefaultsByVersionHandler is the echo handler for the http API that returns the defaults
 // stored for the provided format version.
-func (a *App) GetDefaultsByVersion(c echo.Context) error {
+func (a *App) DefaultsByVersionHandler(c echo.Context) error {
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return err
