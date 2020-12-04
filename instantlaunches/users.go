@@ -57,9 +57,9 @@ func (a *App) UserMapping(user string) (UserInstantLaunchMapping, error) {
 	return m, err
 }
 
-// GetUserMapping is the echo handler for the http API that returns the user's
+// UserMappingHandler is the echo handler for the http API that returns the user's
 // instant launch mappings.
-func (a *App) GetUserMapping(c echo.Context) error {
+func (a *App) UserMappingHandler(c echo.Context) error {
 	user := c.Param("user")
 	m, err := a.UserMapping(user)
 	if err != nil {
@@ -70,12 +70,12 @@ func (a *App) GetUserMapping(c echo.Context) error {
 
 // UpdateUserMapping updates the the latest version of the user's custom
 // instant launch mappings.
-func (a *App) UpdateUserMapping(user string, update echo.Map) (echo.Map, error) {
+func (a *App) UpdateUserMapping(user string, update *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(update)
 	if err != nil {
 		return nil, err
 	}
-	updated := echo.Map{}
+	updated := &UserInstantLaunchMapping{}
 	err = a.DB.QueryRowx(updateUserMappingQuery, marshalled, user).Scan(updated)
 	return updated, err
 }
@@ -84,8 +84,8 @@ func (a *App) UpdateUserMapping(user string, update echo.Map) (echo.Map, error) 
 // instant launch mapping.
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("user")
-	newdefaults := echo.Map{}
-	err := c.Bind(&newdefaults)
+	newdefaults := &UserInstantLaunchMapping{}
+	err := c.Bind(newdefaults)
 	if err != nil {
 		return err
 	}
@@ -114,13 +114,13 @@ func (a *App) DeleteUserMappingHandler(c echo.Context) error {
 }
 
 // AddUserMapping adds a new record to the database for the user's instant launches.
-func (a *App) AddUserMapping(user string, mapping echo.Map) (echo.Map, error) {
+func (a *App) AddUserMapping(user string, mapping *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(mapping)
 	if err != nil {
 		return nil, err
 	}
-	newvalue := echo.Map{}
-	if err = a.DB.QueryRowx(createUserMappingQuery, marshalled, user).Scan(&newvalue); err != nil {
+	newvalue := &UserInstantLaunchMapping{}
+	if err = a.DB.QueryRowx(createUserMappingQuery, marshalled, user).Scan(newvalue); err != nil {
 		return nil, err
 	}
 	return newvalue, nil
@@ -129,7 +129,7 @@ func (a *App) AddUserMapping(user string, mapping echo.Map) (echo.Map, error) {
 // AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
 func (a *App) AddUserMappingHandler(c echo.Context) error {
 	user := c.Param("user")
-	newvalue := echo.Map{}
+	newvalue := &UserInstantLaunchMapping{}
 	err := c.Bind(&newvalue)
 	if err != nil {
 		return err
@@ -150,18 +150,18 @@ const allUserMappingQuery = `
    WHERE users.username = ?;
 `
 
-// AllUserMapping returns all of the user's instant launch mappings regardless of version.
-func (a *App) AllUserMapping(user string) ([]UserInstantLaunchMapping, error) {
+// AllUserMappings returns all of the user's instant launch mappings regardless of version.
+func (a *App) AllUserMappings(user string) ([]UserInstantLaunchMapping, error) {
 	m := []UserInstantLaunchMapping{}
 	err := a.DB.Select(&m, userMappingQuery, user)
 	return m, err
 }
 
-// GetAllUserMappings is the echo handler for the http API that returns the user's
+// AllUserMappingsHandler is the echo handler for the http API that returns the user's
 // instant launch mappings.
-func (a *App) GetAllUserMappings(c echo.Context) error {
+func (a *App) AllUserMappingsHandler(c echo.Context) error {
 	user := c.Param("user")
-	m, err := a.AllUserMapping(user)
+	m, err := a.AllUserMappings(user)
 	if err != nil {
 		return err
 	}
@@ -219,13 +219,13 @@ func (a *App) GetUserMappingsByVersion(c echo.Context) error {
 }
 
 // UpdateUserMappingsByVersion updates the user's instant launches for a specific version.
-func (a *App) UpdateUserMappingsByVersion(user string, version int, update echo.Map) (echo.Map, error) {
+func (a *App) UpdateUserMappingsByVersion(user string, version int, update *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(update)
 	if err != nil {
 		return nil, err
 	}
-	retval := echo.Map{}
-	if err = a.DB.QueryRowx(updateUserMappingsByVersionQuery, marshalled, version, user).Scan(&retval); err != nil {
+	retval := &UserInstantLaunchMapping{}
+	if err = a.DB.QueryRowx(updateUserMappingsByVersionQuery, marshalled, version, user).Scan(retval); err != nil {
 		return nil, err
 	}
 	return retval, nil
@@ -239,8 +239,8 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	update := echo.Map{}
-	if err = c.Bind(&update); err != nil {
+	update := &UserInstantLaunchMapping{}
+	if err = c.Bind(update); err != nil {
 		return err
 	}
 	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)
