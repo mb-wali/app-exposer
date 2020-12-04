@@ -70,12 +70,12 @@ func (a *App) UserMappingHandler(c echo.Context) error {
 
 // UpdateUserMapping updates the the latest version of the user's custom
 // instant launch mappings.
-func (a *App) UpdateUserMapping(user string, update *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
+func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(update)
 	if err != nil {
 		return nil, err
 	}
-	updated := &UserInstantLaunchMapping{}
+	updated := &InstantLaunchMapping{}
 	err = a.DB.QueryRowx(updateUserMappingQuery, marshalled, user).Scan(updated)
 	return updated, err
 }
@@ -84,7 +84,7 @@ func (a *App) UpdateUserMapping(user string, update *UserInstantLaunchMapping) (
 // instant launch mapping.
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("user")
-	newdefaults := &UserInstantLaunchMapping{}
+	newdefaults := &InstantLaunchMapping{}
 	err := c.Bind(newdefaults)
 	if err != nil {
 		return err

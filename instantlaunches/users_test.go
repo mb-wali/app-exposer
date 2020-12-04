@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -39,11 +40,48 @@ func TestUserMapping(t *testing.T) {
 		),
 		"should be equal",
 	)
+	assert.NoError(mock.ExpectationsWereMet(), "expectataions were not met")
 }
 
-func TestUserMappinghandler(t *testing.T) {}
+func TestUserMappingHandler(t *testing.T) {}
 
-func TestUpdateUserMapping(t *testing.T) {}
+func TestUpdateUserMapping(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": {
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "no errors expected")
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).
+		AddRow(v)
+	mock.ExpectQuery("UPDATE ONLY user_instant_launches AS def").
+		WithArgs(v, "test").
+		WillReturnRows(rows)
+
+	actual, err := app.UpdateUserMapping("test", expected)
+	assert.NoError(err, "no errors expected")
+	assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	assert.NoError(mock.ExpectationsWereMet(), "expectataions were not met")
+}
 
 func TestUpdateUserMappingHandler(t *testing.T) {}
 
