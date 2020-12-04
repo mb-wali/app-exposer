@@ -114,12 +114,12 @@ func (a *App) DeleteUserMappingHandler(c echo.Context) error {
 }
 
 // AddUserMapping adds a new record to the database for the user's instant launches.
-func (a *App) AddUserMapping(user string, mapping *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
+func (a *App) AddUserMapping(user string, mapping *InstantLaunchMapping) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(mapping)
 	if err != nil {
 		return nil, err
 	}
-	newvalue := &UserInstantLaunchMapping{}
+	newvalue := &InstantLaunchMapping{}
 	if err = a.DB.QueryRowx(createUserMappingQuery, marshalled, user).Scan(newvalue); err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (a *App) AddUserMapping(user string, mapping *UserInstantLaunchMapping) (*U
 // AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
 func (a *App) AddUserMappingHandler(c echo.Context) error {
 	user := c.Param("user")
-	newvalue := &UserInstantLaunchMapping{}
+	newvalue := &InstantLaunchMapping{}
 	err := c.Bind(&newvalue)
 	if err != nil {
 		return err
@@ -141,9 +141,10 @@ func (a *App) AddUserMappingHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, retval)
 }
 
-const allUserMappingQuery = `
+const allUserMappingsQuery = `
   SELECT u.id,
-         u.version,
+		 u.version,
+		 u.user_id,
          u.instant_launches as mapping
     FROM user_instant_launches u
     JOIN users ON u.user_id = users.id
@@ -153,7 +154,7 @@ const allUserMappingQuery = `
 // AllUserMappings returns all of the user's instant launch mappings regardless of version.
 func (a *App) AllUserMappings(user string) ([]UserInstantLaunchMapping, error) {
 	m := []UserInstantLaunchMapping{}
-	err := a.DB.Select(&m, userMappingQuery, user)
+	err := a.DB.Select(&m, allUserMappingsQuery, user)
 	return m, err
 }
 

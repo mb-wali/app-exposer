@@ -68,10 +68,10 @@ func (i InstantLaunchMapping) Value() (driver.Value, error) {
 // UserInstantLaunchMapping contains the user-specific set of pattern-to-instant-launch
 // mappings that override the system-level default set of mappings.
 type UserInstantLaunchMapping struct {
-	ID      string
-	Version string
-	UserID  string
-	Mapping InstantLaunchMapping
+	ID      string               `json:"id" db:"id"`
+	Version string               `json:"version" db:"version"`
+	UserID  string               `json:"user_id" db:"user_id"`
+	Mapping InstantLaunchMapping `json:"mapping" db:"mapping"`
 }
 
 // App provides an API for managing instant launches.

@@ -78,22 +78,120 @@ func TestUpdateUserMapping(t *testing.T) {
 		WillReturnRows(rows)
 
 	actual, err := app.UpdateUserMapping("test", expected)
-	assert.NoError(err, "no errors expected")
-	assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	if assert.NoError(err, "no errors expected") {
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectataions were not met")
 }
 
 func TestUpdateUserMappingHandler(t *testing.T) {}
 
-func TestDeleteUserMapping(t *testing.T) {}
+func TestDeleteUserMapping(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def").
+		WithArgs("test").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = app.DeleteUserMapping("test")
+	assert.NoError(err, "should not error")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestDeleteUserMappingHandler(t *testing.T) {}
 
-func TestAddUserMapping(t *testing.T) {}
+func TestAddUserMapping(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": {
+			Pattern: "*",
+			Kind:    "glob",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+			Compatible: []InstantLaunch{},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "no errors expected")
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
+	mock.ExpectQuery("INSERT INTO user_instant_launches").
+		WillReturnRows(rows)
+
+	actual, err := app.AddUserMapping("test", expected)
+	if assert.NoError(err, "should not error") {
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestAddUserMappingHandler(t *testing.T) {}
 
-func TestAllUserMappings(t *testing.T) {}
+func TestAllUserMappings(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expectedMapping := InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Kind:    "glob",
+			Pattern: "*",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+		},
+	}
+
+	expected := []UserInstantLaunchMapping{
+		UserInstantLaunchMapping{
+			ID:      "0",
+			Version: "0",
+			UserID:  "0",
+			Mapping: expectedMapping,
+		},
+	}
+
+	v, err := json.Marshal(expectedMapping)
+	assert.NoError(err, "no errors expected")
+
+	rows := sqlmock.NewRows([]string{"id", "version", "user_id", "mapping"}).AddRow("0", "0", "0", v)
+	mock.ExpectQuery("SELECT u.id, u.version, u.user_id, u.instant_launches as mapping FROM user_instant_launches u").
+		WithArgs("test").
+		WillReturnRows(rows)
+
+	actual, err := app.AllUserMappings("test")
+	if assert.NoError(err, "should not return error") {
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+	}
+
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+
+}
 
 func TestAllUserMappingsHandler(t *testing.T) {}
 
