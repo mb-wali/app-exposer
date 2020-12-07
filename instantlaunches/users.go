@@ -84,7 +84,7 @@ func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*Ins
 // UpdateUserMappingHandler is the echo handler for the HTTP API that updates the user's
 // instant launch mapping.
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	newdefaults := &InstantLaunchMapping{}
 	err := c.Bind(newdefaults)
 	if err != nil {
@@ -107,7 +107,7 @@ func (a *App) DeleteUserMapping(user string) error {
 // DeleteUserMappingHandler is the handler for the admin-only operation that removes
 // the latest mapping for the user.
 func (a *App) DeleteUserMappingHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	if user == "" {
 		return errors.New("user was not set")
 	}
@@ -129,10 +129,14 @@ func (a *App) AddUserMapping(user string, mapping *InstantLaunchMapping) (*Insta
 
 // AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
 func (a *App) AddUserMappingHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	newvalue := &InstantLaunchMapping{}
-	err := c.Bind(&newvalue)
+	readbytes, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(readbytes, newvalue); err != nil {
 		return err
 	}
 	retval, err := a.AddUserMapping(user, newvalue)
@@ -253,6 +257,7 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	if err = json.Unmarshal(readbytes, update); err != nil {
 		return err
 	}
+
 	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)
 	if err != nil {
 		return err
