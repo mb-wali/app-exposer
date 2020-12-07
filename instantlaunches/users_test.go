@@ -281,6 +281,22 @@ func TestUpdateUserMappingsByVersion(t *testing.T) {
 
 func TestUpdateUserMappingsByVersionHandler(t *testing.T) {}
 
-func TestDeleteUserMappingsByVersion(t *testing.T) {}
+func TestDeleteUserMappingsByVersion(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, _, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def USING users WHERE def.user_id = users.id").
+		WithArgs("test", 0).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	err = app.DeleteUserMappingsByVersion("test", 0)
+	assert.NoError(err, "no error expected")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestDeleteUserMappingsByVersionHandler(t *testing.T) {}
