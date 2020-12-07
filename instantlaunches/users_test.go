@@ -196,7 +196,63 @@ func TestAllUserMappings(t *testing.T) {
 
 }
 
-func TestAllUserMappingsHandler(t *testing.T) {}
+func TestAllUserMappingsHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expectedMapping := InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Kind:    "glob",
+			Pattern: "*",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+		},
+	}
+
+	expected := []UserInstantLaunchMapping{
+		UserInstantLaunchMapping{
+			ID:      "0",
+			Version: "0",
+			UserID:  "0",
+			Mapping: expectedMapping,
+		},
+	}
+
+	v, err := json.Marshal(expectedMapping)
+	assert.NoError(err, "no errors expected")
+
+	rows := sqlmock.NewRows([]string{"id", "version", "user_id", "mapping"}).AddRow("0", "0", "0", v)
+	mock.ExpectQuery("SELECT u.id, u.version, u.user_id, u.instant_launches as mapping FROM user_instant_launches u").
+		WithArgs("test").
+		WillReturnRows(rows)
+
+	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/test", bytes.NewReader(v))
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:username")
+	c.SetParamNames("username")
+	c.SetParamValues("test")
+
+	err = app.AllUserMappingsHandler(c)
+	if assert.NoError(err, "shouldn't be an error") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := []UserInstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestUserMappingsByVersion(t *testing.T) {
 	assert := assert.New(t)

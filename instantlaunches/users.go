@@ -162,7 +162,7 @@ func (a *App) AllUserMappings(user string) ([]UserInstantLaunchMapping, error) {
 // AllUserMappingsHandler is the echo handler for the http API that returns the user's
 // instant launch mappings.
 func (a *App) AllUserMappingsHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	m, err := a.AllUserMappings(user)
 	if err != nil {
 		return err
