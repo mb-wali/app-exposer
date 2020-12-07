@@ -222,6 +222,30 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/defaults/:version", instance.DeleteDefaultsByVersionHandler)
 
+	// swagger:route get /instantlaunches/{username} instantlaunches getAllUserDefaults
+	instance.Group.GET("/:username", instance.AllUserMappingsHandler)
+
+	// swagger:route get /instantlaunches/{username}/latest instantlaunches getUserDefaults
+	instance.Group.GET("/:username/latest", instance.UserMappingHandler)
+
+	// swagger:route put /instantlaunches/{username}/latest instantlaunches addUserDefaults
+	instance.Group.PUT("/:username/:version", instance.AddUserMappingHandler)
+
+	// swagger:route post /instantlaunches/{username}/latest instantlaunches updateUserDefaults
+	instance.Group.POST("/:username/:version", instance.UpdateUserMappingHandler)
+
+	// swagger:route delete /instantlaunches/{username}/latest instantlaunches deleteUserDefaults
+	instance.Group.DELETE("/:username/:version", instance.DeleteUserMappingHandler)
+
+	// swagger:route get /instantlaunches/{username}/{version} instantlaunches getUserDefaultsByVersion
+	instance.Group.GET("/:username/:version", instance.UserMappingsByVersionHandler)
+
+	// swagger:route post /instantlaunches/{username}/{version} instantlaunches updateUserDefaultsByVersion
+	instance.Group.POST("/:username/:version", instance.UpdateUserMappingsByVersionHandler)
+
+	// swagger:route delete /instantlaunches/{username}/{version} instantlaunches deleteUSerDefaultsByVersion
+	instance.Group.DELETE("/:username/:version", instance.DeleteUserMappingsByVersionHandler)
+
 	return instance
 }
 
