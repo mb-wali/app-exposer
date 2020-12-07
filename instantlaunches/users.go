@@ -53,15 +53,15 @@ const createUserMappingQuery = `
 
 // UserMapping returns the user's instant launch mappings.
 func (a *App) UserMapping(user string) (*UserInstantLaunchMapping, error) {
-	m := UserInstantLaunchMapping{}
-	err := a.DB.Get(&m, userMappingQuery, user)
-	return &m, err
+	m := &UserInstantLaunchMapping{}
+	err := a.DB.Get(m, userMappingQuery, user)
+	return m, err
 }
 
 // UserMappingHandler is the echo handler for the http API that returns the user's
 // instant launch mappings.
 func (a *App) UserMappingHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	m, err := a.UserMapping(user)
 	if err != nil {
 		return err

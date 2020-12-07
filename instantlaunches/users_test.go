@@ -46,7 +46,51 @@ func TestUserMapping(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectataions were not met")
 }
 
-func TestUserMappingHandler(t *testing.T) {}
+func TestUserMappingHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	rows := sqlmock.NewRows([]string{"id", "version", "mapping"}).
+		AddRow("0", "0", "{}")
+
+	mock.ExpectQuery("SELECT u.id, u.version, u.instant_launches as mapping FROM user_instant_launches u").
+		WithArgs("test").
+		WillReturnRows(rows)
+
+	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/test", nil)
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:username")
+	c.SetParamNames("username")
+	c.SetParamValues("test")
+
+	err = app.UserMappingHandler(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &UserInstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		assert.Equal("0", actual.ID, "id should be 0")
+		assert.Equal("0", actual.Version, "version should be 0")
+		assert.True(
+			reflect.DeepEqual(
+				&UserInstantLaunchMapping{
+					ID:      "0",
+					Version: "0",
+					Mapping: InstantLaunchMapping{},
+				},
+				actual,
+			),
+			"should be equal",
+		)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestUpdateUserMapping(t *testing.T) {
 	assert := assert.New(t)
