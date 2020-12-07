@@ -87,7 +87,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 		Group: group,
 	}
 
-	// swagger:route get /instantlaunches/defaults instantlaunches listDefaults
+	// swagger:route get /instantlaunches/mappings/defaults instantlaunches listDefaults
 	//
 	// Lists the global defaults for mapping files to instant launches.
 	//
@@ -101,9 +101,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: listAllDefaults
-	instance.Group.GET("/defaults", instance.GetListDefaults)
+	instance.Group.GET("/mappings/defaults", instance.GetListDefaults)
 
-	// swagger:route get /instantlaunches/defaults/latest instantlaunches latestDefaults
+	// swagger:route get /instantlaunches/mappings/defaults/latest instantlaunches latestDefaults
 	//
 	// Gets the latest default instant launch mapping.
 	//
@@ -117,9 +117,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/defaults/latest", instance.GetLatestDefaults)
+	instance.Group.GET("/mappings/defaults/latest", instance.GetLatestDefaults)
 
-	// swagger:route put /instantlaunches/defaults/latest instantlaunches addLatestDefaults
+	// swagger:route put /instantlaunches/mappings/defaults/latest instantlaunches addLatestDefaults
 	//
 	// Adds a new latest defaults mapping.
 	//
@@ -136,9 +136,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.PUT("/defaults/latest", instance.AddLatestDefaultsHandler)
+	instance.Group.PUT("/mappings/defaults/latest", instance.AddLatestDefaultsHandler)
 
-	// swagger:route post /instantlaunches/defaults/latest instantlaunches updateLatestDefaults
+	// swagger:route post /instantlaunches/mappings/defaults/latest instantlaunches updateLatestDefaults
 	//
 	// Updates the latest defaults mapping.
 	//
@@ -155,9 +155,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.POST("/defaults/latest", instance.UpdateLatestDefaultsHandler)
+	instance.Group.POST("/mappings/defaults/latest", instance.UpdateLatestDefaultsHandler)
 
-	// swagger:route delete /instantlaunches/defaults/latest instantlaunches deleteLatestDefaults
+	// swagger:route delete /instantlaunches/mappings/defaults/latest instantlaunches deleteLatestDefaults
 	//
 	// Deletes the latest defaults mapping.
 	//
@@ -170,9 +170,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//
 	//		Responses:
 	//			default: errorResponse
-	instance.Group.DELETE("/defaults/latest", instance.DeleteLatestDefaultsHandler)
+	instance.Group.DELETE("/mappings/defaults/latest", instance.DeleteLatestDefaultsHandler)
 
-	// swagger:route get /instantlaunches/defaults/{version} instantlaunches defaultsByVersion
+	// swagger:route get /instantlaunches/mappings/defaults/{version} instantlaunches defaultsByVersion
 	//
 	// Gets the default instant launch mapping at the specified version.
 	//
@@ -186,9 +186,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/defaults/:version", instance.DefaultsByVersionHandler)
+	instance.Group.GET("/mappings/defaults/:version", instance.DefaultsByVersionHandler)
 
-	// swagger:route post /instantlaunches/defaults/{version} instantlaunches updateDefaultsByVersion
+	// swagger:route post /instantlaunches/mappings/defaults/{version} instantlaunches updateDefaultsByVersion
 	//
 	// Updates the default instant launch mapping at the specified version.
 	//
@@ -205,9 +205,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.POST("/defaults/:version", instance.UpdateDefaultsByVersionHandler)
+	instance.Group.POST("/mappings/defaults/:version", instance.UpdateDefaultsByVersionHandler)
 
-	// swagger:route delete /instantlaunches/defaults/{version} instantlaunches deleteDefaultsByVersion
+	// swagger:route delete /instantlaunches/mappings/defaults/{version} instantlaunches deleteDefaultsByVersion
 	//
 	// Deletes the default instant launch mapping at the specified version.
 	//
@@ -220,9 +220,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//
 	//		Responses:
 	//			default: errorResponse
-	instance.Group.DELETE("/defaults/:version", instance.DeleteDefaultsByVersionHandler)
+	instance.Group.DELETE("/mappings/defaults/:version", instance.DeleteDefaultsByVersionHandler)
 
-	// swagger:route get /instantlaunches/{username} instantlaunches getAllUserDefaults
+	// swagger:route get /instantlaunches/mappings/{username} instantlaunches getAllUserDefaults
 	//
 	// Lists the user-specific mappings of files to instant launches regardless of version.
 	//
@@ -236,9 +236,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: listAllDefaults
-	instance.Group.GET("/:username", instance.AllUserMappingsHandler)
+	instance.Group.GET("/mappings/:username", instance.AllUserMappingsHandler)
 
-	// swagger:route get /instantlaunches/{username}/latest instantlaunches getUserDefaults
+	// swagger:route get /instantlaunches/mappings/{username}/latest instantlaunches getUserDefaults
 	//
 	// Gets the latest user-specific instant launch mapping.
 	//
@@ -252,9 +252,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/:username/latest", instance.UserMappingHandler)
+	instance.Group.GET("/mappings/:username/latest", instance.UserMappingHandler)
 
-	// swagger:route put /instantlaunches/{username}/latest instantlaunches addUserDefaults
+	// swagger:route put /instantlaunches/mappings/{username}/latest instantlaunches addUserDefaults
 	//
 	// Adds a new user-specific defaults mapping.
 	//
@@ -271,9 +271,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.PUT("/:username", instance.AddUserMappingHandler)
+	instance.Group.PUT("/mappings/:username", instance.AddUserMappingHandler)
 
-	// swagger:route post /instantlaunches/{username}/latest instantlaunches updateUserDefaults
+	// swagger:route post /instantlaunches/mappings/{username}/latest instantlaunches updateUserDefaults
 	//
 	// Updates the latest user-specific defaults mapping.
 	//
@@ -290,9 +290,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.POST("/:username/latest", instance.UpdateUserMappingHandler)
+	instance.Group.POST("/mappings/:username/latest", instance.UpdateUserMappingHandler)
 
-	// swagger:route delete /instantlaunches/{username}/latest instantlaunches deleteUserDefaults
+	// swagger:route delete /instantlaunches/mappings/{username}/latest instantlaunches deleteUserDefaults
 	//
 	// Deletes the user-specific instant launch mapping.
 	//
@@ -305,9 +305,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//
 	//		Responses:
 	//			default: errorResponse
-	instance.Group.DELETE("/:username/latest", instance.DeleteUserMappingHandler)
+	instance.Group.DELETE("/mappings/:username/latest", instance.DeleteUserMappingHandler)
 
-	// swagger:route get /instantlaunches/{username}/{version} instantlaunches getUserDefaultsByVersion
+	// swagger:route get /instantlaunches/mappings/{username}/{version} instantlaunches getUserDefaultsByVersion
 	//
 	// Gets the latest user-specific instant launch mapping by version.
 	//
@@ -321,9 +321,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/:username/:version", instance.UserMappingsByVersionHandler)
+	instance.Group.GET("/mappings/:username/:version", instance.UserMappingsByVersionHandler)
 
-	// swagger:route post /instantlaunches/{username}/{version} instantlaunches updateUserDefaultsByVersion
+	// swagger:route post /instantlaunches/mappings/{username}/{version} instantlaunches updateUserDefaultsByVersion
 	//
 	// Updates a user-specific defaults mapping by version.
 	//
@@ -340,9 +340,9 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.POST("/:username/:version", instance.UpdateUserMappingsByVersionHandler)
+	instance.Group.POST("/mappings/:username/:version", instance.UpdateUserMappingsByVersionHandler)
 
-	// swagger:route delete /instantlaunches/{username}/{version} instantlaunches deleteUSerDefaultsByVersion
+	// swagger:route delete /instantlaunches/mappings/{username}/{version} instantlaunches deleteUSerDefaultsByVersion
 	//
 	// Deletes a user-specific instant launch mapping at the specified version.
 	//
@@ -355,7 +355,7 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	//
 	//		Responses:
 	//			default: errorResponse
-	instance.Group.DELETE("/:username/:version", instance.DeleteUserMappingsByVersionHandler)
+	instance.Group.DELETE("/mappings/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
 	return instance
 }
