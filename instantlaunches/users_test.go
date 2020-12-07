@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -281,7 +282,49 @@ func TestUpdateUserMappingsByVersion(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
-func TestUpdateUserMappingsByVersionHandler(t *testing.T) {}
+func TestUpdateUserMappingsByVersionHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunchMapping{
+		"one": &InstantLaunchSelector{
+			Kind:    "glob",
+			Pattern: "*",
+			Default: InstantLaunch{
+				ID:            "0",
+				QuickLaunchID: "0",
+				AddedBy:       "test",
+				AddedOn:       "today",
+			},
+		},
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "no errors expected")
+
+	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
+	mock.ExpectQuery("UPDATE ONLY user_instant_launches AS def").
+		WithArgs(v, 0, "test").
+		WillReturnRows(rows)
+
+	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/test/0", bytes.NewReader(v))
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:username/:version")
+	c.SetParamNames("username", "version")
+	c.SetParamValues("test", "0")
+
+	err = app.UpdateUserMappingsByVersionHandler(c)
+	if assert.NoError(err, "shouldn't be an error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestDeleteUserMappingsByVersion(t *testing.T) {
 	assert := assert.New(t)

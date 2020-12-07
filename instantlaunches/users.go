@@ -3,6 +3,7 @@ package instantlaunches
 import (
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -207,7 +208,7 @@ func (a *App) UserMappingsByVersion(user string, version int) (UserInstantLaunch
 // UserMappingsByVersionHandler is the echo handler for the http API that returns a specific
 // version of the user's instant launch mappings.
 func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return err
@@ -235,13 +236,21 @@ func (a *App) UpdateUserMappingsByVersion(user string, version int, update *Inst
 // UpdateUserMappingsByVersionHandler is the echo handler for the HTTP API that allows callers
 // to update a user's instant launches for a specific version.
 func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return err
 	}
+
+	// I'm not sure why, but this stuff seems to break echo's c.Bind() function
+	// so we handle the unmarshalling without it here.
 	update := &InstantLaunchMapping{}
-	if err = c.Bind(update); err != nil {
+	readbytes, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(readbytes, update); err != nil {
 		return err
 	}
 	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)
@@ -260,7 +269,7 @@ func (a *App) DeleteUserMappingsByVersion(user string, version int) error {
 // DeleteUserMappingsByVersionHandler is the echo handler for the HTTP API that allows callers
 // delete a user's instant launch mappings at a specific version.
 func (a *App) DeleteUserMappingsByVersionHandler(c echo.Context) error {
-	user := c.Param("user")
+	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return err
