@@ -2,6 +2,8 @@ package instantlaunches
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -299,4 +301,28 @@ func TestDeleteUserMappingsByVersion(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
-func TestDeleteUserMappingsByVersionHandler(t *testing.T) {}
+func TestDeleteUserMappingsByVersionHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def USING users WHERE def.user_id = users.id").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	req := httptest.NewRequest("DELETE", "http://localhost/instantlaunches/test/0", nil)
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:username/:version")
+	c.SetParamNames("username", "version")
+	c.SetParamValues("test", "0")
+
+	err = app.DeleteUserMappingsByVersionHandler(c)
+	if assert.NoError(err, "shouldn't be an error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
