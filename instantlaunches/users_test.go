@@ -107,7 +107,32 @@ func TestDeleteUserMapping(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
-func TestDeleteUserMappingHandler(t *testing.T) {}
+func TestDeleteUserMappingHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def").
+		WithArgs("test").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	req := httptest.NewRequest("DELETE", "http://localhost/instantlaunches/test", nil)
+	rec := httptest.NewRecorder()
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:username")
+	c.SetParamNames("username")
+	c.SetParamValues("test")
+
+	err = app.DeleteUserMappingHandler(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
 
 func TestAddUserMapping(t *testing.T) {
 	assert := assert.New(t)
