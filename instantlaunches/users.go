@@ -220,12 +220,12 @@ func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 }
 
 // UpdateUserMappingsByVersion updates the user's instant launches for a specific version.
-func (a *App) UpdateUserMappingsByVersion(user string, version int, update *UserInstantLaunchMapping) (*UserInstantLaunchMapping, error) {
+func (a *App) UpdateUserMappingsByVersion(user string, version int, update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
 	marshalled, err := json.Marshal(update)
 	if err != nil {
 		return nil, err
 	}
-	retval := &UserInstantLaunchMapping{}
+	retval := &InstantLaunchMapping{}
 	if err = a.DB.QueryRowx(updateUserMappingsByVersionQuery, marshalled, version, user).Scan(retval); err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	update := &UserInstantLaunchMapping{}
+	update := &InstantLaunchMapping{}
 	if err = c.Bind(update); err != nil {
 		return err
 	}
