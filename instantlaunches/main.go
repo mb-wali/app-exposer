@@ -223,27 +223,138 @@ func New(db *sqlx.DB, group *echo.Group) *App {
 	instance.Group.DELETE("/defaults/:version", instance.DeleteDefaultsByVersionHandler)
 
 	// swagger:route get /instantlaunches/{username} instantlaunches getAllUserDefaults
+	//
+	// Lists the user-specific mappings of files to instant launches regardless of version.
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: listAllDefaults
 	instance.Group.GET("/:username", instance.AllUserMappingsHandler)
 
 	// swagger:route get /instantlaunches/{username}/latest instantlaunches getUserDefaults
+	//
+	// Gets the latest user-specific instant launch mapping.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
 	instance.Group.GET("/:username/latest", instance.UserMappingHandler)
 
 	// swagger:route put /instantlaunches/{username}/latest instantlaunches addUserDefaults
-	instance.Group.PUT("/:username/:version", instance.AddUserMappingHandler)
+	//
+	// Adds a new user-specific defaults mapping.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
+	instance.Group.PUT("/:username", instance.AddUserMappingHandler)
 
 	// swagger:route post /instantlaunches/{username}/latest instantlaunches updateUserDefaults
-	instance.Group.POST("/:username/:version", instance.UpdateUserMappingHandler)
+	//
+	// Updates the latest user-specific defaults mapping.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
+	instance.Group.POST("/:username/latest", instance.UpdateUserMappingHandler)
 
 	// swagger:route delete /instantlaunches/{username}/latest instantlaunches deleteUserDefaults
-	instance.Group.DELETE("/:username/:version", instance.DeleteUserMappingHandler)
+	//
+	// Deletes the user-specific instant launch mapping.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	instance.Group.DELETE("/:username/latest", instance.DeleteUserMappingHandler)
 
 	// swagger:route get /instantlaunches/{username}/{version} instantlaunches getUserDefaultsByVersion
+	//
+	// Gets the latest user-specific instant launch mapping by version.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
 	instance.Group.GET("/:username/:version", instance.UserMappingsByVersionHandler)
 
 	// swagger:route post /instantlaunches/{username}/{version} instantlaunches updateUserDefaultsByVersion
+	//
+	// Updates a user-specific defaults mapping by version.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	//		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: defaultMapping
 	instance.Group.POST("/:username/:version", instance.UpdateUserMappingsByVersionHandler)
 
 	// swagger:route delete /instantlaunches/{username}/{version} instantlaunches deleteUSerDefaultsByVersion
+	//
+	// Deletes a user-specific instant launch mapping at the specified version.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
 	instance.Group.DELETE("/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
 	return instance
