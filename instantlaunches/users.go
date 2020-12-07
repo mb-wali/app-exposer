@@ -86,8 +86,12 @@ func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*Ins
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
 	newdefaults := &InstantLaunchMapping{}
-	err := c.Bind(newdefaults)
+	readbytes, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
+		return err
+	}
+
+	if err = json.Unmarshal(readbytes, newdefaults); err != nil {
 		return err
 	}
 	updated, err := a.UpdateUserMapping(user, newdefaults)
