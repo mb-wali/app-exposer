@@ -597,6 +597,10 @@ func TestUpdateUserMappingsByVersionHandler(t *testing.T) {
 	err = app.UpdateUserMappingsByVersionHandler(c)
 	if assert.NoError(err, "shouldn't be an error") {
 		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &InstantLaunchMapping{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
