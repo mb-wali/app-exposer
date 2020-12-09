@@ -106,6 +106,9 @@ func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
 	}
 	updated, err := a.UpdateLatestDefaults(newdefaults)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, updated)
@@ -186,6 +189,9 @@ func (a *App) DefaultsByVersionHandler(c echo.Context) error {
 
 	m, err := a.DefaultsByVersion(int(version))
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 
@@ -225,6 +231,9 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 
 	updated, err := a.UpdateDefaultsByVersion(newvalue, int(version))
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 
@@ -278,6 +287,9 @@ func (a *App) ListAllDefaults() (ListAllDefaultsResponse, error) {
 func (a *App) GetListDefaults(c echo.Context) error {
 	m, err := a.ListAllDefaults()
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, m)

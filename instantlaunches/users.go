@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -64,6 +65,9 @@ func (a *App) UserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
 	m, err := a.UserMapping(user)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, m)
@@ -96,6 +100,9 @@ func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	}
 	updated, err := a.UpdateUserMapping(user, newdefaults)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, updated)
@@ -173,6 +180,9 @@ func (a *App) AllUserMappingsHandler(c echo.Context) error {
 	user := c.Param("username")
 	m, err := a.AllUserMappings(user)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, m)
@@ -223,6 +233,9 @@ func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 	}
 	m, err := a.UserMappingsByVersion(user, int(version))
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, m)
@@ -264,6 +277,9 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 
 	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, newversion)
