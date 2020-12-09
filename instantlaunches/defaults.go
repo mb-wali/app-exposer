@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -76,6 +77,9 @@ func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
 func (a *App) GetLatestDefaults(c echo.Context) error {
 	defaults, err := a.LatestDefaults()
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
 	}
 	return c.JSON(http.StatusOK, defaults)
