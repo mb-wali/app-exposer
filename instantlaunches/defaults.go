@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -100,8 +99,7 @@ func (a *App) UpdateLatestDefaults(newjson *InstantLaunchMapping) (*InstantLaunc
 // UpdateLatestDefaultsHandler is the echo handler for the HTTP API that updates
 // the latest defaults mapping.
 func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
-	newdefaults := &InstantLaunchMapping{}
-	err := c.Bind(newdefaults)
+	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
 		return err
 	}
@@ -143,19 +141,16 @@ func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
 	}
 	addedBy = fmt.Sprintf("%s%s", addedBy, a.UserSuffix)
 
-	update := &InstantLaunchMapping{}
-	readbytes, err := ioutil.ReadAll(c.Request().Body)
+	update, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
 		return err
 	}
 
-	if err = json.Unmarshal(readbytes, update); err != nil {
-		return err
-	}
 	newentry, err := a.AddLatestDefaults(update, addedBy)
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, newentry)
 }
 
@@ -207,12 +202,8 @@ func (a *App) DefaultsByVersionHandler(c echo.Context) error {
 
 // UpdateDefaultsByVersion updates the default mapping for a specific version.
 func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(newjson)
-	if err != nil {
-		return nil, err
-	}
 	updated := &InstantLaunchMapping{}
-	err = a.DB.QueryRowx(updateDefaultsByVersionQuery, marshalled, version).Scan(updated)
+	err := a.DB.QueryRowx(updateDefaultsByVersionQuery, newjson, version).Scan(updated)
 	return updated, err
 }
 
@@ -221,13 +212,8 @@ func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int
 func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 	// I'm not sure why, but this stuff seems to break echo's c.Bind() function
 	// so we handle the unmarshalling without it here.
-	newvalue := &InstantLaunchMapping{}
-	readbytes, err := ioutil.ReadAll(c.Request().Body)
+	newvalue, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal(readbytes, newvalue); err != nil {
 		return err
 	}
 

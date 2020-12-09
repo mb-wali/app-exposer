@@ -20,6 +20,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -63,6 +65,24 @@ func (i InstantLaunchMapping) Scan(value interface{}) error {
 // Value implements the Value() function for database values.
 func (i InstantLaunchMapping) Value() (driver.Value, error) {
 	return json.Marshal(&i)
+}
+
+// InstantLaunchMappingFromJSON creates a new *InstantLaunchMapping from the io.ReadCloser
+// passed in. Calls ioutil.ReadAll on the ReadCloser and closes it.
+func InstantLaunchMappingFromJSON(r io.ReadCloser) (*InstantLaunchMapping, error) {
+	il := &InstantLaunchMapping{}
+
+	defer r.Close()
+	readbytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(readbytes, il); err != nil {
+		return nil, err
+	}
+
+	return il, nil
 }
 
 // UserInstantLaunchMapping contains the user-specific set of pattern-to-instant-launch

@@ -2,9 +2,7 @@ package instantlaunches
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -76,12 +74,8 @@ func (a *App) UserMappingHandler(c echo.Context) error {
 // UpdateUserMapping updates the the latest version of the user's custom
 // instant launch mappings.
 func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(update)
-	if err != nil {
-		return nil, err
-	}
 	updated := &InstantLaunchMapping{}
-	err = a.DB.QueryRowx(updateUserMappingQuery, marshalled, user).Scan(updated)
+	err := a.DB.QueryRowx(updateUserMappingQuery, update, user).Scan(updated)
 	return updated, err
 }
 
@@ -89,15 +83,12 @@ func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*Ins
 // instant launch mapping.
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
-	newdefaults := &InstantLaunchMapping{}
-	readbytes, err := ioutil.ReadAll(c.Request().Body)
+
+	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
 		return err
 	}
 
-	if err = json.Unmarshal(readbytes, newdefaults); err != nil {
-		return err
-	}
 	updated, err := a.UpdateUserMapping(user, newdefaults)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -105,6 +96,7 @@ func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 		}
 		return err
 	}
+
 	return c.JSON(http.StatusOK, updated)
 }
 
@@ -127,12 +119,9 @@ func (a *App) DeleteUserMappingHandler(c echo.Context) error {
 
 // AddUserMapping adds a new record to the database for the user's instant launches.
 func (a *App) AddUserMapping(user string, mapping *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(mapping)
-	if err != nil {
-		return nil, err
-	}
 	newvalue := &InstantLaunchMapping{}
-	if err = a.DB.QueryRowx(createUserMappingQuery, marshalled, user).Scan(newvalue); err != nil {
+	err := a.DB.QueryRowx(createUserMappingQuery, mapping, user).Scan(newvalue)
+	if err != nil {
 		return nil, err
 	}
 	return newvalue, nil
@@ -141,19 +130,17 @@ func (a *App) AddUserMapping(user string, mapping *InstantLaunchMapping) (*Insta
 // AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
 func (a *App) AddUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
-	newvalue := &InstantLaunchMapping{}
-	readbytes, err := ioutil.ReadAll(c.Request().Body)
+
+	newvalue, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
 		return err
 	}
 
-	if err = json.Unmarshal(readbytes, newvalue); err != nil {
-		return err
-	}
 	retval, err := a.AddUserMapping(user, newvalue)
 	if err != nil {
 		return err
 	}
+
 	return c.JSON(http.StatusOK, retval)
 }
 
@@ -243,12 +230,9 @@ func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 
 // UpdateUserMappingsByVersion updates the user's instant launches for a specific version.
 func (a *App) UpdateUserMappingsByVersion(user string, version int, update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(update)
-	if err != nil {
-		return nil, err
-	}
 	retval := &InstantLaunchMapping{}
-	if err = a.DB.QueryRowx(updateUserMappingsByVersionQuery, marshalled, version, user).Scan(retval); err != nil {
+	err := a.DB.QueryRowx(updateUserMappingsByVersionQuery, update, version, user).Scan(retval)
+	if err != nil {
 		return nil, err
 	}
 	return retval, nil
@@ -265,13 +249,8 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 
 	// I'm not sure why, but this stuff seems to break echo's c.Bind() function
 	// so we handle the unmarshalling without it here.
-	update := &InstantLaunchMapping{}
-	readbytes, err := ioutil.ReadAll(c.Request().Body)
+	update, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
-	}
-
-	if err = json.Unmarshal(readbytes, update); err != nil {
 		return err
 	}
 
