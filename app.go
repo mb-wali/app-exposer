@@ -142,7 +142,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	ingress.DELETE("/:name", app.external.DeleteIngress)
 
 	ilgroup := app.router.Group("/instantlaunches")
-	app.instantlaunches = instantlaunches.New(app.db, ilgroup)
+	app.instantlaunches = instantlaunches.New(app.db, ilgroup, init.UserSuffix)
 
 	return app
 }

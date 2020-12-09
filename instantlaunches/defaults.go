@@ -3,6 +3,7 @@ package instantlaunches
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -19,17 +20,17 @@ type DefaultInstantLaunchMapping struct {
 	// Unique identifier.
 	//
 	// Required: true
-	ID string `db:"id"`
+	ID string `db:"id" json:"id"`
 
 	// The version of the mapping format.
 	//
 	// Required: true
-	Version string `db:"version"` // determines the format.
+	Version string `db:"version" json:"version"` // determines the format.
 
 	// The mapping from files to instant launches.
 	//
 	// Required: true
-	Mapping InstantLaunchMapping `db:"mapping"`
+	Mapping InstantLaunchMapping `db:"mapping" json:"mapping"`
 }
 
 const latestDefaultsQuery = `
@@ -60,8 +61,8 @@ const deleteLatestDefaultsQuery = `
 `
 
 const createLatestDefaultsQuery = `
-	INSERT INTO default_instant_launches (instant_launches)
-	VALUES ( ? )
+	INSERT INTO default_instant_launches (instant_launches, added_by)
+	VALUES ( $1, ( SELECT u.id FROM users u WHERE username = $2 ) )
 	RETURNING instant_launches;
 `
 
@@ -127,25 +128,31 @@ func (a *App) DeleteLatestDefaultsHandler(c echo.Context) error {
 }
 
 // AddLatestDefaults adds a new version of the default instant launch mappings.
-func (a *App) AddLatestDefaults(update *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(update)
-	if err != nil {
-		return nil, err
-	}
+func (a *App) AddLatestDefaults(update *InstantLaunchMapping, addedBy string) (*InstantLaunchMapping, error) {
 	newvalue := &InstantLaunchMapping{}
-	err = a.DB.QueryRowx(createLatestDefaultsQuery, marshalled).Scan(newvalue)
+	err := a.DB.QueryRowx(createLatestDefaultsQuery, update, addedBy).Scan(newvalue)
 	return newvalue, err
 }
 
 // AddLatestDefaultsHandler is the echo handler for the HTTP API that allows the
 // caller to add a new version of the default instant launch mapping to the db.
 func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
+	addedBy := c.QueryParam("username")
+	if addedBy == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "missing username in query parameters")
+	}
+	addedBy = fmt.Sprintf("%s%s", addedBy, a.UserSuffix)
+
 	update := &InstantLaunchMapping{}
-	err := c.Bind(update)
+	readbytes, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
 		return err
 	}
-	newentry, err := a.AddLatestDefaults(update)
+
+	if err = json.Unmarshal(readbytes, update); err != nil {
+		return err
+	}
+	newentry, err := a.AddLatestDefaults(update, addedBy)
 	if err != nil {
 		return err
 	}

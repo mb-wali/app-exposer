@@ -26,7 +26,7 @@ func SetupApp() (*App, sqlmock.Sqlmock, *echo.Echo, error) {
 	e := echo.New()
 	g := e.Group("/instantlaunches")
 
-	app := New(sqlxMockDB, g)
+	app := New(sqlxMockDB, g, "@iplantcollaborative.org")
 	return app, mock, e, nil
 }
 
@@ -266,11 +266,13 @@ func TestAddLatestDefaults(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
 
+	testUser := fmt.Sprintf("test%s", app.UserSuffix)
+
 	mock.ExpectQuery("INSERT INTO default_instant_launches").
-		WithArgs(v).
+		WithArgs(v, testUser).
 		WillReturnRows(rows)
 
-	actual, err := app.AddLatestDefaults(expected)
+	actual, err := app.AddLatestDefaults(expected, testUser)
 	if assert.NoError(err, "shouldn't be an error") {
 		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
 	}
@@ -307,11 +309,13 @@ func TestAddLatestDefaultsHandler(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
 
+	testUser := fmt.Sprintf("test%s", app.UserSuffix)
+
 	mock.ExpectQuery("INSERT INTO default_instant_launches").
-		WithArgs(v).
+		WithArgs(v, testUser).
 		WillReturnRows(rows)
 
-	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/defaults", bytes.NewReader(v))
+	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/defaults?username=test", bytes.NewReader(v))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := router.NewContext(req, rec)
