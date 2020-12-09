@@ -15,39 +15,39 @@ const userMappingQuery = `
            u.instant_launches as mapping
       FROM user_instant_launches u
       JOIN users ON u.user_id = users.id
-     WHERE users.username = ?
+     WHERE users.username = $1
   ORDER BY u.version DESC
      LIMIT 1;
 `
 
 const updateUserMappingQuery = `
-    UPDATE ONLY user_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
+    UPDATE ONLY user_instant_launches
+            SET user_instant_launches.instant_launches = $1
            FROM users
-          WHERE def.version = (
-              SELECT max(version)
-                FROM user_instant_launches
+          WHERE user_instant_launches.version = (
+              SELECT max(u.version)
+                FROM user_instant_launches u
           )
-            AND def.user_id = users.id
-            AND users.username = ?
-          RETURNING def.instant_launches;
+            AND user_id = users.id
+            AND users.username = $2
+          RETURNING user_instant_launches.instant_launches;
 `
 
 const deleteUserMappingQuery = `
-	DELETE FROM ONLY user_instant_launches AS def
+	DELETE FROM ONLY user_instant_launches
 	USING users
-	WHERE def.user_id = users.id
-	  AND users.username = ?
-	  AND def.version = (
-		  SELECT max(version)
-		    FROM user_instant_launches
-	  )
+	WHERE user_instant_launches.user_id = users.id
+	  AND users.username = $1
+	  AND user_instant_launches.version = (
+		  SELECT max(u.version)
+		    FROM user_instant_launches u
+	  );
 `
 
 const createUserMappingQuery = `
-	  INSERT INTO user_instant_launches (instant_launches, user_id)
-	  VALUES ( ?, (SELECT id FROM users WHERE username = ?) )
-	  RETURNING instant_launches;
+	INSERT INTO user_instant_launches (instant_launches, user_id)
+	VALUES ( $1, (SELECT id FROM users WHERE username = $2) )
+	RETURNING instant_launches;
 `
 
 // UserMapping returns the user's instant launch mappings.
