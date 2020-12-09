@@ -2,7 +2,6 @@ package instantlaunches
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -42,20 +41,20 @@ const latestDefaultsQuery = `
 `
 
 const updateLatestDefaultsQuery = `
-    UPDATE ONLY default_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-          WHERE def.version = (
-              SELECT max(version)
-                FROM default_instant_launches
+    UPDATE ONLY default_instant_launches
+            SET instant_launches = $1
+          WHERE version = (
+              SELECT max(def.version)
+                FROM default_instant_launches def
           )
-          RETURNING def.instant_launches;
+          RETURNING instant_launches;
 `
 
 const deleteLatestDefaultsQuery = `
 	DELETE FROM ONLY default_instant_launches AS def
-	WHERE def.version = (
-		SELECT max(version)
-		FROM default_instant_launches
+	WHERE version = (
+		SELECT max(def.version)
+		FROM default_instant_launches def
 	);
 `
 
@@ -87,12 +86,8 @@ func (a *App) GetLatestDefaults(c echo.Context) error {
 
 // UpdateLatestDefaults sets a new value for the latest version of the defaults.
 func (a *App) UpdateLatestDefaults(newjson *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	marshalled, err := json.Marshal(newjson)
-	if err != nil {
-		return nil, err
-	}
 	retval := &InstantLaunchMapping{}
-	err = a.DB.QueryRowx(updateLatestDefaultsQuery, marshalled).Scan(retval)
+	err := a.DB.QueryRowx(updateLatestDefaultsQuery, newjson).Scan(retval)
 	return retval, err
 }
 
