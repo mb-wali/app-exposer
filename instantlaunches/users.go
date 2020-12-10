@@ -86,7 +86,7 @@ func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 
 	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
 	updated, err := a.UpdateUserMapping(user, newdefaults)
@@ -133,7 +133,7 @@ func (a *App) AddUserMappingHandler(c echo.Context) error {
 
 	newvalue, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
 	retval, err := a.AddUserMapping(user, newvalue)
@@ -251,7 +251,7 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	// so we handle the unmarshalling without it here.
 	update, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
 	newversion, err := a.UpdateUserMappingsByVersion(user, int(version), update)

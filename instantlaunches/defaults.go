@@ -96,7 +96,7 @@ func (a *App) UpdateLatestDefaults(newjson *InstantLaunchMapping) (*InstantLaunc
 func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
 	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 	updated, err := a.UpdateLatestDefaults(newdefaults)
 	if err != nil {
@@ -138,7 +138,7 @@ func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
 
 	update, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
 	newentry, err := a.AddLatestDefaults(update, addedBy)
@@ -209,7 +209,7 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 	// so we handle the unmarshalling without it here.
 	newvalue, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
