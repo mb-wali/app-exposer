@@ -216,7 +216,7 @@ func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 	m, err := a.UserMappingsByVersion(user, int(version))
 	if err != nil {
@@ -244,7 +244,7 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 
 	// I'm not sure why, but this stuff seems to break echo's c.Bind() function
@@ -276,7 +276,7 @@ func (a *App) DeleteUserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 	return a.DeleteUserMappingsByVersion(user, int(version))
 }
