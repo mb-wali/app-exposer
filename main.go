@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 
 	"github.com/cyverse-de/app-exposer/common"
@@ -43,7 +43,7 @@ func main() {
 		err        error
 		kubeconfig *string
 		cfg        *viper.Viper
-		db         *sql.DB
+		db         *sqlx.DB
 
 		configPath                    = flag.String("config", "/etc/iplant/de/jobservices.yml", "Path to the config file")
 		namespace                     = flag.String("namespace", "default", "The namespace scope this process operates on for non-VICE calls")
@@ -151,15 +151,7 @@ func main() {
 	}
 
 	dbURI := cfg.GetString("db.uri")
-	// connect to the database. or not, I don't really care.
-	db, err = sql.Open("postgres", dbURI)
-	if err != nil {
-		log.Fatal(errors.Wrapf(err, "error connecting to database %s", dbURI))
-	}
-
-	if err = db.Ping(); err != nil {
-		log.Fatal(errors.Wrapf(err, "error pinging database %s", dbURI))
-	}
+	db = sqlx.MustConnect("postgres", dbURI)
 
 	exposerInit := &ExposerAppInit{
 		Namespace:                     *namespace,

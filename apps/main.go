@@ -3,16 +3,18 @@ package apps
 import (
 	"database/sql"
 	"strings"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // Apps provides an API for accessing information about apps.
 type Apps struct {
-	DB         *sql.DB
+	DB         *sqlx.DB
 	UserSuffix string
 }
 
 // NewApps allocates a new *Apps instance.
-func NewApps(db *sql.DB, userSuffix string) *Apps {
+func NewApps(db *sqlx.DB, userSuffix string) *Apps {
 	return &Apps{
 		DB:         db,
 		UserSuffix: userSuffix,

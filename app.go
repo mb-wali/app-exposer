@@ -1,12 +1,13 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/cyverse-de/app-exposer/common"
 	"github.com/cyverse-de/app-exposer/external"
+	"github.com/cyverse-de/app-exposer/instantlaunches"
 	"github.com/cyverse-de/app-exposer/internal"
+	"github.com/jmoiron/sqlx"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/labstack/echo/v4"
@@ -16,12 +17,13 @@ import (
 // REST-like API with the underlying Kubernetes API. All of the HTTP handlers
 // are methods for an ExposerApp instance.
 type ExposerApp struct {
-	external  *external.External
-	internal  *internal.Internal
-	namespace string
-	clientset kubernetes.Interface
-	router    *echo.Echo
-	db        *sql.DB
+	external        *external.External
+	internal        *internal.Internal
+	namespace       string
+	clientset       kubernetes.Interface
+	router          *echo.Echo
+	db              *sqlx.DB
+	instantlaunches *instantlaunches.App
 }
 
 // ExposerAppInit contains configuration settings for creating a new ExposerApp.
@@ -42,7 +44,7 @@ type ExposerAppInit struct {
 	CheckResourceAccessService    string
 	VICEBackendNamespace          string
 	AppsServiceBaseURL            string
-	db                            *sql.DB
+	db                            *sqlx.DB
 	UserSuffix                    string
 }
 
@@ -87,6 +89,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	}
 
 	app.router.GET("/", app.Greeting).Name = "greeting"
+	app.router.Static("/docs", "./docs")
 
 	vice := app.router.Group("/vice")
 	vice.POST("/launch", app.internal.VICELaunchApp)
@@ -137,6 +140,9 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	ingress.PUT("/:name", app.external.UpdateIngress)
 	ingress.GET("/:name", app.external.GetIngress)
 	ingress.DELETE("/:name", app.external.DeleteIngress)
+
+	ilgroup := app.router.Group("/instantlaunches")
+	app.instantlaunches = instantlaunches.New(app.db, ilgroup, init.UserSuffix)
 
 	return app
 }
