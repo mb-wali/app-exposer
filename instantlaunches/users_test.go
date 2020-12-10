@@ -3,6 +3,7 @@ package instantlaunches
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -58,8 +59,10 @@ func TestUserMappingHandler(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "version", "mapping"}).
 		AddRow("0", "0", "{}")
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	mock.ExpectQuery("SELECT u.id, u.version, u.instant_launches as mapping FROM user_instant_launches u").
-		WithArgs("test").
+		WithArgs(expectedUsername).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/test", nil)
@@ -121,10 +124,10 @@ func TestUpdateUserMapping(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"instant_launches"}).
 		AddRow(v)
 	mock.ExpectQuery("UPDATE ONLY user_instant_launches").
-		WithArgs(v, "test").
+		WithArgs(v, fmt.Sprintf("test%s", app.UserSuffix)).
 		WillReturnRows(rows)
 
-	actual, err := app.UpdateUserMapping("test", expected)
+	actual, err := app.UpdateUserMapping(fmt.Sprintf("test%s", app.UserSuffix), expected)
 	if assert.NoError(err, "no errors expected") {
 		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
 	}
@@ -157,10 +160,12 @@ func TestUpdateUserMappingHandler(t *testing.T) {
 	v, err := json.Marshal(expected)
 	assert.NoError(err, "no errors expected")
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	rows := sqlmock.NewRows([]string{"instant_launches"}).
 		AddRow(v)
 	mock.ExpectQuery("UPDATE ONLY user_instant_launches").
-		WithArgs(v, "test").
+		WithArgs(v, expectedUsername).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/test", bytes.NewReader(v))
@@ -209,8 +214,10 @@ func TestDeleteUserMappingHandler(t *testing.T) {
 	}
 	defer app.DB.Close()
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	mock.ExpectExec("DELETE FROM ONLY user_instant_launches").
-		WithArgs("test").
+		WithArgs(expectedUsername).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	req := httptest.NewRequest("DELETE", "http://localhost/instantlaunches/test", nil)
@@ -287,12 +294,14 @@ func TestAddUserMappingHandler(t *testing.T) {
 		},
 	}
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	v, err := json.Marshal(expected)
 	assert.NoError(err, "no errors expected")
 
 	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
 	mock.ExpectQuery("INSERT INTO user_instant_launches").
-		WithArgs(v, "test").
+		WithArgs(v, expectedUsername).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches/test", bytes.NewReader(v))
@@ -395,9 +404,11 @@ func TestAllUserMappingsHandler(t *testing.T) {
 	v, err := json.Marshal(expectedMapping)
 	assert.NoError(err, "no errors expected")
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	rows := sqlmock.NewRows([]string{"id", "version", "user_id", "mapping"}).AddRow("0", "0", "0", v)
 	mock.ExpectQuery("SELECT u.id, u.version, u.user_id, u.instant_launches as mapping FROM user_instant_launches u").
-		WithArgs("test").
+		WithArgs(expectedUsername).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/test", bytes.NewReader(v))
@@ -496,9 +507,11 @@ func TestUserMappingsByVersionHandler(t *testing.T) {
 	v, err := json.Marshal(expectedMapping)
 	assert.NoError(err, "no errors expected")
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	rows := sqlmock.NewRows([]string{"id", "version", "user_id", "mapping"}).AddRow("0", "0", "0", v)
 	mock.ExpectQuery("SELECT u.id, u.version, u.instant_launches as mapping FROM user_instant_launches u").
-		WithArgs("test", 0).
+		WithArgs(expectedUsername, 0).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/test/0", bytes.NewReader(v))
@@ -582,9 +595,11 @@ func TestUpdateUserMappingsByVersionHandler(t *testing.T) {
 	v, err := json.Marshal(expected)
 	assert.NoError(err, "no errors expected")
 
+	expectedUsername := fmt.Sprintf("test%s", app.UserSuffix)
+
 	rows := sqlmock.NewRows([]string{"instant_launches"}).AddRow(v)
 	mock.ExpectQuery("UPDATE ONLY user_instant_launches AS def").
-		WithArgs(v, 0, "test").
+		WithArgs(v, 0, expectedUsername).
 		WillReturnRows(rows)
 
 	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/test/0", bytes.NewReader(v))

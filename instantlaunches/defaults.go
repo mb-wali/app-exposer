@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -134,7 +135,10 @@ func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
 	if addedBy == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "missing username in query parameters")
 	}
-	addedBy = fmt.Sprintf("%s%s", addedBy, a.UserSuffix)
+
+	if !strings.HasSuffix(addedBy, a.UserSuffix) {
+		addedBy = fmt.Sprintf("%s%s", addedBy, a.UserSuffix)
+	}
 
 	update, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {

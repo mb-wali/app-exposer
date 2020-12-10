@@ -2,8 +2,10 @@ package instantlaunches
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 )
@@ -64,6 +66,10 @@ func (a *App) UserMappingHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
 	}
 
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	m, err := a.UserMapping(user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -88,6 +94,10 @@ func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
 	}
 
 	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
@@ -120,6 +130,9 @@ func (a *App) DeleteUserMappingHandler(c echo.Context) error {
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
 	}
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
 	return a.DeleteUserMapping(user)
 }
 
@@ -136,6 +149,13 @@ func (a *App) AddUserMapping(user string, mapping *InstantLaunchMapping) (*Insta
 // AddUserMappingHandler is the HTTP handler for adding a new user mapping to the database.
 func (a *App) AddUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
 
 	newvalue, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
@@ -171,6 +191,14 @@ func (a *App) AllUserMappings(user string) ([]UserInstantLaunchMapping, error) {
 // instant launch mappings.
 func (a *App) AllUserMappingsHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	m, err := a.AllUserMappings(user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -178,6 +206,7 @@ func (a *App) AllUserMappingsHandler(c echo.Context) error {
 		}
 		return err
 	}
+
 	return c.JSON(http.StatusOK, m)
 }
 
@@ -220,10 +249,19 @@ func (a *App) UserMappingsByVersion(user string, version int) (UserInstantLaunch
 // version of the user's instant launch mappings.
 func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
+
 	m, err := a.UserMappingsByVersion(user, int(version))
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -231,6 +269,7 @@ func (a *App) UserMappingsByVersionHandler(c echo.Context) error {
 		}
 		return err
 	}
+
 	return c.JSON(http.StatusOK, m)
 }
 
@@ -248,6 +287,14 @@ func (a *App) UpdateUserMappingsByVersion(user string, version int, update *Inst
 // to update a user's instant launches for a specific version.
 func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
@@ -267,6 +314,7 @@ func (a *App) UpdateUserMappingsByVersionHandler(c echo.Context) error {
 		}
 		return err
 	}
+
 	return c.JSON(http.StatusOK, newversion)
 }
 
@@ -280,9 +328,18 @@ func (a *App) DeleteUserMappingsByVersion(user string, version int) error {
 // delete a user's instant launch mappings at a specific version.
 func (a *App) DeleteUserMappingsByVersionHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
+
 	return a.DeleteUserMappingsByVersion(user, int(version))
 }
