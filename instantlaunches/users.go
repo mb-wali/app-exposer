@@ -2,7 +2,6 @@ package instantlaunches
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -61,6 +60,10 @@ func (a *App) UserMapping(user string) (*UserInstantLaunchMapping, error) {
 // instant launch mappings.
 func (a *App) UserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
+
 	m, err := a.UserMapping(user)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -83,6 +86,9 @@ func (a *App) UpdateUserMapping(user string, update *InstantLaunchMapping) (*Ins
 // instant launch mapping.
 func (a *App) UpdateUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
+	}
 
 	newdefaults, err := InstantLaunchMappingFromJSON(c.Request().Body)
 	if err != nil {
@@ -112,7 +118,7 @@ func (a *App) DeleteUserMapping(user string) error {
 func (a *App) DeleteUserMappingHandler(c echo.Context) error {
 	user := c.Param("username")
 	if user == "" {
-		return errors.New("user was not set")
+		return echo.NewHTTPError(http.StatusBadRequest, "user was not set")
 	}
 	return a.DeleteUserMapping(user)
 }
