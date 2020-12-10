@@ -120,7 +120,7 @@ func TestUpdateUserMapping(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"instant_launches"}).
 		AddRow(v)
-	mock.ExpectQuery("UPDATE ONLY user_instant_launches AS def").
+	mock.ExpectQuery("UPDATE ONLY user_instant_launches").
 		WithArgs(v, "test").
 		WillReturnRows(rows)
 
@@ -159,7 +159,7 @@ func TestUpdateUserMappingHandler(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{"instant_launches"}).
 		AddRow(v)
-	mock.ExpectQuery("UPDATE ONLY user_instant_launches AS def").
+	mock.ExpectQuery("UPDATE ONLY user_instant_launches").
 		WithArgs(v, "test").
 		WillReturnRows(rows)
 
@@ -191,7 +191,7 @@ func TestDeleteUserMapping(t *testing.T) {
 	}
 	defer app.DB.Close()
 
-	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def").
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches").
 		WithArgs("test").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -209,7 +209,7 @@ func TestDeleteUserMappingHandler(t *testing.T) {
 	}
 	defer app.DB.Close()
 
-	mock.ExpectExec("DELETE FROM ONLY user_instant_launches AS def").
+	mock.ExpectExec("DELETE FROM ONLY user_instant_launches").
 		WithArgs("test").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
