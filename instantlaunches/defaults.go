@@ -181,7 +181,7 @@ func (a *App) DefaultsByVersion(version int) (*DefaultInstantLaunchMapping, erro
 func (a *App) DefaultsByVersionHandler(c echo.Context) error {
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 
 	m, err := a.DefaultsByVersion(int(version))
@@ -214,7 +214,7 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 
 	updated, err := a.UpdateDefaultsByVersion(newvalue, int(version))
@@ -241,7 +241,7 @@ func (a *App) DeleteDefaultsByVersion(version int) error {
 func (a *App) DeleteDefaultsByVersionHandler(c echo.Context) error {
 	version, err := strconv.ParseInt(c.Param("version"), 10, 0)
 	if err != nil {
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, "cannot process version")
 	}
 	return a.DeleteDefaultsByVersion(int(version))
 }
