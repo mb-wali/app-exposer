@@ -29,10 +29,10 @@ import (
 
 // InstantLaunch contains the information needed to instantly launch an app.
 type InstantLaunch struct {
-	ID            string `json:"id"`
-	QuickLaunchID string `json:"quick_launch_id"`
-	AddedBy       string `json:"added_by"` // short username
-	AddedOn       string `json:"added_on"` // formatted timestamp including timezone
+	ID            string `json:"id" db:"id"`
+	QuickLaunchID string `json:"quick_launch_id" db:"quick_launch_id"`
+	AddedBy       string `json:"added_by" db:"added_by"` // short username
+	AddedOn       string `json:"added_on" db:"added_on"` // formatted timestamp including timezone
 	db            *sqlx.DB
 }
 
