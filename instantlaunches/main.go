@@ -36,6 +36,25 @@ type InstantLaunch struct {
 	db            *sqlx.DB
 }
 
+// NewInstantLaunchFromJSON instantiates and returns a new *InstantLaunch from the
+// ReadCloser passed in. The ReadCloser is closed as part of this function.
+func NewInstantLaunchFromJSON(r io.ReadCloser) (*InstantLaunch, error) {
+	defer r.Close()
+
+	il := &InstantLaunch{}
+
+	readbytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = json.Unmarshal(readbytes, il); err != nil {
+		return nil, err
+	}
+
+	return il, err
+}
+
 // InstantLaunchSelector defines the default and compatible instant launches
 // for a file pattern.
 type InstantLaunchSelector struct {
