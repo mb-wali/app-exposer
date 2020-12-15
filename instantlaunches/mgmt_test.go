@@ -236,6 +236,33 @@ func TestDeleteInstantLaunch(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
+func TestDeleteInstantLaunchHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	mock.ExpectExec("DELETE FROM instant_launches").
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	req := httptest.NewRequest("DELETE", "http://localhost/instantlaunches/0", nil)
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	err = app.DeleteInstantLaunchHandler(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
+
 func TestListInstantLaunches(t *testing.T) {
 	assert := assert.New(t)
 
