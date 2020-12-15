@@ -1,6 +1,10 @@
 package instantlaunches
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
 
@@ -28,6 +32,48 @@ func TestAddInstantLaunch(t *testing.T) {
 	assert.Equal("0", actual.QuickLaunchID, "quick_launch_id should be 0")
 	assert.Equal("test@iplantcollaborative.org", actual.AddedBy, "added_by should be test@iplantcollaborative.org")
 	assert.Equal("today", actual.AddedOn, "added_on should be set to 'today'")
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
+
+func TestAddInstantLaunchHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := &InstantLaunch{
+		QuickLaunchID: "0",
+		AddedBy:       "test@iplantcollaborative.org",
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "should not error")
+
+	rows := sqlmock.NewRows([]string{"id", "quick_launch_id", "added_by", "added_on"}).
+		AddRow("0", expected.QuickLaunchID, expected.AddedBy, "today")
+
+	mock.ExpectQuery("INSERT INTO instant_launches").WillReturnRows(rows)
+
+	req := httptest.NewRequest("PUT", "http://localhost/instantlaunches", bytes.NewReader(v))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+
+	err = app.AddInstantLaunchHandler(c)
+	if assert.NoError(err, "should not error") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &InstantLaunch{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		if assert.NoError(err, "should be able to parse body") {
+			assert.True(reflect.DeepEqual(expected.QuickLaunchID, actual.QuickLaunchID), "should be equal")
+			assert.True(reflect.DeepEqual(expected.AddedBy, actual.AddedBy), "should be equal")
+		}
+	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 

@@ -28,21 +28,20 @@ func (a *App) AddInstantLaunch(quickLaunchID, username string) (*InstantLaunch, 
 
 // AddInstantLaunchHandler is the HTTP handler for adding a new instant launch.
 func (a *App) AddInstantLaunchHandler(c echo.Context) error {
-	user := c.QueryParam("username")
-	if user == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "username was not set")
-	}
-
-	if !strings.HasSuffix(user, a.UserSuffix) {
-		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
-	}
-
 	il, err := NewInstantLaunchFromJSON(c.Request().Body)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "cannot parse JSON")
 	}
 
-	newil, err := a.AddInstantLaunch(il.QuickLaunchID, user)
+	if il.AddedBy == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "username was not set")
+	}
+
+	if !strings.HasSuffix(il.AddedBy, a.UserSuffix) {
+		il.AddedBy = fmt.Sprintf("%s%s", il.AddedBy, a.UserSuffix)
+	}
+
+	newil, err := a.AddInstantLaunch(il.QuickLaunchID, il.AddedBy)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
