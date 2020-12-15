@@ -173,6 +173,52 @@ func TestUpdateInstantLaunch(t *testing.T) {
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
+func TestUpdateInstantLaunchHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	rows := sqlmock.NewRows([]string{"id", "quick_launch_id", "added_by", "added_on"}).
+		AddRow("0", "0", "test@iplantcollaborative.org", "today")
+
+	mock.ExpectQuery("UPDATE ONLY instant_launches").
+		WillReturnRows(rows)
+
+	expected := &InstantLaunch{
+		QuickLaunchID: "0",
+		AddedBy:       "test@iplantcollaborative.org",
+	}
+
+	v, err := json.Marshal(expected)
+	assert.NoError(err, "should not error")
+
+	req := httptest.NewRequest("POST", "http://localhost/instantlaunches/0", bytes.NewReader(v))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	err = app.UpdateInstantLaunchHandler(c)
+	if assert.NoError(err, "error should be nil") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := &InstantLaunch{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		if assert.NoError(err, "should be able to parse body") {
+			assert.Equal(expected.QuickLaunchID, actual.QuickLaunchID, "should be equal")
+			assert.Equal(expected.AddedBy, actual.AddedBy, "should be equal")
+		}
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
+
 func TestDeleteInstantLaunch(t *testing.T) {
 	assert := assert.New(t)
 
