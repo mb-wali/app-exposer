@@ -303,3 +303,57 @@ func TestListInstantLaunches(t *testing.T) {
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
+
+func TestListInstantLaunchesHandler(t *testing.T) {
+	assert := assert.New(t)
+
+	app, mock, router, err := SetupApp()
+	if err != nil {
+		t.Fatalf("error setting up app: %s", err)
+	}
+	defer app.DB.Close()
+
+	expected := []InstantLaunch{
+		InstantLaunch{
+			ID:            "0",
+			QuickLaunchID: "0",
+			AddedBy:       "test@iplantcollaborative.org",
+			AddedOn:       "today",
+		},
+		InstantLaunch{
+			ID:            "1",
+			QuickLaunchID: "1",
+			AddedBy:       "test1@iplantcollaborative.org",
+			AddedOn:       "yesterday",
+		},
+	}
+
+	rows := sqlmock.NewRows([]string{"id", "quick_launch_id", "added_by", "added_on"}).
+		AddRow(expected[0].ID, expected[0].QuickLaunchID, expected[0].AddedBy, expected[0].AddedOn).
+		AddRow(expected[1].ID, expected[1].QuickLaunchID, expected[1].AddedBy, expected[1].AddedOn)
+
+	mock.ExpectQuery("SELECT i.id, i.quick_launch_id, i.added_by, i.added_on FROM instant_launches i").
+		WillReturnRows(rows)
+
+	req := httptest.NewRequest("GET", "http://localhost/instantlaunches/0", nil)
+	rec := httptest.NewRecorder()
+
+	c := router.NewContext(req, rec)
+	c.SetPath("/instantlaunches/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	err = app.ListInstantLaunchesHandler(c)
+	if assert.NoError(err, "error should be nil") {
+		assert.Equal(http.StatusOK, rec.Code)
+
+		actual := []InstantLaunch{}
+		err = json.Unmarshal(rec.Body.Bytes(), &actual)
+		if assert.True(len(actual) > 0 && len(actual) == len(expected), "length is wrong") {
+			for index := range expected {
+				assert.True(reflect.DeepEqual(expected[index], actual[index]), "should be equal")
+			}
+		}
+	}
+	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
+}
