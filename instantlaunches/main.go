@@ -398,6 +398,12 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/mappings/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
+	instance.Group.PUT("/", instance.AddInstantLaunchHandler)
+	instance.Group.GET("/", instance.ListInstantLaunchesHandler)
+	instance.Group.GET("/:id", instance.GetInstantLaunchHandler)
+	instance.Group.POST("/:id", instance.UpdateInstantLaunchHandler)
+	instance.Group.DELETE("/:id", instance.DeleteInstantLaunchHandler)
+
 	return instance
 }
 

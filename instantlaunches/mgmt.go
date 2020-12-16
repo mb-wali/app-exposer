@@ -92,7 +92,7 @@ func (a *App) GetInstantLaunchHandler(c echo.Context) error {
 const updateInstantLaunchQuery = `
 	UPDATE ONLY instant_launches
 			SET quick_launch_id = $1
-		  WHERE id = $2;
+		  WHERE id = $2
 	  RETURNING id, quick_launch_id, added_by, added_by;
 `
 
