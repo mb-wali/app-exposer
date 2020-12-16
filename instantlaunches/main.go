@@ -27,13 +27,34 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// InstantLaunch contains the information needed to instantly launch an app.
+// InstantLaunch docs
+//
+// The information needed to instantly launch an app.
+//
+// swagger:response instantLaunch
+//
+//		In: body
 type InstantLaunch struct {
-	ID            string `json:"id" db:"id"`
+	// Unique identifier
+	//
+	// Required: false
+	ID string `json:"id" db:"id"`
+
+	// The UUID for the quick launch used in the instant launch.
+	//
+	// Required: true
 	QuickLaunchID string `json:"quick_launch_id" db:"quick_launch_id"`
-	AddedBy       string `json:"added_by" db:"added_by"` // short username
-	AddedOn       string `json:"added_on" db:"added_on"` // formatted timestamp including timezone
-	db            *sqlx.DB
+
+	// The username of the user that added or is adding the instant launch.
+	//
+	// Required: true
+	AddedBy string `json:"added_by" db:"added_by"` // short username
+
+	// The date the instant launch was added to the system.
+	//
+	// Required: true
+	AddedOn string `json:"added_on" db:"added_on"` // formatted timestamp including timezone
+	db      *sqlx.DB
 }
 
 // NewInstantLaunchFromJSON instantiates and returns a new *InstantLaunch from the
@@ -398,10 +419,83 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/mappings/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
+	// swagger.route PUT /instantlaunches/ instantlaunches addInstantLaunch
+	//
+	// Adds a new instant launch to the system.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: instantLaunch
 	instance.Group.PUT("/", instance.AddInstantLaunchHandler)
+
+	// swagger.route GET /instantlaunches/ instantlaunches listInstantLaunches
+	//
+	// Lists all of the instant launches in the system.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: instantLaunch
 	instance.Group.GET("/", instance.ListInstantLaunchesHandler)
+
+	// swagger.route GET /instantlaunches/{id} instantlaunches getInstantLaunch
+	//
+	// Returns a particular instant launch based on its UUID.
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: instantLaunch
 	instance.Group.GET("/:id", instance.GetInstantLaunchHandler)
+
+	// swagger.route POST /instantlaunches/{id} instantlaunches updateInstantLaunch
+	//
+	// Updates an instant launch.
+	//
+	//		Consumes:
+	//		- application/json
+	//
+	// 		Produces:
+	//		- application/json
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
+	//			200: instantLaunch
 	instance.Group.POST("/:id", instance.UpdateInstantLaunchHandler)
+
+	// swagger.route DELETE /instantlaunches/{id} instantlaunches deleteInstantLaunch
+	//
+	// Deletes an instant launch.
+	//
+	//		Schemes: http
+	//
+	//		Deprecated: false
+	//
+	//		Responses:
+	//			default: errorResponse
 	instance.Group.DELETE("/:id", instance.DeleteInstantLaunchHandler)
 
 	return instance
