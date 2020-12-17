@@ -32,6 +32,7 @@ type ExposerAppInit struct {
 	ViceNamespace                 string // The namespace containing the running VICE apps.
 	PorklockImage                 string // The image containing the porklock tool
 	PorklockTag                   string // The docker tag for the image containing the porklock tool
+	UseCSIDriver                  bool   // Yes to use CSI Driver for data input/output, No to use Vice-file-transfer
 	InputPathListIdentifier       string // Header line for input path lists
 	TicketInputPathListIdentifier string // Header line for ticket input path lists
 	JobStatusURL                  string
@@ -54,6 +55,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		ViceNamespace:                 init.ViceNamespace,
 		PorklockImage:                 init.PorklockImage,
 		PorklockTag:                   init.PorklockTag,
+		UseCSIDriver:                  init.UseCSIDriver,
 		InputPathListIdentifier:       init.InputPathListIdentifier,
 		TicketInputPathListIdentifier: init.TicketInputPathListIdentifier,
 		ViceProxyImage:                init.ViceProxyImage,
