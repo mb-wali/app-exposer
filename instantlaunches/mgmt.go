@@ -50,8 +50,8 @@ func (a *App) AddInstantLaunchHandler(c echo.Context) error {
 
 const getInstantLaunchQuery = `
 	SELECT i.id, i.quick_launch_id, i.added_by, i.added_on
-	  FROM instant_launches i
-	 WHERE i.id = $1;
+	FROM instant_launches i
+	WHERE i.id = $1;
 `
 
 // GetInstantLaunch returns a stored instant launch by ID.
@@ -83,9 +83,9 @@ func (a *App) GetInstantLaunchHandler(c echo.Context) error {
 
 const updateInstantLaunchQuery = `
 	UPDATE ONLY instant_launches
-			SET quick_launch_id = $1
-		  WHERE id = $2
-	  RETURNING id, quick_launch_id, added_by, added_by;
+	SET quick_launch_id = $1
+	WHERE id = $2
+	RETURNING id, quick_launch_id, added_by, added_by;
 `
 
 // UpdateInstantLaunch updates a stored instant launch with new values.
@@ -143,7 +143,7 @@ func (a *App) DeleteInstantLaunchHandler(c echo.Context) error {
 
 const listInstantLaunchesQuery = `
 	SELECT i.id, i.quick_launch_id, i.added_by, i.added_on
-	  FROM instant_launches i;
+	FROM instant_launches i;
 `
 
 // ListInstantLaunches lists all registered instant launches.
