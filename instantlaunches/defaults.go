@@ -10,7 +10,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// A DefaultInstantLaunchMapping is a global default mapping of files to instant launches.
+// DefaultInstantLaunchMapping docs
+//
+// A global default mapping of files to instant launches.
 //
 // swagger:response defaultMapping
 //
