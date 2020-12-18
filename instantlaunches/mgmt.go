@@ -18,11 +18,7 @@ const addInstantLaunchQuery = `
 // AddInstantLaunch registers a new instant launch in the database.
 func (a *App) AddInstantLaunch(quickLaunchID, username string) (*InstantLaunch, error) {
 	newvalues := &InstantLaunch{}
-	err := a.DB.QueryRowx(addInstantLaunchQuery, quickLaunchID, username).Scan(&newvalues.ID,
-		&newvalues.QuickLaunchID,
-		&newvalues.AddedBy,
-		&newvalues.AddedOn,
-	)
+	err := a.DB.QueryRowx(addInstantLaunchQuery, quickLaunchID, username).StructScan(newvalues)
 	return newvalues, err
 }
 
@@ -61,11 +57,7 @@ const getInstantLaunchQuery = `
 // GetInstantLaunch returns a stored instant launch by ID.
 func (a *App) GetInstantLaunch(id string) (*InstantLaunch, error) {
 	il := &InstantLaunch{}
-	err := a.DB.QueryRowx(getInstantLaunchQuery, id).Scan(&il.ID,
-		&il.QuickLaunchID,
-		&il.AddedBy,
-		&il.AddedOn,
-	)
+	err := a.DB.QueryRowx(getInstantLaunchQuery, id).StructScan(il)
 	return il, err
 }
 
@@ -99,11 +91,7 @@ const updateInstantLaunchQuery = `
 // UpdateInstantLaunch updates a stored instant launch with new values.
 func (a *App) UpdateInstantLaunch(id, quickLaunchID string) (*InstantLaunch, error) {
 	il := &InstantLaunch{}
-	err := a.DB.QueryRowx(updateInstantLaunchQuery, quickLaunchID, id).Scan(&il.ID,
-		&il.QuickLaunchID,
-		&il.AddedBy,
-		&il.AddedOn,
-	)
+	err := a.DB.QueryRowx(updateInstantLaunchQuery, quickLaunchID, id).StructScan(il)
 	return il, err
 }
 
