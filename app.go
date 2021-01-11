@@ -87,11 +87,11 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		switch err.(type) {
 		case common.ErrorResponse:
 			code = http.StatusBadRequest
-			body = err
+			body = err.(common.ErrorResponse)
 			break
 		case *common.ErrorResponse:
 			code = http.StatusBadRequest
-			body = err
+			body = err.(*common.ErrorResponse)
 			break
 		case *echo.HTTPError:
 			echoErr := err.(*echo.HTTPError)
