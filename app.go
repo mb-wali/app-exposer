@@ -82,12 +82,22 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 
 	app.router.HTTPErrorHandler = func(err error, c echo.Context) {
 		code := http.StatusInternalServerError
+		var body interface{}
 
-		if echoErr, ok := err.(*echo.HTTPError); ok {
+		switch err.(type) {
+		case common.ErrorResponse:
+			body = err
+			break
+		case *echo.HTTPError:
+			echoErr := err.(*echo.HTTPError)
 			code = echoErr.Code
+			body = common.NewErrorResponse(err)
+			break
+		default:
+			body = common.NewErrorResponse(err)
 		}
 
-		c.JSON(code, common.NewErrorResponse(err))
+		c.JSON(code, body)
 	}
 
 	app.router.GET("/", app.Greeting).Name = "greeting"
