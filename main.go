@@ -37,7 +37,7 @@ func init() {
 }
 
 func main() {
-	logrus.SetReportCaller(true)
+	log.Logger.SetReportCaller(true)
 
 	var (
 		err        error
@@ -56,6 +56,7 @@ func main() {
 		getAnalysisIDService          = flag.String("--get-analysis-id-service", "get-analysis-id", "The service name for the service that provides analysis ID lookups")
 		checkResourceAccessService    = flag.String("--check-resource-access-service", "check-resource-access", "The name of the service that validates whether a user can access a resource")
 		userSuffix                    = flag.String("user-suffix", "@iplantcollaborative.org", "The user suffix for all users in the DE installation")
+		logLevel                      = flag.String("log-level", "warn", "One of trace, debug, info, warn, error, fatal, or panic.")
 	)
 
 	// if cluster is set, then
@@ -73,6 +74,36 @@ func main() {
 	}
 
 	flag.Parse()
+
+	var levelSetting logrus.Level
+
+	switch *logLevel {
+	case "trace":
+		levelSetting = logrus.TraceLevel
+		break
+	case "debug":
+		levelSetting = logrus.DebugLevel
+		break
+	case "info":
+		levelSetting = logrus.InfoLevel
+		break
+	case "warn":
+		levelSetting = logrus.WarnLevel
+		break
+	case "error":
+		levelSetting = logrus.ErrorLevel
+		break
+	case "fatal":
+		levelSetting = logrus.FatalLevel
+		break
+	case "panic":
+		levelSetting = logrus.PanicLevel
+		break
+	default:
+		log.Fatal("incorrect log level")
+	}
+
+	log.Logger.SetLevel(levelSetting)
 
 	log.Infof("Reading config from %s", *configPath)
 	if _, err = os.Open(*configPath); err != nil {
