@@ -36,16 +36,6 @@ func init() {
 	logtostderr.Value.Set("true")
 }
 
-var logLevels = []string{
-	"trace",
-	"debug",
-	"info",
-	"warn",
-	"error",
-	"fatal",
-	"panic",
-}
-
 func main() {
 	log.Logger.SetReportCaller(true)
 
