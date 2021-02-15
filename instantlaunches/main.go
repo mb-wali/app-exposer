@@ -434,6 +434,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	//			200: instantLaunch
 	instance.Group.PUT("/", instance.AddInstantLaunchHandler)
+	instance.Group.PUT("", instance.AddInstantLaunchHandler)
 
 	// swagger.route GET /instantlaunches/ instantlaunches listInstantLaunches
 	//
@@ -450,6 +451,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	//			200: instantLaunch
 	instance.Group.GET("/", instance.ListInstantLaunchesHandler)
+	instance.Group.GET("", instance.ListInstantLaunchesHandler)
 
 	// swagger.route GET /instantlaunches/{id} instantlaunches getInstantLaunch
 	//
