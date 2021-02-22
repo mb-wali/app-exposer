@@ -419,6 +419,8 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/mappings/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
+	instance.Group.GET("/metadata", instance.ListMetadataHandler)
+
 	// swagger.route PUT /instantlaunches/ instantlaunches addInstantLaunch
 	//
 	// Adds a new instant launch to the system.
@@ -499,6 +501,10 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//		Responses:
 	//			default: errorResponse
 	instance.Group.DELETE("/:id", instance.DeleteInstantLaunchHandler)
+
+	instance.Group.GET("/:id/metadata", instance.GetMetadataHandler)
+	instance.Group.POST("/:id/metadata", instance.AddOrUpdateMetadataHandler)
+	instance.Group.PUT("/:id/metadata", instance.SetAllMetadataHandler)
 
 	return instance
 }
