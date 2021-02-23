@@ -27,7 +27,7 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 		return err
 	}
 
-	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	svc.Path = path.Join(svc.Path, "/avus")
 	query := svc.Query()
 	query.Add("user", user)
 	query.Add("target-type", "instant_launch")
