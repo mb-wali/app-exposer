@@ -13,8 +13,51 @@ import (
 // ListMetadataHandler lists all of the instant launch metadata
 // based on the attributes and values contained in the body.
 func (a *App) ListMetadataHandler(c echo.Context) error {
+	user := c.QueryParam("user")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
 
-	return nil
+	attr := c.QueryParam("attribute")
+	value := c.QueryParam("value")
+	unit := c.QueryParam("unit")
+
+	svc, err := url.Parse(a.MetadataBaseURL)
+	if err != nil {
+		return err
+	}
+
+	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	query := svc.Query()
+	query.Add("user", user)
+	query.Add("target-type", "instant_launch")
+
+	if attr != "" {
+		query.Add("attribute", attr)
+	}
+
+	if value != "" {
+		query.Add("value", value)
+	}
+
+	if unit != "" {
+		query.Add("unit", unit)
+	}
+	svc.RawQuery = query.Encode()
+
+	svc.Path = path.Join(svc.Path, "/avus")
+
+	resp, err := http.Get(svc.String())
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
 }
 
 // GetMetadataHandler returns all of the metadata associated with an instant launch.
