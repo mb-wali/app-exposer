@@ -24,12 +24,21 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
 	}
 
+	user := c.QueryParam("user")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
+
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
 		return err
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	query := svc.Query()
+	query.Add("user", user)
+	svc.RawQuery = query.Encode()
+
 	resp, err := http.Get(svc.String())
 	if err != nil {
 		return err
@@ -50,6 +59,11 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
 	}
 
+	user := c.QueryParam("user")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
+
 	inBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
 		return err
@@ -61,6 +75,10 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	query := svc.Query()
+	query.Add("user", user)
+	svc.RawQuery = query.Encode()
+
 	resp, err := http.Post(svc.String(), "application/json", bytes.NewReader(inBody))
 	if err != nil {
 		return err
@@ -82,6 +100,11 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
 	}
 
+	user := c.QueryParam("user")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
+
 	inBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
 		return err
@@ -93,6 +116,10 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	query := svc.Query()
+	query.Add("user", user)
+	svc.RawQuery = query.Encode()
+
 	req, err := http.NewRequest(http.MethodPut, svc.String(), bytes.NewReader(inBody))
 	if err != nil {
 		return err
