@@ -136,17 +136,19 @@ type UserInstantLaunchMapping struct {
 
 // App provides an API for managing instant launches.
 type App struct {
-	DB         *sqlx.DB
-	Group      *echo.Group
-	UserSuffix string
+	DB              *sqlx.DB
+	Group           *echo.Group
+	UserSuffix      string
+	MetadataBaseURL string
 }
 
 // New returns a newly created *App.
-func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
+func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL string) *App {
 	instance := &App{
-		DB:         db,
-		Group:      group,
-		UserSuffix: userSuffix,
+		DB:              db,
+		Group:           group,
+		UserSuffix:      userSuffix,
+		MetadataBaseURL: metadataBaseURL,
 	}
 
 	// swagger:route get /instantlaunches/mappings/defaults instantlaunches listDefaults

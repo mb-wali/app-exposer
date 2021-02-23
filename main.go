@@ -173,6 +173,11 @@ func main() {
 		appsServiceBaseURL = "http://apps"
 	}
 
+	metadataBaseURL := cfg.GetString("metadata.base")
+	if metadataBaseURL == "" {
+		metadataBaseURL = "http://metadata"
+	}
+
 	var proxyImage string
 	proxyTag := cfg.GetString("interapps.proxy.tag")
 	if proxyTag == "" {
@@ -204,6 +209,7 @@ func main() {
 		AppsServiceBaseURL:            appsServiceBaseURL,
 		db:                            db,
 		UserSuffix:                    *userSuffix,
+		MetadataBaseURL:               metadataBaseURL,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
