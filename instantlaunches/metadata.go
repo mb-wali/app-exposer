@@ -1,6 +1,7 @@
 package instantlaunches
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -28,7 +29,7 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 		return err
 	}
 
-	svc.Path = path.Join(svc.Path, "/avus", "quick_launch", id)
+	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
 	resp, err := http.Get(svc.String())
 	if err != nil {
 		return err
@@ -48,7 +49,29 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
 	}
-	return nil
+
+	inBody, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return err
+	}
+
+	svc, err := url.Parse(a.MetadataBaseURL)
+	if err != nil {
+		return err
+	}
+
+	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	resp, err := http.Post(svc.String(), "application/json", bytes.NewReader(inBody))
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
 }
 
 // SetAllMetadataHandler sets all of the AVUs associated with an instant
@@ -58,5 +81,32 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
 	}
-	return nil
+
+	inBody, err := ioutil.ReadAll(c.Request().Body)
+	if err != nil {
+		return err
+	}
+
+	svc, err := url.Parse(a.MetadataBaseURL)
+	if err != nil {
+		return err
+	}
+
+	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
+	req, err := http.NewRequest(http.MethodPut, svc.String(), bytes.NewReader(inBody))
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
 }
