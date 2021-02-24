@@ -2,13 +2,22 @@ package instantlaunches
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
 
+	"github.com/cyverse-de/app-exposer/common"
 	"github.com/labstack/echo/v4"
 )
+
+var log = common.Log
+
+func handleError(err error, statusCode int) error {
+	log.Error(err)
+	return echo.NewHTTPError(statusCode, err.Error())
+}
 
 // ListMetadataHandler lists all of the instant launch metadata
 // based on the attributes and values contained in the body.
@@ -24,7 +33,7 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusBadRequest)
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus")
@@ -45,16 +54,18 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 	}
 	svc.RawQuery = query.Encode()
 
-	svc.Path = path.Join(svc.Path, "/avus")
+	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
 
 	resp, err := http.Get(svc.String())
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
+
+	log.Debug(fmt.Sprintf("metadata endpoint: %s, status code: %d", svc.String(), resp.StatusCode))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
@@ -74,7 +85,7 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusBadRequest)
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
@@ -84,11 +95,11 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 
 	resp, err := http.Get(svc.String())
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
@@ -109,12 +120,12 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 
 	inBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusBadRequest)
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
@@ -124,12 +135,12 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 
 	resp, err := http.Post(svc.String(), "application/json", bytes.NewReader(inBody))
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
@@ -150,12 +161,12 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 
 	inBody, err := ioutil.ReadAll(c.Request().Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusBadRequest)
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus", "instant_launch", id)
@@ -165,17 +176,17 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 
 	req, err := http.NewRequest(http.MethodPut, svc.String(), bytes.NewReader(inBody))
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return handleError(err, http.StatusInternalServerError)
 	}
 
 	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
