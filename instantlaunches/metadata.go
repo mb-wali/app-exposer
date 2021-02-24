@@ -56,7 +56,7 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 	}
 	svc.RawQuery = query.Encode()
 
-	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+	log.Debug(fmt.Sprintf("metadata endpoint: GET %s", svc.String()))
 
 	resp, err := http.Get(svc.String())
 	if err != nil {
@@ -97,7 +97,7 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
-	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+	log.Debug(fmt.Sprintf("metadata endpoint: GET %s", svc.String()))
 
 	resp, err := http.Get(svc.String())
 	if err != nil {
@@ -144,7 +144,7 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
-	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+	log.Debug(fmt.Sprintf("metadata endpoint: POST %s", svc.String()))
 
 	resp, err := http.Post(svc.String(), "application/json", bytes.NewReader(inBody))
 	if err != nil {
@@ -191,12 +191,14 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
-	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+	log.Debug(fmt.Sprintf("metadata endpoint: PUT %s", svc.String()))
 
 	req, err := http.NewRequest(http.MethodPut, svc.String(), bytes.NewReader(inBody))
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
 	}
+
+	req.Header.Set(http.CanonicalHeaderKey("content-type"), "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
