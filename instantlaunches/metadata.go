@@ -22,6 +22,8 @@ func handleError(err error, statusCode int) error {
 // ListMetadataHandler lists all of the instant launch metadata
 // based on the attributes and values contained in the body.
 func (a *App) ListMetadataHandler(c echo.Context) error {
+	log.Debug("in ListMetadataHandler")
+
 	user := c.QueryParam("user")
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
@@ -73,6 +75,8 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 
 // GetMetadataHandler returns all of the metadata associated with an instant launch.
 func (a *App) GetMetadataHandler(c echo.Context) error {
+	log.Debug("int GetMetadataHandler")
+
 	id := c.Param("id")
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
@@ -93,10 +97,15 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
+	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+
 	resp, err := http.Get(svc.String())
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
 	}
+
+	log.Debug(fmt.Sprintf("metadata endpoint: %s, status code: %d", svc.String(), resp.StatusCode))
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
@@ -108,6 +117,8 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 // AddOrUpdateMetadataHandler adds or updates one or more AVUs on an instant
 // launch.
 func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
+	log.Debug("in AddOrUpdateMetadataHandler")
+
 	id := c.Param("id")
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
@@ -133,10 +144,14 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
+	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+
 	resp, err := http.Post(svc.String(), "application/json", bytes.NewReader(inBody))
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
 	}
+
+	log.Debug(fmt.Sprintf("metadata endpoint: %s, status code: %d", svc.String(), resp.StatusCode))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -149,6 +164,8 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 // SetAllMetadataHandler sets all of the AVUs associated with an instant
 // launch to the set contained in the body of the request.
 func (a *App) SetAllMetadataHandler(c echo.Context) error {
+	log.Debug("in SetAllMetadataHandler")
+
 	id := c.Param("id")
 	if id == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
@@ -174,6 +191,8 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	query.Add("user", user)
 	svc.RawQuery = query.Encode()
 
+	log.Debug(fmt.Sprintf("metadata endpoint: %s", svc.String()))
+
 	req, err := http.NewRequest(http.MethodPut, svc.String(), bytes.NewReader(inBody))
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
@@ -183,6 +202,8 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	if err != nil {
 		return handleError(err, http.StatusInternalServerError)
 	}
+
+	log.Debug(fmt.Sprintf("metadata endpoint: %s, status code: %d", svc.String(), resp.StatusCode))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
