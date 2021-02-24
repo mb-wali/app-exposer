@@ -19,6 +19,13 @@ func handleError(err error, statusCode int) error {
 	return echo.NewHTTPError(statusCode, err.Error())
 }
 
+// InstantLaunchExists returns true if the id passed in exists in the database
+func (a *App) InstantLaunchExists(id string) (bool, error) {
+	var count int
+	err := a.DB.Get(&count, "SELECT COUNT(*) FROM instant_launches WHERE id = $1;", id)
+	return count > 0, err
+}
+
 // ListMetadataHandler lists all of the instant launch metadata
 // based on the attributes and values contained in the body.
 func (a *App) ListMetadataHandler(c echo.Context) error {
@@ -87,6 +94,15 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
 	}
 
+	exists, err := a.InstantLaunchExists(id)
+	if err != nil {
+		return handleError(err, http.StatusInternalServerError)
+	}
+
+	if !exists {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("instant launch UUID %s not found", id))
+	}
+
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
 		return handleError(err, http.StatusBadRequest)
@@ -127,6 +143,15 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 	user := c.QueryParam("user")
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
+
+	exists, err := a.InstantLaunchExists(id)
+	if err != nil {
+		return handleError(err, http.StatusInternalServerError)
+	}
+
+	if !exists {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("instant launch UUID %s not found", id))
 	}
 
 	inBody, err := ioutil.ReadAll(c.Request().Body)
@@ -174,6 +199,15 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 	user := c.QueryParam("user")
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+	}
+
+	exists, err := a.InstantLaunchExists(id)
+	if err != nil {
+		return handleError(err, http.StatusInternalServerError)
+	}
+
+	if !exists {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("instant launch UUID %s not found", id))
 	}
 
 	inBody, err := ioutil.ReadAll(c.Request().Body)
