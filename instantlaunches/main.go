@@ -136,17 +136,19 @@ type UserInstantLaunchMapping struct {
 
 // App provides an API for managing instant launches.
 type App struct {
-	DB         *sqlx.DB
-	Group      *echo.Group
-	UserSuffix string
+	DB              *sqlx.DB
+	Group           *echo.Group
+	UserSuffix      string
+	MetadataBaseURL string
 }
 
 // New returns a newly created *App.
-func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
+func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL string) *App {
 	instance := &App{
-		DB:         db,
-		Group:      group,
-		UserSuffix: userSuffix,
+		DB:              db,
+		Group:           group,
+		UserSuffix:      userSuffix,
+		MetadataBaseURL: metadataBaseURL,
 	}
 
 	// swagger:route get /instantlaunches/mappings/defaults instantlaunches listDefaults
@@ -419,6 +421,8 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/mappings/:username/:version", instance.DeleteUserMappingsByVersionHandler)
 
+	instance.Group.GET("/metadata", instance.ListMetadataHandler)
+
 	// swagger.route PUT /instantlaunches/ instantlaunches addInstantLaunch
 	//
 	// Adds a new instant launch to the system.
@@ -499,6 +503,10 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string) *App {
 	//		Responses:
 	//			default: errorResponse
 	instance.Group.DELETE("/:id", instance.DeleteInstantLaunchHandler)
+
+	instance.Group.GET("/:id/metadata", instance.GetMetadataHandler)
+	instance.Group.POST("/:id/metadata", instance.AddOrUpdateMetadataHandler)
+	instance.Group.PUT("/:id/metadata", instance.SetAllMetadataHandler)
 
 	return instance
 }
