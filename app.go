@@ -48,6 +48,7 @@ type ExposerAppInit struct {
 	db                            *sqlx.DB
 	UserSuffix                    string
 	MetadataBaseURL               string
+	PermissionsURL                string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -79,6 +80,12 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		clientset: cs,
 		router:    echo.New(),
 		db:        init.db,
+	}
+
+	ilInit := &instantlaunches.Init{
+		UserSuffix:      init.UserSuffix,
+		MetadataBaseURL: init.MetadataBaseURL,
+		PermissionsURL:  init.PermissionsURL,
 	}
 
 	app.router.HTTPErrorHandler = func(err error, c echo.Context) {
@@ -160,7 +167,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	ingress.DELETE("/:name", app.external.DeleteIngressHandler)
 
 	ilgroup := app.router.Group("/instantlaunches")
-	app.instantlaunches = instantlaunches.New(app.db, ilgroup, init.UserSuffix, init.MetadataBaseURL)
+	app.instantlaunches = instantlaunches.New(app.db, ilgroup, ilInit)
 
 	return app
 }

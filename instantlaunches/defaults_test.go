@@ -26,7 +26,12 @@ func SetupApp() (*App, sqlmock.Sqlmock, *echo.Echo, error) {
 	e := echo.New()
 	g := e.Group("/instantlaunches")
 
-	app := New(sqlxMockDB, g, "@iplantcollaborative.org", "")
+	ilInit := &Init{
+		UserSuffix:      "@iplantcollaborative.org",
+		MetadataBaseURL: "",
+		PermissionsURL:  "",
+	}
+	app := New(sqlxMockDB, g, ilInit)
 	return app, mock, e, nil
 }
 

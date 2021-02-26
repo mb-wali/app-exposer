@@ -178,6 +178,11 @@ func main() {
 		metadataBaseURL = "http://metadata"
 	}
 
+	permissionsURL := cfg.GetString("permissions.base")
+	if permissionsURL == "" {
+		permissionsURL = "http://permissions"
+	}
+
 	var proxyImage string
 	proxyTag := cfg.GetString("interapps.proxy.tag")
 	if proxyTag == "" {
