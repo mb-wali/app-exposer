@@ -33,7 +33,7 @@ func New(cs kubernetes.Interface, namespace, ingressClass string) *External {
 	}
 }
 
-// CreateService is an http handler for creating a Service object in a k8s cluster.
+// CreateServiceHandler is an http handler for creating a Service object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
 // 	{
@@ -43,7 +43,7 @@ func New(cs kubernetes.Interface, namespace, ingressClass string) *External {
 //
 // The name of the Service comes from the URL the request is sent to and the
 // namespace is a daemon-wide configuration setting.
-func (e *External) CreateService(c echo.Context) error {
+func (e *External) CreateServiceHandler(c echo.Context) error {
 	var (
 		service string
 		err     error
@@ -93,7 +93,7 @@ func (e *External) CreateService(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// UpdateService is an http handler for updating a Service object in a k8s cluster.
+// UpdateServiceHandler is an http handler for updating a Service object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
 // 	{
@@ -103,7 +103,7 @@ func (e *External) CreateService(c echo.Context) error {
 //
 // The name of the Service comes from the URL the request is sent to and the
 // namespace is a daemon-wide configuration setting.
-func (e *External) UpdateService(c echo.Context) error {
+func (e *External) UpdateServiceHandler(c echo.Context) error {
 
 	var (
 		service string
@@ -154,7 +154,7 @@ func (e *External) UpdateService(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// GetService is an http handler for getting information about a Service object from
+// GetServiceHandler is an http handler for getting information about a Service object from
 // a k8s cluster.
 //
 // Expects no body in the requests and will return a JSON encoded body in the
@@ -167,7 +167,7 @@ func (e *External) UpdateService(c echo.Context) error {
 // 	}
 //
 // The namespace of the Service comes from the daemon configuration setting.
-func (e *External) GetService(c echo.Context) error {
+func (e *External) GetServiceHandler(c echo.Context) error {
 	var (
 		service string
 	)
@@ -196,11 +196,11 @@ func (e *External) GetService(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// DeleteService is an http handler for deleting a Service object in a k8s cluster.
+// DeleteServiceHandler is an http handler for deleting a Service object in a k8s cluster.
 //
 // Expects no body in the request and returns no body in the response. Returns
 // a 200 status if you try to delete a Service that doesn't exist.
-func (e *External) DeleteService(c echo.Context) error {
+func (e *External) DeleteServiceHandler(c echo.Context) error {
 	var service string
 
 	service = c.Param("name")
@@ -218,7 +218,7 @@ func (e *External) DeleteService(c echo.Context) error {
 	return nil
 }
 
-// CreateEndpoint is an http handler for creating an Endpoints object in a k8s cluster.
+// CreateEndpointHandler is an http handler for creating an Endpoints object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
 // 	{
@@ -228,7 +228,7 @@ func (e *External) DeleteService(c echo.Context) error {
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) CreateEndpoint(c echo.Context) error {
+func (e *External) CreateEndpointHandler(c echo.Context) error {
 	var (
 		endpoint string
 		err      error
@@ -278,7 +278,7 @@ func (e *External) CreateEndpoint(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// UpdateEndpoint is an http handler for updating an Endpoints object in a k8s cluster.
+// UpdateEndpointHandler is an http handler for updating an Endpoints object in a k8s cluster.
 //
 // Expects JSON in the request body in the following format:
 // 	{
@@ -288,7 +288,7 @@ func (e *External) CreateEndpoint(c echo.Context) error {
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) UpdateEndpoint(c echo.Context) error {
+func (e *External) UpdateEndpointHandler(c echo.Context) error {
 	var err error
 
 	endpoint := c.Param("name")
@@ -336,7 +336,7 @@ func (e *External) UpdateEndpoint(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// GetEndpoint is an http handler for getting an Endpoints object from a k8s cluster.
+// GetEndpointHandler is an http handler for getting an Endpoints object from a k8s cluster.
 //
 // Expects no body in the request and returns JSON in the response body in the
 // following format:
@@ -349,7 +349,7 @@ func (e *External) UpdateEndpoint(c echo.Context) error {
 //
 // The name of the Endpoint is derived from the URL the request was sent to and
 // the namespace comes from the daemon-wide configuration value.
-func (e *External) GetEndpoint(c echo.Context) error {
+func (e *External) GetEndpointHandler(c echo.Context) error {
 	var (
 		endpoint string
 		err      error
@@ -379,11 +379,11 @@ func (e *External) GetEndpoint(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// DeleteEndpoint is an http handler for deleting an Endpoints object from a k8s cluster.
+// DeleteEndpointHandler is an http handler for deleting an Endpoints object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *External) DeleteEndpoint(c echo.Context) error {
+func (e *External) DeleteEndpointHandler(c echo.Context) error {
 	var endpoint string
 
 	endpoint = c.Param("name")
@@ -401,7 +401,7 @@ func (e *External) DeleteEndpoint(c echo.Context) error {
 	return nil
 }
 
-// CreateIngress is an http handler for creating an Ingress object in a k8s cluster.
+// CreateIngressHandler is an http handler for creating an Ingress object in a k8s cluster.
 //
 // Expects a JSON encoded request body in the following format:
 // 	{
@@ -411,7 +411,7 @@ func (e *External) DeleteEndpoint(c echo.Context) error {
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *External) CreateIngress(c echo.Context) error {
+func (e *External) CreateIngressHandler(c echo.Context) error {
 	var ingress string
 	var err error
 
@@ -459,7 +459,7 @@ func (e *External) CreateIngress(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// UpdateIngress is an http handler for updating an Ingress object in a k8s cluster.
+// UpdateIngressHandler is an http handler for updating an Ingress object in a k8s cluster.
 //
 // Expects a JSON encoded request body in the following format:
 // 	{
@@ -469,7 +469,7 @@ func (e *External) CreateIngress(c echo.Context) error {
 //
 // The name of the Ingress is extracted from the URL that the request is sent to.
 // The namespace for the Ingress object comes from the daemon configuration setting.
-func (e *External) UpdateIngress(c echo.Context) error {
+func (e *External) UpdateIngressHandler(c echo.Context) error {
 	var (
 		ingress string
 		err     error
@@ -519,7 +519,7 @@ func (e *External) UpdateIngress(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// GetIngress is an http handler for getting an Ingress object from a k8s cluster.
+// GetIngressHandler is an http handler for getting an Ingress object from a k8s cluster.
 //
 // Expects no request body and returns a JSON-encoded body in the response in the
 // following format:
@@ -529,7 +529,7 @@ func (e *External) UpdateIngress(c echo.Context) error {
 // 		"service" : "The name of the Service that the Ingress is configured for, as a string.",
 // 		"port" : The port of the Service that the Ingress is configured for, as an integer
 // 	}
-func (e *External) GetIngress(c echo.Context) error {
+func (e *External) GetIngressHandler(c echo.Context) error {
 	var (
 		ingress string
 		err     error
@@ -559,11 +559,11 @@ func (e *External) GetIngress(c echo.Context) error {
 	return c.JSON(http.StatusOK, returnOpts)
 }
 
-// DeleteIngress is an http handler for deleting an Ingress object from a k8s cluster.
+// DeleteIngressHandler is an http handler for deleting an Ingress object from a k8s cluster.
 //
 // Expects no request body and returns no body in the response. Returns a 200
 // if you attempt to delete an Endpoints object that doesn't exist.
-func (e *External) DeleteIngress(c echo.Context) error {
+func (e *External) DeleteIngressHandler(c echo.Context) error {
 	var ingress string
 
 	ingress = c.Param("name")

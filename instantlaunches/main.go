@@ -165,7 +165,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL stri
 	//		Responses:
 	//			default: errorResponse
 	//			200: listAllDefaults
-	instance.Group.GET("/mappings/defaults", instance.GetListDefaults)
+	instance.Group.GET("/mappings/defaults", instance.ListDefaultsHandler)
 
 	// swagger:route get /instantlaunches/mappings/defaults/latest instantlaunches latestDefaults
 	//
@@ -181,7 +181,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL stri
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/mappings/defaults/latest", instance.GetLatestDefaults)
+	instance.Group.GET("/mappings/defaults/latest", instance.LatestDefaultsHandler)
 
 	// swagger:route put /instantlaunches/mappings/defaults/latest instantlaunches addLatestDefaults
 	//

@@ -92,7 +92,7 @@ func TestGetLatestDefaults(t *testing.T) {
 
 	c := router.NewContext(req, rec)
 
-	err = app.GetLatestDefaults(c)
+	err = app.LatestDefaultsHandler(c)
 	if assert.NoError(err, "error from GetLatestDefaults should be nil") {
 		assert.Equal(http.StatusOK, rec.Code)
 

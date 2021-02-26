@@ -588,7 +588,7 @@ func createAppLoadIngress(ns, name string) (*ExposerApp, error) {
 	c.SetPath("/ingress/:name")
 	c.SetParamNames("name")
 	c.SetParamValues(name)
-	if err = testapp.external.CreateIngress(c); err != nil {
+	if err = testapp.external.CreateIngressHandler(c); err != nil {
 		return nil, err
 	}
 
@@ -625,7 +625,7 @@ func TestUpdateIngress(t *testing.T) {
 	c.SetParamNames("name")
 	c.SetParamValues(expectedName)
 
-	if err = testapp.external.UpdateIngress(c); err != nil {
+	if err = testapp.external.UpdateIngressHandler(c); err != nil {
 		t.Error(err)
 	}
 
@@ -677,7 +677,7 @@ func TestGetIngress(t *testing.T) {
 	c.SetParamNames("name")
 	c.SetParamValues(expectedName)
 
-	err = testapp.external.GetIngress(c)
+	err = testapp.external.GetIngressHandler(c)
 	if err != nil {
 		t.Error(err)
 	}
