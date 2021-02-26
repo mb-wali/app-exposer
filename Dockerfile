@@ -1,7 +1,7 @@
 ### First stage
 FROM quay.io/goswagger/swagger as swagger
 
-FROM golang:1.15 as build-root
+FROM golang:1.16 as build-root
 
 WORKDIR /build
 
