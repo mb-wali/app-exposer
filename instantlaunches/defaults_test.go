@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -62,7 +62,7 @@ func TestGetLatestDefaults(t *testing.T) {
 	defer app.DB.Close()
 
 	expected := map[string]*InstantLaunchSelector{
-		"one": &InstantLaunchSelector{
+		"one": {
 			Pattern: "*",
 			Kind:    "glob",
 			Default: InstantLaunch{
@@ -142,7 +142,7 @@ func TestUpdateLatestDefaults(t *testing.T) {
 
 	mapping, err := app.UpdateLatestDefaults(expected)
 	assert.NoError(err, "error from UpdateLatestDefaults should be nil")
-	assert.True(reflect.DeepEqual(expected, mapping), "mappings should match")
+	assert.True(cmp.Equal(expected, mapping), "mappings should match")
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
 
@@ -156,7 +156,7 @@ func TestUpdateLatestDefaultsHandler(t *testing.T) {
 	defer app.DB.Close()
 
 	expected := map[string]*InstantLaunchSelector{
-		"one": &InstantLaunchSelector{
+		"one": {
 			Pattern: "*",
 			Kind:    "glob",
 			Default: InstantLaunch{
@@ -193,7 +193,7 @@ func TestUpdateLatestDefaultsHandler(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
 		if assert.NoError(err, "should be able to parse body") {
 			assert.Equal(1, len(actual))
-			assert.True(reflect.DeepEqual(expected["one"], actual["one"]))
+			assert.True(cmp.Equal(expected["one"], actual["one"]))
 		}
 	}
 }
@@ -274,7 +274,7 @@ func TestAddLatestDefaults(t *testing.T) {
 
 	actual, err := app.AddLatestDefaults(expected, testUser)
 	if assert.NoError(err, "shouldn't be an error") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
@@ -328,7 +328,7 @@ func TestAddLatestDefaultsHandler(t *testing.T) {
 		actual := &InstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), actual)
 		if assert.NoError(err, "should be able to parse the response body") {
-			assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+			assert.True(cmp.Equal(expected, actual), "should be equal")
 		}
 	}
 }
@@ -346,7 +346,7 @@ func TestDefaultsByVersion(t *testing.T) {
 		ID:      "0",
 		Version: "0",
 		Mapping: map[string]*InstantLaunchSelector{
-			"one": &InstantLaunchSelector{
+			"one": {
 				Kind:    "glob",
 				Pattern: "*",
 				Default: InstantLaunch{
@@ -371,7 +371,7 @@ func TestDefaultsByVersion(t *testing.T) {
 
 	actual, err := app.DefaultsByVersion(0)
 	if assert.NoError(err) {
-		assert.True(reflect.DeepEqual(expected, actual))
+		assert.True(cmp.Equal(expected, actual))
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
@@ -389,7 +389,7 @@ func TestDefaultsByVersionHandler(t *testing.T) {
 		ID:      "0",
 		Version: "0",
 		Mapping: map[string]*InstantLaunchSelector{
-			"one": &InstantLaunchSelector{
+			"one": {
 				Kind:    "glob",
 				Pattern: "*",
 				Default: InstantLaunch{
@@ -426,7 +426,7 @@ func TestDefaultsByVersionHandler(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
 		if assert.NoError(err, "should be able to parse body") {
 			assert.Equal(1, len(actual.Mapping))
-			assert.True(reflect.DeepEqual(expected, actual), "should match")
+			assert.True(cmp.Equal(expected, actual), "should match")
 		}
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -466,7 +466,7 @@ func TestUpdateDefaultsByVersion(t *testing.T) {
 
 	actual, err := app.UpdateDefaultsByVersion(expected, 0)
 	if assert.NoError(err, "should not error") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
