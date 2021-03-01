@@ -87,8 +87,10 @@ func (p *Permissions) GetPermissions(lookup *Lookup) (*PermissionList, error) {
 // be denied if an error is returned, even if the boolean return value is true.
 func (p *Permissions) IsAllowed(user, resource string) (bool, error) {
 	lookup := &Lookup{
-		Subject:  user,
-		Resource: resource,
+		Subject:      user,
+		SubjectType:  "user",
+		Resource:     resource,
+		ResourceType: "analysis",
 	}
 
 	l, err := p.GetPermissions(lookup)
