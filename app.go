@@ -131,6 +131,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	vice.POST("/:analysis-id/time-limit", app.internal.TimeLimitUpdateHandler)
 	vice.GET("/:analysis-id/time-limit", app.internal.GetTimeLimitHandler)
 	vice.GET("/:host/url-ready", app.internal.URLReadyHandler)
+	vice.GET("/:host/description", app.internal.DescribeAnalysisHandler)
 
 	vicelisting := vice.Group("/listing")
 	vicelisting.GET("/", app.internal.FilterableResourcesHandler)
@@ -142,6 +143,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 
 	viceadmin := vice.Group("/admin")
 	viceadmin.GET("/listing", app.internal.AdminFilterableResourcesHandler)
+	viceadmin.GET("/:host/description", app.internal.AdminDescribeAnalysisHandler)
 	viceadmin.GET("/:host/url-ready", app.internal.AdminURLReadyHandler)
 
 	viceanalyses := viceadmin.Group("/analyses")
