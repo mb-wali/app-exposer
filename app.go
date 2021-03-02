@@ -71,6 +71,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
 		JobStatusURL:                  init.JobStatusURL,
 		UserSuffix:                    init.UserSuffix,
+		PermissionsURL:                init.PermissionsURL,
 	}
 
 	app := &ExposerApp{
@@ -139,14 +140,19 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	vicelisting.GET("/services", app.internal.FilterableServicesHandler)
 	vicelisting.GET("/ingresses", app.internal.FilterableIngressesHandler)
 
-	viceadmin := vice.Group("/admin/analyses")
-	viceadmin.POST("/:analysis-id/download-input-files", app.internal.AdminTriggerDownloadsHandler)
-	viceadmin.POST("/:analysis-id/save-output-files", app.internal.AdminTriggerUploadsHandler)
-	viceadmin.POST("/:analysis-id/exit", app.internal.AdminExitHandler)
-	viceadmin.POST("/:analysis-id/save-and-exit", app.internal.AdminSaveAndExitHandler)
-	viceadmin.GET("/:analysis-id/time-limit", app.internal.AdminGetTimeLimitHandler)
-	viceadmin.POST("/:analysis-id/time-limit", app.internal.AdminTimeLimitUpdateHandler)
-	viceadmin.GET("/:analysis-id/external-id", app.internal.AdminGetExternalIDHandler)
+	viceadmin := vice.Group("/admin")
+	viceadmin.GET("/listing", app.internal.AdminFilterableResourcesHandler)
+	viceadmin.GET("/:host/url-ready", app.internal.AdminURLReadyHandler)
+
+	viceanalyses := viceadmin.Group("/analyses")
+	viceanalyses.GET("/", app.internal.AdminFilterableResourcesHandler)
+	viceanalyses.POST("/:analysis-id/download-input-files", app.internal.AdminTriggerDownloadsHandler)
+	viceanalyses.POST("/:analysis-id/save-output-files", app.internal.AdminTriggerUploadsHandler)
+	viceanalyses.POST("/:analysis-id/exit", app.internal.AdminExitHandler)
+	viceanalyses.POST("/:analysis-id/save-and-exit", app.internal.AdminSaveAndExitHandler)
+	viceanalyses.GET("/:analysis-id/time-limit", app.internal.AdminGetTimeLimitHandler)
+	viceanalyses.POST("/:analysis-id/time-limit", app.internal.AdminTimeLimitUpdateHandler)
+	viceanalyses.GET("/:analysis-id/external-id", app.internal.AdminGetExternalIDHandler)
 
 	svc := app.router.Group("/service")
 	svc.POST("/:name", app.external.CreateServiceHandler)

@@ -215,6 +215,7 @@ func main() {
 		db:                            db,
 		UserSuffix:                    *userSuffix,
 		MetadataBaseURL:               metadataBaseURL,
+		PermissionsURL:                permissionsURL,
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)
