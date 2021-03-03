@@ -16,7 +16,7 @@ k8s:
     base: "https://cyverse.run"
 
 metadata:
-  base: "https://metadata"
+  base: "http://metadata"
 
 path_list:
   file_identifier: "# application/vnd.de.multi-input-path-list+csv; version=1"
