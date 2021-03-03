@@ -74,9 +74,9 @@ func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
 	return m, err
 }
 
-// GetLatestDefaults is the echo handler for the http API that returns the
+// LatestDefaultsHandler is the echo handler for the http API that returns the
 // default mapping of instant launches to file patterns.
-func (a *App) GetLatestDefaults(c echo.Context) error {
+func (a *App) LatestDefaultsHandler(c echo.Context) error {
 	defaults, err := a.LatestDefaults()
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -276,9 +276,9 @@ func (a *App) ListAllDefaults() (ListAllDefaultsResponse, error) {
 	return m, err
 }
 
-// GetListDefaults is the echo handler for the http API that returns a list of
+// ListDefaultsHandler is the echo handler for the http API that returns a list of
 // all defaults listed in the database, regardless of version.
-func (a *App) GetListDefaults(c echo.Context) error {
+func (a *App) ListDefaultsHandler(c echo.Context) error {
 	m, err := a.ListAllDefaults()
 	if err != nil {
 		if err == sql.ErrNoRows {

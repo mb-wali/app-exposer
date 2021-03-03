@@ -15,14 +15,20 @@ k8s:
   frontend:
     base: "https://cyverse.run"
 
+metadata:
+  base: "http://metadata"
+
 path_list:
   file_identifier: "# application/vnd.de.multi-input-path-list+csv; version=1"
+
+permissions:
+  base: "http://permissions"
 
 vice:
   file-transfers:
     image: "discoenv/vice-file-transfers"
     tag: latest
   job-status:
-    base: http://localhost:31300
+    base: http://job-status-listener
   k8s-enabled: true
   backend-namespace: default

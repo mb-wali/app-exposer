@@ -23,6 +23,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/cyverse-de/app-exposer/permissions"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
@@ -140,15 +141,26 @@ type App struct {
 	Group           *echo.Group
 	UserSuffix      string
 	MetadataBaseURL string
+	Permissions     *permissions.Permissions
+}
+
+// Init configuration for the instant launches.
+type Init struct {
+	UserSuffix      string
+	MetadataBaseURL string
+	PermissionsURL  string
 }
 
 // New returns a newly created *App.
-func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL string) *App {
+func New(db *sqlx.DB, group *echo.Group, init *Init) *App {
 	instance := &App{
 		DB:              db,
 		Group:           group,
-		UserSuffix:      userSuffix,
-		MetadataBaseURL: metadataBaseURL,
+		UserSuffix:      init.UserSuffix,
+		MetadataBaseURL: init.MetadataBaseURL,
+		Permissions: &permissions.Permissions{
+			BaseURL: init.PermissionsURL,
+		},
 	}
 
 	// swagger:route get /instantlaunches/mappings/defaults instantlaunches listDefaults
@@ -165,7 +177,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL stri
 	//		Responses:
 	//			default: errorResponse
 	//			200: listAllDefaults
-	instance.Group.GET("/mappings/defaults", instance.GetListDefaults)
+	instance.Group.GET("/mappings/defaults", instance.ListDefaultsHandler)
 
 	// swagger:route get /instantlaunches/mappings/defaults/latest instantlaunches latestDefaults
 	//
@@ -181,7 +193,7 @@ func New(db *sqlx.DB, group *echo.Group, userSuffix string, metadataBaseURL stri
 	//		Responses:
 	//			default: errorResponse
 	//			200: defaultMapping
-	instance.Group.GET("/mappings/defaults/latest", instance.GetLatestDefaults)
+	instance.Group.GET("/mappings/defaults/latest", instance.LatestDefaultsHandler)
 
 	// swagger:route put /instantlaunches/mappings/defaults/latest instantlaunches addLatestDefaults
 	//

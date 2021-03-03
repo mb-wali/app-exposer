@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,7 +34,7 @@ func TestUserMapping(t *testing.T) {
 	assert.Equal("0", actual.ID, "id should be 0")
 	assert.Equal("0", actual.Version, "version should be 0")
 	assert.True(
-		reflect.DeepEqual(
+		cmp.Equal(
 			&UserInstantLaunchMapping{
 				ID:      "0",
 				Version: "0",
@@ -81,7 +81,7 @@ func TestUserMappingHandler(t *testing.T) {
 		assert.Equal("0", actual.ID, "id should be 0")
 		assert.Equal("0", actual.Version, "version should be 0")
 		assert.True(
-			reflect.DeepEqual(
+			cmp.Equal(
 				&UserInstantLaunchMapping{
 					ID:      "0",
 					Version: "0",
@@ -129,7 +129,7 @@ func TestUpdateUserMapping(t *testing.T) {
 
 	actual, err := app.UpdateUserMapping(fmt.Sprintf("test%s", app.UserSuffix), expected)
 	if assert.NoError(err, "no errors expected") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectataions were not met")
 }
@@ -181,7 +181,7 @@ func TestUpdateUserMappingHandler(t *testing.T) {
 
 		actual := &InstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 
@@ -266,7 +266,7 @@ func TestAddUserMapping(t *testing.T) {
 
 	actual, err := app.AddUserMapping("test", expected)
 	if assert.NoError(err, "should not error") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
@@ -317,7 +317,7 @@ func TestAddUserMappingHandler(t *testing.T) {
 
 		actual := &InstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
@@ -345,7 +345,7 @@ func TestAllUserMappings(t *testing.T) {
 	}
 
 	expected := []UserInstantLaunchMapping{
-		UserInstantLaunchMapping{
+		{
 			ID:      "0",
 			Version: "0",
 			UserID:  "0",
@@ -363,7 +363,7 @@ func TestAllUserMappings(t *testing.T) {
 
 	actual, err := app.AllUserMappings("test")
 	if assert.NoError(err, "should not return error") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -393,7 +393,7 @@ func TestAllUserMappingsHandler(t *testing.T) {
 	}
 
 	expected := []UserInstantLaunchMapping{
-		UserInstantLaunchMapping{
+		{
 			ID:      "0",
 			Version: "0",
 			UserID:  "0",
@@ -424,7 +424,7 @@ func TestAllUserMappingsHandler(t *testing.T) {
 
 		actual := []UserInstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -469,7 +469,7 @@ func TestUserMappingsByVersion(t *testing.T) {
 
 	actual, err := app.UserMappingsByVersion("test", 0)
 	if assert.NoError(err, "no error expected") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 
@@ -527,7 +527,7 @@ func TestUserMappingsByVersionHandler(t *testing.T) {
 
 		actual := &UserInstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -565,7 +565,7 @@ func TestUpdateUserMappingsByVersion(t *testing.T) {
 
 	actual, err := app.UpdateUserMappingsByVersion("test", 0, expected)
 	if assert.NoError(err, "no error expected") {
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }
@@ -615,7 +615,7 @@ func TestUpdateUserMappingsByVersionHandler(t *testing.T) {
 
 		actual := &InstantLaunchMapping{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
-		assert.True(reflect.DeepEqual(expected, actual), "should be equal")
+		assert.True(cmp.Equal(expected, actual), "should be equal")
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
 }

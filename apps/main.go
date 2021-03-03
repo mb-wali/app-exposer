@@ -122,3 +122,16 @@ func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
 	}
 	return username, id, nil
 }
+
+const userByUsername = `
+	SELECT u.id
+	  FROM users u
+	 WHERE u.username = $1
+`
+
+// GetUserID returns the user's UUID based on their full username, including domain suffix.
+func (a *Apps) GetUserID(username string) (string, error) {
+	var id string
+	err := a.DB.QueryRow(userByUsername, username).Scan(&id)
+	return id, err
+}

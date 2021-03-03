@@ -11,6 +11,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/google/go-cmp v0.5.4
 	github.com/googleapis/gnostic v0.1.0 // indirect
 	github.com/gosimple/slug v1.5.0
 	github.com/jmoiron/sqlx v1.2.0

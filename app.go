@@ -48,6 +48,7 @@ type ExposerAppInit struct {
 	db                            *sqlx.DB
 	UserSuffix                    string
 	MetadataBaseURL               string
+	PermissionsURL                string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -70,6 +71,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		AppsServiceBaseURL:            init.AppsServiceBaseURL,
 		JobStatusURL:                  init.JobStatusURL,
 		UserSuffix:                    init.UserSuffix,
+		PermissionsURL:                init.PermissionsURL,
 	}
 
 	app := &ExposerApp{
@@ -79,6 +81,12 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		clientset: cs,
 		router:    echo.New(),
 		db:        init.db,
+	}
+
+	ilInit := &instantlaunches.Init{
+		UserSuffix:      init.UserSuffix,
+		MetadataBaseURL: init.MetadataBaseURL,
+		PermissionsURL:  init.PermissionsURL,
 	}
 
 	app.router.HTTPErrorHandler = func(err error, c echo.Context) {
@@ -110,57 +118,64 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 	app.router.Static("/docs", "./docs")
 
 	vice := app.router.Group("/vice")
-	vice.POST("/launch", app.internal.VICELaunchApp)
+	vice.POST("/launch", app.internal.LaunchAppHandler)
 	vice.POST("/apply-labels", app.internal.ApplyAsyncLabelsHandler)
-	vice.GET("/async-data", app.internal.GetAsyncData)
-	vice.GET("/listing", app.internal.FilterableResources)
-	vice.POST("/:id/download-input-files", app.internal.VICETriggerDownloads)
-	vice.POST("/:id/save-output-files", app.internal.VICETriggerUploads)
-	vice.POST("/:id/exit", app.internal.VICEExit)
-	vice.POST("/:id/save-and-exit", app.internal.VICESaveAndExit)
-	vice.GET("/:analysis-id/pods", app.internal.VICEPods)
-	vice.GET("/:analysis-id/logs", app.internal.VICELogs)
-	vice.POST("/:analysis-id/time-limit", app.internal.VICETimeLimitUpdate)
-	vice.GET("/:analysis-id/time-limit", app.internal.VICEGetTimeLimit)
-	vice.GET("/:host/url-ready", app.internal.VICEStatus)
+	vice.GET("/async-data", app.internal.AsyncDataHandler)
+	vice.GET("/listing", app.internal.FilterableResourcesHandler)
+	vice.POST("/:id/download-input-files", app.internal.TriggerDownloadsHandler)
+	vice.POST("/:id/save-output-files", app.internal.TriggerUploadsHandler)
+	vice.POST("/:id/exit", app.internal.ExitHandler)
+	vice.POST("/:id/save-and-exit", app.internal.SaveAndExitHandler)
+	vice.GET("/:analysis-id/pods", app.internal.PodsHandler)
+	vice.GET("/:analysis-id/logs", app.internal.LogsHandler)
+	vice.POST("/:analysis-id/time-limit", app.internal.TimeLimitUpdateHandler)
+	vice.GET("/:analysis-id/time-limit", app.internal.GetTimeLimitHandler)
+	vice.GET("/:host/url-ready", app.internal.URLReadyHandler)
+	vice.GET("/:host/description", app.internal.DescribeAnalysisHandler)
 
 	vicelisting := vice.Group("/listing")
-	vicelisting.GET("/", app.internal.FilterableResources)
-	vicelisting.GET("/deployments", app.internal.FilterableDeployments)
-	vicelisting.GET("/pods", app.internal.FilterablePods)
-	vicelisting.GET("/configmaps", app.internal.FilterableConfigMaps)
-	vicelisting.GET("/services", app.internal.FilterableServices)
-	vicelisting.GET("/ingresses", app.internal.FilterableIngresses)
+	vicelisting.GET("/", app.internal.FilterableResourcesHandler)
+	vicelisting.GET("/deployments", app.internal.FilterableDeploymentsHandler)
+	vicelisting.GET("/pods", app.internal.FilterablePodsHandler)
+	vicelisting.GET("/configmaps", app.internal.FilterableConfigMapsHandler)
+	vicelisting.GET("/services", app.internal.FilterableServicesHandler)
+	vicelisting.GET("/ingresses", app.internal.FilterableIngressesHandler)
 
-	viceadmin := vice.Group("/admin/analyses")
-	viceadmin.POST("/:analysis-id/download-input-files", app.internal.VICEAdminTriggerDownloads)
-	viceadmin.POST("/:analysis-id/save-output-files", app.internal.VICEAdminTriggerUploads)
-	viceadmin.POST("/:analysis-id/exit", app.internal.VICEAdminExit)
-	viceadmin.POST("/:analysis-id/save-and-exit", app.internal.VICEAdminSaveAndExit)
-	viceadmin.GET("/:analysis-id/time-limit", app.internal.VICEAdminGetTimeLimit)
-	viceadmin.POST("/:analysis-id/time-limit", app.internal.VICEAdminTimeLimitUpdate)
-	viceadmin.GET("/:analysis-id/external-id", app.internal.VICEAdminGetExternalID)
+	viceadmin := vice.Group("/admin")
+	viceadmin.GET("/listing", app.internal.AdminFilterableResourcesHandler)
+	viceadmin.GET("/:host/description", app.internal.AdminDescribeAnalysisHandler)
+	viceadmin.GET("/:host/url-ready", app.internal.AdminURLReadyHandler)
+
+	viceanalyses := viceadmin.Group("/analyses")
+	viceanalyses.GET("/", app.internal.AdminFilterableResourcesHandler)
+	viceanalyses.POST("/:analysis-id/download-input-files", app.internal.AdminTriggerDownloadsHandler)
+	viceanalyses.POST("/:analysis-id/save-output-files", app.internal.AdminTriggerUploadsHandler)
+	viceanalyses.POST("/:analysis-id/exit", app.internal.AdminExitHandler)
+	viceanalyses.POST("/:analysis-id/save-and-exit", app.internal.AdminSaveAndExitHandler)
+	viceanalyses.GET("/:analysis-id/time-limit", app.internal.AdminGetTimeLimitHandler)
+	viceanalyses.POST("/:analysis-id/time-limit", app.internal.AdminTimeLimitUpdateHandler)
+	viceanalyses.GET("/:analysis-id/external-id", app.internal.AdminGetExternalIDHandler)
 
 	svc := app.router.Group("/service")
-	svc.POST("/:name", app.external.CreateService)
-	svc.PUT("/:name", app.external.UpdateService)
-	svc.GET("/:name", app.external.GetService)
-	svc.DELETE("/:name", app.external.DeleteService)
+	svc.POST("/:name", app.external.CreateServiceHandler)
+	svc.PUT("/:name", app.external.UpdateServiceHandler)
+	svc.GET("/:name", app.external.GetServiceHandler)
+	svc.DELETE("/:name", app.external.DeleteServiceHandler)
 
 	endpoint := app.router.Group("/endpoint")
-	endpoint.POST("/:name", app.external.CreateEndpoint)
-	endpoint.PUT("/:name", app.external.UpdateEndpoint)
-	endpoint.GET("/:name", app.external.GetEndpoint)
-	endpoint.DELETE("/:name", app.external.DeleteEndpoint)
+	endpoint.POST("/:name", app.external.CreateEndpointHandler)
+	endpoint.PUT("/:name", app.external.UpdateEndpointHandler)
+	endpoint.GET("/:name", app.external.GetEndpointHandler)
+	endpoint.DELETE("/:name", app.external.DeleteEndpointHandler)
 
 	ingress := app.router.Group("/ingress")
-	ingress.POST("/:name", app.external.CreateIngress)
-	ingress.PUT("/:name", app.external.UpdateIngress)
-	ingress.GET("/:name", app.external.GetIngress)
-	ingress.DELETE("/:name", app.external.DeleteIngress)
+	ingress.POST("/:name", app.external.CreateIngressHandler)
+	ingress.PUT("/:name", app.external.UpdateIngressHandler)
+	ingress.GET("/:name", app.external.GetIngressHandler)
+	ingress.DELETE("/:name", app.external.DeleteIngressHandler)
 
 	ilgroup := app.router.Group("/instantlaunches")
-	app.instantlaunches = instantlaunches.New(app.db, ilgroup, init.UserSuffix, init.MetadataBaseURL)
+	app.instantlaunches = instantlaunches.New(app.db, ilgroup, ilInit)
 
 	return app
 }

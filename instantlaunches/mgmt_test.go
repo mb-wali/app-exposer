@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -70,8 +70,8 @@ func TestAddInstantLaunchHandler(t *testing.T) {
 		actual := &InstantLaunch{}
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
 		if assert.NoError(err, "should be able to parse body") {
-			assert.True(reflect.DeepEqual(expected.QuickLaunchID, actual.QuickLaunchID), "should be equal")
-			assert.True(reflect.DeepEqual(expected.AddedBy, actual.AddedBy), "should be equal")
+			assert.True(cmp.Equal(expected.QuickLaunchID, actual.QuickLaunchID), "should be equal")
+			assert.True(cmp.Equal(expected.AddedBy, actual.AddedBy), "should be equal")
 		}
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -273,13 +273,13 @@ func TestListInstantLaunches(t *testing.T) {
 	defer app.DB.Close()
 
 	expected := []InstantLaunch{
-		InstantLaunch{
+		{
 			ID:            "0",
 			QuickLaunchID: "0",
 			AddedBy:       "test@iplantcollaborative.org",
 			AddedOn:       "today",
 		},
-		InstantLaunch{
+		{
 			ID:            "1",
 			QuickLaunchID: "1",
 			AddedBy:       "test1@iplantcollaborative.org",
@@ -298,7 +298,7 @@ func TestListInstantLaunches(t *testing.T) {
 	assert.NoError(err, "error should be nil")
 	if assert.True(len(actual) > 0 && len(actual) == len(expected), "length is wrong") {
 		for index := range expected {
-			assert.True(reflect.DeepEqual(expected[index], actual[index]), "should be equal")
+			assert.True(cmp.Equal(expected[index], actual[index]), "should be equal")
 		}
 	}
 	assert.NoError(mock.ExpectationsWereMet(), "expectations were not met")
@@ -314,13 +314,13 @@ func TestListInstantLaunchesHandler(t *testing.T) {
 	defer app.DB.Close()
 
 	expected := []InstantLaunch{
-		InstantLaunch{
+		{
 			ID:            "0",
 			QuickLaunchID: "0",
 			AddedBy:       "test@iplantcollaborative.org",
 			AddedOn:       "today",
 		},
-		InstantLaunch{
+		{
 			ID:            "1",
 			QuickLaunchID: "1",
 			AddedBy:       "test1@iplantcollaborative.org",
@@ -351,7 +351,7 @@ func TestListInstantLaunchesHandler(t *testing.T) {
 		err = json.Unmarshal(rec.Body.Bytes(), &actual)
 		if assert.True(len(actual) > 0 && len(actual) == len(expected), "length is wrong") {
 			for index := range expected {
-				assert.True(reflect.DeepEqual(expected[index], actual[index]), "should be equal")
+				assert.True(cmp.Equal(expected[index], actual[index]), "should be equal")
 			}
 		}
 	}
