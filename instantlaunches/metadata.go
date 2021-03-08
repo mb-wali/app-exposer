@@ -110,7 +110,7 @@ FROM instant_launches il
 	JOIN users ilu ON il.added_by = ilu.id
 
 
-WHERE il.id IN $1;
+WHERE il.id = any($1);
 `
 
 // FullListMetadataHandler returns a list of instant launches with the quick launches
