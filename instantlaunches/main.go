@@ -25,6 +25,7 @@ import (
 
 	"github.com/cyverse-de/app-exposer/permissions"
 	"github.com/jmoiron/sqlx"
+	"github.com/jmoiron/sqlx/types"
 	"github.com/labstack/echo/v4"
 )
 
@@ -61,21 +62,21 @@ type InstantLaunch struct {
 //FullInstantLaunch contains more data about the instant launch, including quick launch
 // info, the submission, and app info.
 type FullInstantLaunch struct {
-	ID                     string `json:"id" db:"id"`
-	AddedBy                string `json:"added_by" db:"added_by"`
-	AddedOn                string `json:"added_on" db:"added_on"`
-	QuickLaunchID          string `json:"quick_launch_id" db:"quick_launch_id"`
-	QuickLaunchName        string `json:"quick_launch_name" db:"ql_name"`
-	QuickLaunchDescription string `json:"quick_launch_description" db:"ql_description"`
-	QuickLaunchCreator     string `json:"quick_launch_creator" db:"ql_creator"`
-	QuickLaunchIsPublic    bool   `json:"is_public" db:"is_public"`
-	Submission             string `json:"submission" db:"submission"`
-	AppID                  string `json:"app_id" db:"app_id"`
-	AppName                string `json:"app_name" db:"app_name"`
-	AppDescription         string `json:"app_description" db:"app_description"`
-	AppDeleted             bool   `json:"app_deleted" db:"app_deleted"`
-	AppDisabled            bool   `json:"app_disabled" db:"app_disabled"`
-	AppIntegrator          string `json:"integrator" db:"integrator"`
+	ID                     string         `json:"id" db:"id"`
+	AddedBy                string         `json:"added_by" db:"added_by"`
+	AddedOn                string         `json:"added_on" db:"added_on"`
+	QuickLaunchID          string         `json:"quick_launch_id" db:"quick_launch_id"`
+	QuickLaunchName        string         `json:"quick_launch_name" db:"ql_name"`
+	QuickLaunchDescription string         `json:"quick_launch_description" db:"ql_description"`
+	QuickLaunchCreator     string         `json:"quick_launch_creator" db:"ql_creator"`
+	QuickLaunchIsPublic    bool           `json:"is_public" db:"is_public"`
+	Submission             types.JSONText `json:"submission" db:"submission"`
+	AppID                  string         `json:"app_id" db:"app_id"`
+	AppName                string         `json:"app_name" db:"app_name"`
+	AppDescription         string         `json:"app_description" db:"app_description"`
+	AppDeleted             bool           `json:"app_deleted" db:"app_deleted"`
+	AppDisabled            bool           `json:"app_disabled" db:"app_disabled"`
+	AppIntegrator          string         `json:"integrator" db:"integrator"`
 }
 
 // NewInstantLaunchFromJSON instantiates and returns a new *InstantLaunch from the
