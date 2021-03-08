@@ -32,6 +32,7 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94 // indirect
 	github.com/stretchr/testify v1.6.1
+	github.com/valyala/fastjson v1.6.3 // indirect
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897 // indirect
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
