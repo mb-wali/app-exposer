@@ -81,6 +81,65 @@ func (a *App) GetInstantLaunchHandler(c echo.Context) error {
 
 }
 
+const fullInstantLaunchQuery = `
+SELECT
+	il.id,
+	ilu.username AS added_by,
+	il.added_on,
+	il.quick_launch_id,
+	ql.name AS ql_name,
+	ql.description AS ql_description,
+	qlu.username AS ql_creator,
+	sub.submission AS submission,
+	ql.app_id,
+	ql.is_public,
+	a.name AS app_name,
+	a.description AS app_description,
+	a.deleted AS app_deleted,
+	a.disabled AS app_disabled,
+	iu.username as integrator
+
+
+FROM instant_launches il
+	JOIN quick_launches ql ON il.quick_launch_id = ql.id
+	JOIN submissions sub ON ql.submission_id = sub.id
+	JOIN apps a ON ql.app_id = a.id
+	JOIN integration_data integ ON a.integration_data_id = integ.id
+	JOIN users iu ON integ.user_id = iu.id
+	JOIN users qlu ON ql.creator = qlu.id
+	JOIN users ilu ON il.added_by = ilu.id
+
+
+WHERE il.id = $1;
+`
+
+// FullInstantLaunch returns an instant launch from the database that
+// includes quick launch, app, and submission information.
+func (a *App) FullInstantLaunch(id string) (*FullInstantLaunch, error) {
+	fil := &FullInstantLaunch{}
+	err := a.DB.QueryRowx(fullInstantLaunchQuery, id).StructScan(fil)
+	return fil, err
+}
+
+// FullInstantLaunchHandler is the HTTP handler for getting a full description of
+// an instant launch, including its quick launch, submission, and basic app info.
+func (a *App) FullInstantLaunchHandler(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "id is missing")
+	}
+
+	il, err := a.FullInstantLaunch(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusOK, il)
+}
+
 const updateInstantLaunchQuery = `
 	UPDATE ONLY instant_launches
 	SET quick_launch_id = $1

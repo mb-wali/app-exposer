@@ -538,6 +538,8 @@ func New(db *sqlx.DB, group *echo.Group, init *Init) *App {
 	//			default: errorResponse
 	instance.Group.DELETE("/:id", instance.DeleteInstantLaunchHandler)
 
+	instance.Group.GET("/:id/full", instance.FullInstantLaunchHandler)
+
 	instance.Group.GET("/:id/metadata", instance.GetMetadataHandler)
 	instance.Group.POST("/:id/metadata", instance.AddOrUpdateMetadataHandler)
 	instance.Group.PUT("/:id/metadata", instance.SetAllMetadataHandler)
