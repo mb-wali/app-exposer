@@ -34,46 +34,6 @@ type DefaultInstantLaunchMapping struct {
 	Mapping InstantLaunchMapping `db:"mapping" json:"mapping"`
 }
 
-const latestDefaultsQuery = `
-    SELECT def.id,
-           def.version,
-           def.instant_launches AS mapping
-      FROM default_instant_launches def
-  ORDER BY def.version DESC
-     LIMIT 1;
-`
-
-const updateLatestDefaultsQuery = `
-    UPDATE ONLY default_instant_launches
-            SET instant_launches = $1
-          WHERE version = (
-              SELECT max(def.version)
-                FROM default_instant_launches def
-          )
-          RETURNING instant_launches;
-`
-
-const deleteLatestDefaultsQuery = `
-	DELETE FROM ONLY default_instant_launches AS def
-	WHERE version = (
-		SELECT max(def.version)
-		FROM default_instant_launches def
-	);
-`
-
-const createLatestDefaultsQuery = `
-	INSERT INTO default_instant_launches (instant_launches, added_by)
-	VALUES ( $1, ( SELECT u.id FROM users u WHERE username = $2 ) )
-	RETURNING instant_launches;
-`
-
-// LatestDefaults returns the latest version of the default instant launches.
-func (a *App) LatestDefaults() (DefaultInstantLaunchMapping, error) {
-	m := DefaultInstantLaunchMapping{}
-	err := a.DB.Get(&m, latestDefaultsQuery)
-	return m, err
-}
-
 // LatestDefaultsHandler is the echo handler for the http API that returns the
 // default mapping of instant launches to file patterns.
 func (a *App) LatestDefaultsHandler(c echo.Context) error {
@@ -85,13 +45,6 @@ func (a *App) LatestDefaultsHandler(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, defaults)
-}
-
-// UpdateLatestDefaults sets a new value for the latest version of the defaults.
-func (a *App) UpdateLatestDefaults(newjson *InstantLaunchMapping) (*InstantLaunchMapping, error) {
-	retval := &InstantLaunchMapping{}
-	err := a.DB.QueryRowx(updateLatestDefaultsQuery, newjson).Scan(retval)
-	return retval, err
 }
 
 // UpdateLatestDefaultsHandler is the echo handler for the HTTP API that updates
@@ -111,23 +64,10 @@ func (a *App) UpdateLatestDefaultsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, updated)
 }
 
-// DeleteLatestDefaults removes the latest default mappings from the database.
-func (a *App) DeleteLatestDefaults() error {
-	_, err := a.DB.Exec(deleteLatestDefaultsQuery)
-	return err
-}
-
 // DeleteLatestDefaultsHandler is the echo handler for the HTTP API that allows
 // the caller to delete the latest default mappings from the database.
 func (a *App) DeleteLatestDefaultsHandler(c echo.Context) error {
 	return a.DeleteLatestDefaults()
-}
-
-// AddLatestDefaults adds a new version of the default instant launch mappings.
-func (a *App) AddLatestDefaults(update *InstantLaunchMapping, addedBy string) (*InstantLaunchMapping, error) {
-	newvalue := &InstantLaunchMapping{}
-	err := a.DB.QueryRowx(createLatestDefaultsQuery, update, addedBy).Scan(newvalue)
-	return newvalue, err
 }
 
 // AddLatestDefaultsHandler is the echo handler for the HTTP API that allows the
@@ -155,33 +95,6 @@ func (a *App) AddLatestDefaultsHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, newentry)
 }
 
-const defaultsByVersionQuery = `
-    SELECT def.id,
-           def.version,
-           def.instant_launches as mapping
-      FROM default_instant_launches def
-     WHERE def.version = ?;
-`
-
-const updateDefaultsByVersionQuery = `
-    UPDATE ONLY default_instant_launches AS def
-            SET def.instant_launches = jsonb_object(?)
-          WHERE def.version = ?
-      RETURNING def.instant_launches;
-`
-
-const deleteDefaultsByVersionQuery = `
-	DELETE FROM ONLY default_instant_launches as def
-	WHERE def.version = ?;
-`
-
-// DefaultsByVersion returns a specific version of the default instant launches.
-func (a *App) DefaultsByVersion(version int) (*DefaultInstantLaunchMapping, error) {
-	m := &DefaultInstantLaunchMapping{}
-	err := a.DB.Get(m, defaultsByVersionQuery, version)
-	return m, err
-}
-
 // DefaultsByVersionHandler is the echo handler for the http API that returns the defaults
 // stored for the provided format version.
 func (a *App) DefaultsByVersionHandler(c echo.Context) error {
@@ -199,13 +112,6 @@ func (a *App) DefaultsByVersionHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, m)
-}
-
-// UpdateDefaultsByVersion updates the default mapping for a specific version.
-func (a *App) UpdateDefaultsByVersion(newjson *InstantLaunchMapping, version int) (*InstantLaunchMapping, error) {
-	updated := &InstantLaunchMapping{}
-	err := a.DB.QueryRowx(updateDefaultsByVersionQuery, newjson, version).Scan(updated)
-	return updated, err
 }
 
 // UpdateDefaultsByVersionHandler is the echo handler for the HTTP API that
@@ -234,13 +140,6 @@ func (a *App) UpdateDefaultsByVersionHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, updated)
 }
 
-// DeleteDefaultsByVersion removes a default instant launch mapping from the database
-// based on its version.
-func (a *App) DeleteDefaultsByVersion(version int) error {
-	_, err := a.DB.Exec(deleteDefaultsByVersionQuery, version)
-	return err
-}
-
 // DeleteDefaultsByVersionHandler is an echo handler for the HTTP API that allows the
 // caller to delete a default instant launch mapping from the database based on its
 // version.
@@ -252,13 +151,6 @@ func (a *App) DeleteDefaultsByVersionHandler(c echo.Context) error {
 	return a.DeleteDefaultsByVersion(int(version))
 }
 
-const listAllDefaultsQuery = `
-    SELECT def.id,
-           def.version,
-           def.instant_launches as mapping
-      FROM default_instant_launches def;
-`
-
 // A ListAllDefaultsResponse is the response body for listing all of the default mappings.
 //
 // swagger:response listAllDefaults
@@ -267,13 +159,6 @@ const listAllDefaultsQuery = `
 type ListAllDefaultsResponse struct {
 	// The defaults being listed.
 	Defaults []DefaultInstantLaunchMapping `json:"defaults"`
-}
-
-// ListAllDefaults returns a list of all of the default instant launches, including their version.
-func (a *App) ListAllDefaults() (ListAllDefaultsResponse, error) {
-	m := ListAllDefaultsResponse{Defaults: []DefaultInstantLaunchMapping{}}
-	err := a.DB.Select(&m.Defaults, listAllDefaultsQuery)
-	return m, err
 }
 
 // ListDefaultsHandler is the echo handler for the http API that returns a list of
