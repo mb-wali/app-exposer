@@ -2,6 +2,7 @@ package instantlaunches
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/cyverse-de/app-exposer/common"
 	"github.com/labstack/echo/v4"
+	"github.com/valyala/fastjson"
 )
 
 var log = common.Log
@@ -26,14 +28,12 @@ func (a *App) InstantLaunchExists(id string) (bool, error) {
 	return count > 0, err
 }
 
-// ListMetadataHandler lists all of the instant launch metadata
-// based on the attributes and values contained in the body.
-func (a *App) ListMetadataHandler(c echo.Context) error {
+func (a *App) listAVUs(c echo.Context) ([]byte, *http.Response, error) {
 	log.Debug("in ListMetadataHandler")
 
 	user := c.QueryParam("user")
 	if user == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "user is missing")
+		return nil, nil, echo.NewHTTPError(http.StatusBadRequest, "user is missing")
 	}
 
 	attr := c.QueryParam("attribute")
@@ -42,7 +42,7 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 
 	svc, err := url.Parse(a.MetadataBaseURL)
 	if err != nil {
-		return handleError(err, http.StatusBadRequest)
+		return nil, nil, handleError(err, http.StatusBadRequest)
 	}
 
 	svc.Path = path.Join(svc.Path, "/avus")
@@ -67,14 +67,63 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 
 	resp, err := http.Get(svc.String())
 	if err != nil {
-		return handleError(err, http.StatusInternalServerError)
+		return nil, nil, handleError(err, http.StatusInternalServerError)
 	}
 
 	log.Debug(fmt.Sprintf("metadata endpoint: %s, status code: %d", svc.String(), resp.StatusCode))
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return handleError(err, http.StatusInternalServerError)
+		return nil, resp, handleError(err, http.StatusInternalServerError)
+	}
+
+	return body, resp, nil
+}
+
+// FullListMetadataHandler returns a list of instant launches with the quick launches
+// embedded, meaning that the submission field is included.
+func (a *App) FullListMetadataHandler(c echo.Context) error {
+	log.Debug("in FullListMetadataHandler")
+	avuBody, _, err := a.listAVUs(c)
+	if err != nil {
+		return err
+	}
+
+	var p fastjson.Parser
+
+	val, err := p.ParseBytes(avuBody)
+	if err != nil {
+		return err
+	}
+
+	avus := val.GetArray("avus")
+	if avus == nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "no avus found in metadata response")
+	}
+
+	var targetIDs []string
+
+	for _, avu := range avus {
+		targetIDs = append(targetIDs, string(avu.GetStringBytes("target_id")))
+	}
+
+	fullListing, err := a.ListFullInstantLaunchesByIDs(targetIDs)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, "no instant launches found")
+		}
+		return err
+	}
+
+	return c.JSON(http.StatusOK, fullListing)
+}
+
+// ListMetadataHandler lists all of the instant launch metadata
+// based on the attributes and values contained in the body.
+func (a *App) ListMetadataHandler(c echo.Context) error {
+	body, resp, err := a.listAVUs(c)
+	if err != nil {
+		return err
 	}
 
 	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
