@@ -98,7 +98,7 @@ func (a *App) FullListMetadataHandler(c echo.Context) error {
 
 	avus := val.GetArray("avus")
 	if avus == nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "no avus found in metadata response")
+		avus = []*fastjson.Value{}
 	}
 
 	var targetIDs []string
