@@ -216,6 +216,10 @@ func main() {
 		UserSuffix:                    *userSuffix,
 		MetadataBaseURL:               metadataBaseURL,
 		PermissionsURL:                permissionsURL,
+		KeycloakBaseURL:               cfg.GetString("keycloak.base"),
+		KeycloakRealm:                 cfg.GetString("keycloak.realm"),
+		KeycloakClientID:              cfg.GetString("keycloak.client-id"),
+		KeycloakClientSecret:          cfg.GetString("keycloak.client-secret"),
 	}
 
 	app := NewExposerApp(exposerInit, *ingressClass, clientset)

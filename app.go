@@ -49,6 +49,10 @@ type ExposerAppInit struct {
 	UserSuffix                    string
 	MetadataBaseURL               string
 	PermissionsURL                string
+	KeycloakBaseURL               string
+	KeycloakRealm                 string
+	KeycloakClientID              string
+	KeycloakClientSecret          string
 }
 
 // NewExposerApp creates and returns a newly instantiated *ExposerApp.
@@ -72,6 +76,10 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		JobStatusURL:                  init.JobStatusURL,
 		UserSuffix:                    init.UserSuffix,
 		PermissionsURL:                init.PermissionsURL,
+		KeycloakBaseURL:               init.KeycloakBaseURL,
+		KeycloakRealm:                 init.KeycloakRealm,
+		KeycloakClientID:              init.KeycloakClientID,
+		KeycloakClientSecret:          init.KeycloakClientSecret,
 	}
 
 	app := &ExposerApp{
