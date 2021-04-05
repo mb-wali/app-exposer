@@ -123,3 +123,16 @@ func (a *App) ListInstantLaunchesHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, list)
 }
+
+// FullListInstantLaunchesHandler is the HTTP handler for performing a full
+// listing of all registered instant launches.
+func (a *App) FullListInstantLaunchesHandler(c echo.Context) error {
+	list, err := a.FullListInstantLaunches()
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return err
+	}
+	return c.JSON(http.StatusOK, list)
+}

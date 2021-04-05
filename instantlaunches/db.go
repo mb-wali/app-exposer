@@ -146,6 +146,41 @@ func (a *App) ListInstantLaunches() ([]InstantLaunch, error) {
 	return all, err
 }
 
+const fullListInstantLaunchesQuery = `
+SELECT
+	il.id,
+	ilu.username AS added_by,
+	il.added_on,
+	il.quick_launch_id,
+	ql.name AS ql_name,
+	ql.description AS ql_description,
+	qlu.username AS ql_creator,
+	sub.submission AS submission,
+	ql.app_id,
+	ql.is_public,
+	a.name AS app_name,
+	a.description AS app_description,
+	a.deleted AS app_deleted,
+	a.disabled AS app_disabled,
+	iu.username as integrator
+
+
+FROM instant_launches il
+	JOIN quick_launches ql ON il.quick_launch_id = ql.id
+	JOIN submissions sub ON ql.submission_id = sub.id
+	JOIN apps a ON ql.app_id = a.id
+	JOIN integration_data integ ON a.integration_data_id = integ.id
+	JOIN users iu ON integ.user_id = iu.id
+	JOIN users qlu ON ql.creator = qlu.id
+	JOIN users ilu ON il.added_by = ilu.id
+`
+
+func (a *App) FullListInstantLaunches() ([]FullInstantLaunch, error) {
+	all := []FullInstantLaunch{}
+	err := a.DB.Select(&all, fullListInstantLaunchesQuery)
+	return all, err
+}
+
 const userMappingQuery = `
     SELECT u.id,
            u.version,
