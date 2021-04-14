@@ -158,7 +158,7 @@ type UserInstantLaunchMapping struct {
 
 type QuickLaunch struct {
 	ID          string         `json:"id" db:"id"`
-	Creator     string         `json:"createor" db:"creator"`
+	Creator     string         `json:"creator" db:"creator"`
 	AppID       string         `json:"app_id" db:"app_id"`
 	Name        string         `json:"name" db:"name"`
 	Description string         `json:"description" db:"description"`
