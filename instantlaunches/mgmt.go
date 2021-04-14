@@ -146,6 +146,11 @@ func (a *App) ListViablePublicQuickLaunchesHandler(c echo.Context) error {
 	if user == "" {
 		return echo.NewHTTPError(http.StatusBadRequest, "user must be set")
 	}
+
+	if !strings.HasSuffix(user, a.UserSuffix) {
+		user = fmt.Sprintf("%s%s", user, a.UserSuffix)
+	}
+
 	list, err := a.ListViablePublicQuickLaunches(user)
 	if err != nil {
 		if err == sql.ErrNoRows {
