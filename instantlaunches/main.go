@@ -156,6 +156,16 @@ type UserInstantLaunchMapping struct {
 	Mapping InstantLaunchMapping `json:"mapping" db:"mapping"`
 }
 
+type QuickLaunch struct {
+	ID          string         `json:"id" db:"id"`
+	Creator     string         `json:"createor" db:"creator"`
+	AppID       string         `json:"app_id" db:"app_id"`
+	Name        string         `json:"name" db:"name"`
+	Description string         `json:"description" db:"description"`
+	IsPublic    bool           `json:"is_public" db:"is_public"`
+	Submission  types.JSONText `json:"submission" db:"submission"`
+}
+
 // App provides an API for managing instant launches.
 type App struct {
 	DB              *sqlx.DB
@@ -184,6 +194,7 @@ func New(db *sqlx.DB, group *echo.Group, init *Init) *App {
 		},
 	}
 
+	instance.Group.GET("/quicklaunches/public", instance.ListViablePublicQuickLaunchesHandler)
 	instance.Group.GET("/mappings/defaults", instance.ListDefaultsHandler)
 	instance.Group.GET("/mappings/defaults/latest", instance.LatestDefaultsHandler)
 	instance.Group.PUT("/mappings/defaults/latest", instance.AddLatestDefaultsHandler)
