@@ -436,3 +436,24 @@ func (a *App) ListAllDefaults() (ListAllDefaultsResponse, error) {
 	err := a.DB.Select(&m.Defaults, listAllDefaultsQuery)
 	return m, err
 }
+
+const listPublicQLsQuery = `
+	SELECT ql.id,
+		u.username as creator,
+		ql.app_id,
+		ql.name,
+		ql.description,
+		ql.is_public,
+		s.submission
+	FROM quick_launches ql
+	JOIN app_listing a on ql.app_id = a.id
+	JOIN users u on ql.creator = u.id
+	JOIN submissions s on ql.submission_id = s.id
+	WHERE u.username = $1 OR ( ql.is_public = true AND a.is_public = true)
+`
+
+func (a *App) ListViablePublicQuickLaunches(user string) ([]QuickLaunch, error) {
+	l := []QuickLaunch{}
+	err := a.DB.Select(&l, listPublicQLsQuery, user)
+	return l, err
+}

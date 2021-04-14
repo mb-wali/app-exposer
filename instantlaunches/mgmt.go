@@ -136,3 +136,22 @@ func (a *App) FullListInstantLaunchesHandler(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, list)
 }
+
+// ListViablePublicQuickLaunchesHandler is the HTTP handler for getting a listing
+// of public quick launches that are associated with apps that are currently
+// public. This should help us avoid situations where we accidentally list public
+// quick launches for apps that have been deleted or are otherwise no longer public.
+func (a *App) ListViablePublicQuickLaunchesHandler(c echo.Context) error {
+	user := c.QueryParam("user")
+	if user == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "user must be set")
+	}
+	list, err := a.ListViablePublicQuickLaunches(user)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
+		return err
+	}
+	return c.JSON(http.StatusOK, list)
+}
