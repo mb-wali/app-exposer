@@ -55,7 +55,7 @@ spec:
           - --namespace
           - "$(APP_EXPOSER_NAMESPACE)"
           - --user-suffix
-          - "$(USER_SUFFIX)"
+          - "@$(USER_SUFFIX)"
         env:
           - name: APP_EXPOSER_NAMESPACE
             valueFrom:
