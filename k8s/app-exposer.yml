@@ -54,6 +54,8 @@ spec:
         args:
           - --namespace
           - "$(APP_EXPOSER_NAMESPACE)"
+          - --user-suffix
+          - "$(USER_SUFFIX)"
         env:
           - name: APP_EXPOSER_NAMESPACE
             valueFrom:
@@ -61,6 +63,11 @@ spec:
                 fieldPath: metadata.namespace
           - name: CLUSTER
             value: "1"
+          - name: USER_SUFFIX
+            valueFrom:
+              secretKeyRef:
+                name: configs
+                key: USER_SUFFIX
         ports:
           - name: listen-port
             containerPort: 60000
