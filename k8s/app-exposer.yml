@@ -43,7 +43,7 @@ spec:
                 path: jobservices.yml
       containers:
       - name: app-exposer
-        image: discoenv/app-exposer
+        image: harbor.cyverse.org/de/app-exposer
         resources:
           requests:
             cpu: "1m"
