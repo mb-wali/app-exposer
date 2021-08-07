@@ -35,6 +35,7 @@ type ExposerAppInit struct {
 	UseCSIDriver                  bool   // Yes to use CSI Driver for data input/output, No to use Vice-file-transfer
 	InputPathListIdentifier       string // Header line for input path lists
 	TicketInputPathListIdentifier string // Header line for ticket input path lists
+	ImagePullSecretName           string // A secret name to add to pods' imagePullSecrets
 	JobStatusURL                  string
 	ViceProxyImage                string
 	CASBaseURL                    string
@@ -64,6 +65,7 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		UseCSIDriver:                  init.UseCSIDriver,
 		InputPathListIdentifier:       init.InputPathListIdentifier,
 		TicketInputPathListIdentifier: init.TicketInputPathListIdentifier,
+		ImagePullSecretName:           init.ImagePullSecretName,
 		ViceProxyImage:                init.ViceProxyImage,
 		CASBaseURL:                    init.CASBaseURL,
 		FrontendBaseURL:               init.FrontendBaseURL,
