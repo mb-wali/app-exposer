@@ -202,6 +202,7 @@ func main() {
 		UseCSIDriver:                  cfg.GetBool("vice.use_csi_driver"),
 		InputPathListIdentifier:       cfg.GetString("path_list.file_identifier"),
 		TicketInputPathListIdentifier: cfg.GetString("tickets_path_list.file_identifier"),
+		ImagePullSecretName:           cfg.GetString("vice.image-pull-secret"),
 		JobStatusURL:                  jobStatusURL,
 		ViceProxyImage:                proxyImage,
 		CASBaseURL:                    cfg.GetString("cas.base"),
