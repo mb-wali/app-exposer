@@ -103,25 +103,22 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 		code := http.StatusInternalServerError
 		var body interface{}
 
-		switch err.(type) {
+		switch err := err.(type) {
 		case common.ErrorResponse:
 			code = http.StatusBadRequest
-			body = err.(common.ErrorResponse)
-			break
+			body = err
 		case *common.ErrorResponse:
 			code = http.StatusBadRequest
-			body = err.(*common.ErrorResponse)
-			break
+			body = err
 		case *echo.HTTPError:
-			echoErr := err.(*echo.HTTPError)
+			echoErr := err
 			code = echoErr.Code
 			body = common.NewErrorResponse(err)
-			break
 		default:
 			body = common.NewErrorResponse(err)
 		}
 
-		c.JSON(code, body)
+		c.JSON(code, body) // nolint:errcheck
 	}
 
 	app.router.GET("/", app.Greeting).Name = "greeting"
@@ -193,6 +190,5 @@ func NewExposerApp(init *ExposerAppInit, ingressClass string, cs kubernetes.Inte
 // Greeting lets the caller know that the service is up and should be receiving
 // requests.
 func (e *ExposerApp) Greeting(context echo.Context) error {
-	context.String(http.StatusOK, "Hello from app-exposer.")
-	return nil
+	return context.String(http.StatusOK, "Hello from app-exposer.")
 }

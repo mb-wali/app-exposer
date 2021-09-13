@@ -117,9 +117,7 @@ func (a *Apps) GetUserByAnalysisID(analysisID string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if strings.HasSuffix(username, a.UserSuffix) {
-		username = strings.TrimSuffix(username, a.UserSuffix)
-	}
+	username = strings.TrimSuffix(username, a.UserSuffix)
 	return username, id, nil
 }
 

@@ -126,7 +126,7 @@ func (a *App) ListMetadataHandler(c echo.Context) error {
 		return err
 	}
 
-	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
+	return c.Blob(resp.StatusCode, resp.Header.Get("content-type"), body)
 }
 
 // GetMetadataHandler returns all of the metadata associated with an instant launch.
@@ -176,7 +176,7 @@ func (a *App) GetMetadataHandler(c echo.Context) error {
 		return handleError(err, http.StatusInternalServerError)
 	}
 
-	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
+	return c.Blob(resp.StatusCode, resp.Header.Get("content-type"), body)
 }
 
 // AddOrUpdateMetadataHandler adds or updates one or more AVUs on an instant
@@ -232,7 +232,7 @@ func (a *App) AddOrUpdateMetadataHandler(c echo.Context) error {
 		return handleError(err, http.StatusInternalServerError)
 	}
 
-	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
+	return c.Blob(resp.StatusCode, resp.Header.Get("content-type"), body)
 }
 
 // SetAllMetadataHandler sets all of the AVUs associated with an instant
@@ -281,7 +281,7 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 		return handleError(err, http.StatusInternalServerError)
 	}
 
-	req.Header.Set(http.CanonicalHeaderKey("content-type"), "application/json")
+	req.Header.Set("content-type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -295,5 +295,5 @@ func (a *App) SetAllMetadataHandler(c echo.Context) error {
 		return handleError(err, http.StatusInternalServerError)
 	}
 
-	return c.Blob(resp.StatusCode, resp.Header.Get(http.CanonicalHeaderKey("content-type")), body)
+	return c.Blob(resp.StatusCode, resp.Header.Get("content-type"), body)
 }
