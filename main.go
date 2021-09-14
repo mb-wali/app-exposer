@@ -33,7 +33,7 @@ func init() {
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(klogFlags)
 	logtostderr := klogFlags.Lookup("logtostderr")
-	logtostderr.Value.Set("true")
+	logtostderr.Value.Set("true") // nolint:errcheck
 }
 
 func main() {
@@ -80,25 +80,18 @@ func main() {
 	switch *logLevel {
 	case "trace":
 		levelSetting = logrus.TraceLevel
-		break
 	case "debug":
 		levelSetting = logrus.DebugLevel
-		break
 	case "info":
 		levelSetting = logrus.InfoLevel
-		break
 	case "warn":
 		levelSetting = logrus.WarnLevel
-		break
 	case "error":
 		levelSetting = logrus.ErrorLevel
-		break
 	case "fatal":
 		levelSetting = logrus.FatalLevel
-		break
 	case "panic":
 		levelSetting = logrus.PanicLevel
-		break
 	default:
 		log.Fatal("incorrect log level")
 	}

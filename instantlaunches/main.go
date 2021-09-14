@@ -56,7 +56,6 @@ type InstantLaunch struct {
 	//
 	// Required: true
 	AddedOn string `json:"added_on" db:"added_on"` // formatted timestamp including timezone
-	db      *sqlx.DB
 }
 
 //FullInstantLaunch contains more data about the instant launch, including quick launch
@@ -114,10 +113,10 @@ type InstantLaunchMapping map[string]*InstantLaunchSelector
 func (i InstantLaunchMapping) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case []byte:
-		json.Unmarshal(v, &i)
+		json.Unmarshal(v, &i) // nolint:errcheck
 		return nil
 	case string:
-		json.Unmarshal([]byte(v), &i)
+		json.Unmarshal([]byte(v), &i) // nolint:errcheck
 		return nil
 	default:
 		return fmt.Errorf("unsupported type: %T", v)
@@ -227,12 +226,4 @@ func New(db *sqlx.DB, group *echo.Group, init *Init) *App {
 	instance.Group.PUT("/:id/metadata", instance.SetAllMetadataHandler)
 
 	return instance
-}
-
-// swagger:parameters defaultsByVersion
-type defaultsByVersionParams struct {
-	// in: path
-	// required: true
-	// minimum: 0
-	Version int
 }
