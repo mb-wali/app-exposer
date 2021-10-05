@@ -1,5 +1,5 @@
 app-exposer
-**/jobservices.yml
+# **/jobservices.yml
 configs/local.yml
 configs/local.yaml
 swagger-ui/

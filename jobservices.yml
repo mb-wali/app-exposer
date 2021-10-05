@@ -1,0 +1,37 @@
+apps:
+  base: "http://apps:31323"
+
+cas:
+  base: "https://my-cas-server.example.org/cas"
+
+db:
+  uri: postgresql://de:testpassword@db:5432/de?sslmode=disable
+
+# todo
+interapps:
+  proxy:
+    tag: latest
+
+# todo
+k8s:
+  frontend:
+    base: "https://cyverse.run"
+
+metadata:
+  base: "http://metadata:60007"
+
+path_list:
+  file_identifier: "# application/vnd.de.multi-input-path-list+csv; version=1"
+
+permissions:
+  base: "http://permissions:60005"
+
+# todo
+vice:
+  file-transfers:
+    image: "discoenv/vice-file-transfers"
+    tag: latest
+  job-status:
+    base: http://job-status-listener
+  k8s-enabled: true
+  backend-namespace: default
