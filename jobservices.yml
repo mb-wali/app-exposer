@@ -32,6 +32,6 @@ vice:
     image: "discoenv/vice-file-transfers"
     tag: latest
   job-status:
-    base: http://job-status-listener
+    base: http://job-status-listener:60020
   k8s-enabled: true
   backend-namespace: default
